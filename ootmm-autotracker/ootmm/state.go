@@ -1,0 +1,107 @@
+package ootmm
+
+// GameState holds the complete tracked state from both games.
+type GameState struct {
+	ActiveGame ActiveGame
+	SaveIndex  uint32
+	Valid      bool
+
+	Oot OotState
+	Mm  MmState
+}
+
+// OotState holds all tracked OoT data.
+type OotState struct {
+	SceneID  uint16
+	Age      uint32 // 0=adult, 1=child
+	GameMode uint32
+
+	// Inventory
+	Items  [24]uint8
+	Ammo   [15]uint8
+	Beans  uint8
+
+	// Equipment bitfield: boots:4, tunics:4, shields:4, swords:4
+	Equipment uint16
+	// Upgrades bitfield
+	Upgrades uint32
+	// Quest items bitfield (medallions, songs, stones, etc.)
+	QuestItems uint32
+	// Heart pieces (top 4 bits of questItems)
+	HeartPieces uint8
+
+	// Per-dungeon
+	DungeonItems [20]uint8 // bossKey:1, compass:1, map:1, maxKeys:5
+	DungeonKeys  [19]int8
+
+	GoldTokens uint16
+
+	// Scene flags: chests/switches/collectibles per scene
+	SceneFlags [124]SceneFlags
+
+	// Extra records
+	ExtraRecords [20]uint32
+
+	// Event flags
+	EventsChk  [14]uint16
+	EventsMisc [30]uint16
+}
+
+// MmState holds all tracked MM data.
+type MmState struct {
+	PlayerForm uint8
+	Day        uint32
+	Time       uint16
+	GameMode   uint32
+
+	// Inventory
+	Items [48]uint8
+	Ammo  [24]int8
+
+	// Upgrades bitfield
+	Upgrades uint32
+	// Quest items (remains, songs, notebook, heart pieces)
+	QuestItems uint32
+	HeartPieces uint8
+
+	// Per-dungeon
+	DungeonItems  [10]uint8
+	DungeonKeys   [9]int8
+	StrayFairies  [10]int8
+
+	SceneFlags [120]SceneFlags
+
+	// Cycle flags (reset each 3-day cycle)
+	CycleFlags [120]CycleSceneFlags
+}
+
+// SceneFlags represents the permanent flags for a single scene.
+type SceneFlags struct {
+	Chests       uint32
+	Switches     uint32
+	RoomClear    uint32
+	Collectibles uint32
+	Unused       uint32
+	VisitedRooms uint32
+	VisitedFloors uint32
+}
+
+// CycleSceneFlags represents MM's per-cycle scene flags.
+type CycleSceneFlags struct {
+	Chests       uint32
+	Switch0      uint32
+	Switch1      uint32
+	ClearedRoom  uint32
+	Collectibles uint32
+}
+
+// HasQuestBit checks if a specific quest bit is set.
+func HasQuestBit(questItems uint32, bit int) bool {
+	return questItems&(1<<uint(bit)) != 0
+}
+
+// GetUpgradeLevel extracts a multi-bit upgrade field.
+func GetUpgradeLevel(upgrades uint32, shift, bits int) int {
+	mask := uint32((1 << bits) - 1)
+	return int((upgrades >> uint(shift)) & mask)
+}
