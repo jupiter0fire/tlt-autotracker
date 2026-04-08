@@ -20,6 +20,8 @@ type inventorySlotEntry struct {
 var (
 	ootInventorySlots []string
 	mmInventorySlots  []string
+	ootInventorySlotIndices map[string]int
+	mmInventorySlotIndices  map[string]int
 )
 
 //go:embed inventory_slots.json
@@ -31,11 +33,11 @@ func init() {
 		panic(fmt.Sprintf("parse embedded inventory slot mapping: %v", err))
 	}
 
-	ootInventorySlots = buildInventorySlotTable("OOT", slotFile.Oot)
-	mmInventorySlots = buildInventorySlotTable("MM", slotFile.Mm)
+	ootInventorySlots, ootInventorySlotIndices = buildInventorySlotTable("OOT", slotFile.Oot)
+	mmInventorySlots, mmInventorySlotIndices = buildInventorySlotTable("MM", slotFile.Mm)
 }
 
-func buildInventorySlotTable(game string, entries []inventorySlotEntry) []string {
+func buildInventorySlotTable(game string, entries []inventorySlotEntry) ([]string, map[string]int) {
 	maxIndex := -1
 	for _, entry := range entries {
 		if entry.Index > maxIndex {
@@ -43,10 +45,11 @@ func buildInventorySlotTable(game string, entries []inventorySlotEntry) []string
 		}
 	}
 	if maxIndex < 0 {
-		return nil
+		return nil, nil
 	}
 
 	table := make([]string, maxIndex+1)
+	indices := make(map[string]int, len(entries))
 	for _, entry := range entries {
 		if entry.Index < 0 || entry.Index >= len(table) {
 			panic(fmt.Sprintf("invalid %s slot index %d for %s", game, entry.Index, entry.Slot))
@@ -57,7 +60,11 @@ func buildInventorySlotTable(game string, entries []inventorySlotEntry) []string
 		if entry.ItemID == "" {
 			panic(fmt.Sprintf("empty tracker ID for %s", entry.Slot))
 		}
+		if _, exists := indices[entry.ItemID]; exists {
+			panic(fmt.Sprintf("duplicate %s tracker ID %s", game, entry.ItemID))
+		}
 		table[entry.Index] = entry.ItemID
+		indices[entry.ItemID] = entry.Index
 	}
 
 	for index, trackerID := range table {
@@ -66,5 +73,21 @@ func buildInventorySlotTable(game string, entries []inventorySlotEntry) []string
 		}
 	}
 
-	return table
+	return table, indices
+}
+
+func mustOotInventorySlotIndex(itemID string) int {
+	return mustInventorySlotIndex("OOT", ootInventorySlotIndices, itemID)
+}
+
+func mustMmInventorySlotIndex(itemID string) int {
+	return mustInventorySlotIndex("MM", mmInventorySlotIndices, itemID)
+}
+
+func mustInventorySlotIndex(game string, indices map[string]int, itemID string) int {
+	index, ok := indices[itemID]
+	if !ok {
+		panic(fmt.Sprintf("missing %s inventory slot for %s", game, itemID))
+	}
+	return index
 }

@@ -4,11 +4,11 @@ import "testing"
 
 func TestExtractItemsNormalizesOotInventorySlots(t *testing.T) {
 	state := &GameState{}
-	state.Oot.Items[ootSlotOcarina] = 0x08
-	state.Oot.Items[ootSlotHookshot] = 0x0B
-	state.Oot.Items[18] = 0x14
-	state.Oot.Items[ootSlotTradeAdult] = 0x37
-	state.Oot.Items[ootSlotBeans] = 0x10
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_OCARINA")] = 0x08
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_HOOKSHOT")] = 0x0B
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_BOTTLE_1")] = 0x14
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_ADULT_TRADE")] = 0x37
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_MAGIC_BEANS")] = 0x10
 	state.Oot.Beans = 5
 
 	items := itemQtyMap(ExtractItems(state))
@@ -32,14 +32,14 @@ func TestExtractItemsNormalizesOotInventorySlots(t *testing.T) {
 
 func TestExtractItemsNormalizesMmInventorySlots(t *testing.T) {
 	state := &GameState{}
-	state.Mm.Items[mmSlotOcarina] = 0x00
-	state.Mm.Items[mmSlotTrade1] = 0x2C
-	state.Mm.Items[mmSlotTrade2] = 0xB3
-	state.Mm.Items[mmSlotHookshot] = 0x11
-	state.Mm.Items[mmSlotGFS] = 0xB5
-	state.Mm.Items[mmSlotTrade3] = 0x30
-	state.Mm.Items[24] = 0x3E
-	state.Mm.Items[18] = 0x13
+	state.Mm.Items[mustMmInventorySlotIndex("MM_OCARINA")] = 0x00
+	state.Mm.Items[mustMmInventorySlotIndex("MM_TRADE_1")] = 0x2C
+	state.Mm.Items[mustMmInventorySlotIndex("MM_TRADE_2")] = 0xB3
+	state.Mm.Items[mustMmInventorySlotIndex("MM_HOOKSHOT")] = 0x11
+	state.Mm.Items[mustMmInventorySlotIndex("MM_GREAT_FAIRY_SWORD")] = 0xB5
+	state.Mm.Items[mustMmInventorySlotIndex("MM_TRADE_3")] = 0x30
+	state.Mm.Items[mustMmInventorySlotIndex("MM_MASK_POSTMAN")] = 0x3E
+	state.Mm.Items[mustMmInventorySlotIndex("MM_BOTTLE_1")] = 0x13
 
 	items := itemQtyMap(ExtractItems(state))
 

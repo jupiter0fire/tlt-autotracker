@@ -78,7 +78,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		if name == "" {
 			continue
 		}
-		qty := ootInventorySlotQty(i, itemID, oot.Beans)
+		qty := ootInventorySlotQty(name, itemID, oot.Beans)
 		if qty > 0 {
 			items = append(items, TrackedItem{name, qty})
 		}
@@ -145,7 +145,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		if name == "" {
 			continue
 		}
-		qty := mmInventorySlotQty(i, itemID)
+		qty := mmInventorySlotQty(name, itemID)
 		if qty > 0 {
 			items = append(items, TrackedItem{name, qty})
 		}
@@ -314,21 +314,6 @@ func mmDungeonName(idx int) string {
 
 const emptyInventoryItem = 0xFF
 
-const (
-	ootSlotOcarina   = 7
-	ootSlotHookshot  = 9
-	ootSlotBeans     = 14
-	ootSlotTradeAdult = 22
-	ootSlotTradeChild = 23
-
-	mmSlotOcarina   = 0
-	mmSlotTrade1    = 5
-	mmSlotTrade2    = 11
-	mmSlotHookshot  = 15
-	mmSlotGFS       = 16
-	mmSlotTrade3    = 17
-)
-
 var (
 	ootOcarinaStages = []uint8{0x07, 0x08}
 	ootHookshotStages = []uint8{0x0A, 0x0B}
@@ -343,27 +328,27 @@ var (
 	mmTrade3Stages   = []uint8{0xAF, 0xB2, 0xB4, 0x2F, 0x30}
 )
 
-func ootInventorySlotQty(slot int, itemID, beans uint8) int {
+func ootInventorySlotQty(itemName string, itemID, beans uint8) int {
 	if itemID == emptyInventoryItem {
 		return 0
 	}
 
-	switch slot {
-	case ootSlotOcarina:
+	switch itemName {
+	case "OOT_OCARINA":
 		return stageQty(itemID, ootOcarinaStages)
-	case ootSlotHookshot:
+	case "OOT_HOOKSHOT":
 		return stageQty(itemID, ootHookshotStages)
-	case ootSlotBeans:
+	case "OOT_MAGIC_BEANS":
 		if beans > 0 {
 			return int(beans)
 		}
 		return 1
-	case ootSlotTradeAdult:
+	case "OOT_ADULT_TRADE":
 		if isOotBottleItem(itemID) {
 			return len(ootAdultTradeStages)
 		}
 		return stageQty(itemID, ootAdultTradeStages)
-	case ootSlotTradeChild:
+	case "OOT_CHILD_TRADE":
 		if isOotBottleItem(itemID) {
 			return len(ootChildTradeStages)
 		}
@@ -373,23 +358,23 @@ func ootInventorySlotQty(slot int, itemID, beans uint8) int {
 	}
 }
 
-func mmInventorySlotQty(slot int, itemID uint8) int {
+func mmInventorySlotQty(itemName string, itemID uint8) int {
 	if itemID == emptyInventoryItem {
 		return 0
 	}
 
-	switch slot {
-	case mmSlotOcarina:
+	switch itemName {
+	case "MM_OCARINA":
 		return stageQty(itemID, mmOcarinaStages)
-	case mmSlotTrade1:
+	case "MM_TRADE_1":
 		return stageQty(itemID, mmTrade1Stages)
-	case mmSlotTrade2:
+	case "MM_TRADE_2":
 		return stageQty(itemID, mmTrade2Stages)
-	case mmSlotHookshot:
+	case "MM_HOOKSHOT":
 		return stageQty(itemID, mmHookshotStages)
-	case mmSlotGFS:
+	case "MM_GREAT_FAIRY_SWORD":
 		return stageQty(itemID, mmGFSStages)
-	case mmSlotTrade3:
+	case "MM_TRADE_3":
 		return stageQty(itemID, mmTrade3Stages)
 	default:
 		return 1
