@@ -15,6 +15,10 @@ type Reader struct {
 
 	foreignOotSaveAddr uint32
 	foreignMmSaveAddr  uint32
+	lastKnownOot       OotState
+	lastKnownMm        MmState
+	hasLastKnownOot    bool
+	hasLastKnownMm     bool
 }
 
 func NewReader(mem *n64.Memory) *Reader {
@@ -53,23 +57,27 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readOotSave(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read OoT save: %w", err)
 		}
-		if err := r.readForeignMmSave(&state.Mm); err != nil {
+		r.rememberOotState(state.Oot)
+		if err := r.readForeignMmState(&state.Mm); err != nil {
 			return nil, fmt.Errorf("read foreign MM save: %w", err)
 		}
 	case GameMm:
-		if err := r.readForeignOotSave(&state.Oot); err != nil {
-			return nil, fmt.Errorf("read foreign OoT save: %w", err)
-		}
 		if err := r.readMmSave(&state.Mm); err != nil {
 			return nil, fmt.Errorf("read MM save: %w", err)
+		}
+		r.rememberMmState(state.Mm)
+		if err := r.readForeignOotState(&state.Oot); err != nil {
+			return nil, fmt.Errorf("read foreign OoT save: %w", err)
 		}
 	default:
 		if err := r.readOotSave(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read OoT save: %w", err)
 		}
+		r.rememberOotState(state.Oot)
 		if err := r.readMmSave(&state.Mm); err != nil {
 			return nil, fmt.Errorf("read MM save: %w", err)
 		}
+		r.rememberMmState(state.Mm)
 	}
 
 	return state, nil
@@ -259,6 +267,44 @@ func (r *Reader) readForeignMmSave(mm *MmState) error {
 	}
 
 	return parseMmSave(mm, data)
+}
+
+func (r *Reader) readForeignOotState(oot *OotState) error {
+	if err := r.readForeignOotSave(oot); err == nil {
+		r.rememberOotState(*oot)
+		return nil
+	}
+
+	if r.hasLastKnownOot {
+		*oot = r.lastKnownOot
+		return nil
+	}
+
+	return nil
+}
+
+func (r *Reader) readForeignMmState(mm *MmState) error {
+	if err := r.readForeignMmSave(mm); err == nil {
+		r.rememberMmState(*mm)
+		return nil
+	}
+
+	if r.hasLastKnownMm {
+		*mm = r.lastKnownMm
+		return nil
+	}
+
+	return nil
+}
+
+func (r *Reader) rememberOotState(oot OotState) {
+	r.lastKnownOot = oot
+	r.hasLastKnownOot = true
+}
+
+func (r *Reader) rememberMmState(mm MmState) {
+	r.lastKnownMm = mm
+	r.hasLastKnownMm = true
 }
 
 func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
