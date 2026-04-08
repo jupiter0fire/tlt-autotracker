@@ -88,6 +88,7 @@ const (
 	// MmSavePlayerData at 0x24 (size 0x28)
 	// MmItemEquips starts at 0x4C and is followed by 2 bytes of padding so
 	// the 4-byte aligned MmInventory begins at 0x70.
+	MmOffEquipment     = 0x6C  // u16 bitfield {boots:4, tunic:4, shield:4, sword:4}
 	MmOffInvItems      = 0x70  // u8[48]
 	MmOffInvAmmo       = 0xA0  // s8[24]
 	MmOffInvUpgrades   = 0xB8  // u32 bitfield

@@ -89,6 +89,20 @@ func TestExtractItemsCountsOotEquipmentStages(t *testing.T) {
 	}
 }
 
+func TestExtractItemsReadsMmEquipmentLevels(t *testing.T) {
+	state := &GameState{}
+	state.Mm.Equipment = 0x0023
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_SWORD"]; got != 3 {
+		t.Fatalf("MM_SWORD = %d, want 3", got)
+	}
+	if got := items["MM_SHIELD"]; got != 2 {
+		t.Fatalf("MM_SHIELD = %d, want 2", got)
+	}
+}
+
 func itemQtyMap(items []TrackedItem) map[string]int {
 	result := make(map[string]int, len(items))
 	for _, item := range items {

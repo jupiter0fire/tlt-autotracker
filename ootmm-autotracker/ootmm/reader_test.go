@@ -27,6 +27,8 @@ func TestLocateForeignSaveRejectsUnalignedCandidate(t *testing.T) {
 
 func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 	data := make([]byte, MmSaveSize)
+	data[MmOffEquipment] = 0x00
+	data[MmOffEquipment+1] = 0x23
 	data[MmOffInvItems] = 0x00
 	data[MmOffInvItems+1] = 0xFF
 	data[MmOffInvQuest+2] = 0x80
@@ -42,6 +44,9 @@ func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 
 	if mm.Items[0] != 0x00 || mm.Items[1] != 0xFF {
 		t.Fatalf("unexpected item bytes: % x", mm.Items[:4])
+	}
+	if mm.Equipment != 0x0023 {
+		t.Fatalf("unexpected MM equipment: %04x", mm.Equipment)
 	}
 	if mm.QuestItems != 0x00008000 {
 		t.Fatalf("unexpected MM quest bits: %08x", mm.QuestItems)

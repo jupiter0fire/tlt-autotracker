@@ -58,6 +58,10 @@ type MmState struct {
 	Items [48]uint8
 	Ammo  [24]int8
 
+	// Equipment bitfield: boots:4, tunic:4, shield:4, sword:4.
+	// In practice MM tracking currently uses sword and shield levels.
+	Equipment uint16
+
 	// Upgrades bitfield
 	Upgrades uint32
 	// Quest items (remains, songs, notebook, heart pieces)

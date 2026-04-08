@@ -176,6 +176,7 @@ func parseMmSave(mm *MmState, data []byte) error {
 		mm.Ammo[i] = int8(data[MmOffInvAmmo+i])
 	}
 
+	mm.Equipment = binary.BigEndian.Uint16(data[MmOffEquipment:])
 	mm.Upgrades = binary.BigEndian.Uint32(data[MmOffInvUpgrades:])
 	mm.QuestItems = binary.BigEndian.Uint32(data[MmOffInvQuest:])
 	mm.HeartPieces = uint8((mm.QuestItems >> 28) & 0xF)

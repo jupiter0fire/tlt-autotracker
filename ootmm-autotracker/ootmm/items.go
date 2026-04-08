@@ -136,6 +136,8 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	items = appendQuestBit(items, mm.QuestItems, QuestMmNotebook, "MM_NOTEBOOK")
 	items = append(items, TrackedItem{"MM_HEART_PIECES", int(mm.HeartPieces)})
+	items = append(items, TrackedItem{"MM_SWORD", int(mm.Equipment & 0xF)})
+	items = append(items, TrackedItem{"MM_SHIELD", int((mm.Equipment >> 4) & 0xF)})
 
 	// MM inventory items
 	for i, itemID := range mm.Items {
