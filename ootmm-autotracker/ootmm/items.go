@@ -1,5 +1,7 @@
 package ootmm
 
+import "math/bits"
+
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
 	ID  string `json:"id"`
@@ -55,10 +57,10 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_HEART_PIECES", int(oot.HeartPieces)})
 
 	// Equipment levels (from bitfield: boots:4, tunics:4, shields:4, swords:4)
-	items = append(items, TrackedItem{"OOT_SWORD", int(oot.Equipment & 0xF)})
-	items = append(items, TrackedItem{"OOT_SHIELD", int((oot.Equipment >> 4) & 0xF)})
-	items = append(items, TrackedItem{"OOT_TUNIC", int((oot.Equipment >> 8) & 0xF)})
-	items = append(items, TrackedItem{"OOT_BOOTS", int((oot.Equipment >> 12) & 0xF)})
+	items = append(items, TrackedItem{"OOT_SWORD", bits.OnesCount16(oot.Equipment & 0xF)})
+	items = append(items, TrackedItem{"OOT_SHIELD", bits.OnesCount16((oot.Equipment >> 4) & 0xF)})
+	items = append(items, TrackedItem{"OOT_TUNIC", bits.OnesCount16((oot.Equipment >> 8) & 0xF)})
+	items = append(items, TrackedItem{"OOT_BOOTS", bits.OnesCount16((oot.Equipment >> 12) & 0xF)})
 
 	// Upgrades
 	items = append(items, TrackedItem{"OOT_QUIVER", GetUpgradeLevel(oot.Upgrades, 0, 3)})
@@ -72,11 +74,13 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	// Main inventory items (track which slots have items, 0xFF = empty)
 	for i, itemID := range oot.Items {
-		if itemID != 0xFF {
-			name := ootInventorySlotName(i)
-			if name != "" {
-				items = append(items, TrackedItem{name, int(itemID)})
-			}
+		name := ootInventorySlotName(i)
+		if name == "" {
+			continue
+		}
+		qty := ootInventorySlotQty(i, itemID, oot.Beans)
+		if qty > 0 {
+			items = append(items, TrackedItem{name, qty})
 		}
 	}
 
@@ -135,11 +139,13 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	// MM inventory items
 	for i, itemID := range mm.Items {
-		if itemID != 0xFF {
-			name := mmInventorySlotName(i)
-			if name != "" {
-				items = append(items, TrackedItem{name, int(itemID)})
-			}
+		name := mmInventorySlotName(i)
+		if name == "" {
+			continue
+		}
+		qty := mmInventorySlotQty(i, itemID)
+		if qty > 0 {
+			items = append(items, TrackedItem{name, qty})
 		}
 	}
 
@@ -302,4 +308,110 @@ func mmDungeonName(idx int) string {
 		return names[idx]
 	}
 	return ""
+}
+
+const emptyInventoryItem = 0xFF
+
+const (
+	ootSlotOcarina   = 7
+	ootSlotHookshot  = 9
+	ootSlotBeans     = 14
+	ootSlotTradeAdult = 22
+	ootSlotTradeChild = 23
+
+	mmSlotOcarina   = 0
+	mmSlotTrade1    = 5
+	mmSlotTrade2    = 11
+	mmSlotHookshot  = 15
+	mmSlotGFS       = 16
+	mmSlotTrade3    = 17
+)
+
+var (
+	ootOcarinaStages = []uint8{0x07, 0x08}
+	ootHookshotStages = []uint8{0x0A, 0x0B}
+	ootAdultTradeStages = []uint8{0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x14}
+	ootChildTradeStages = []uint8{0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x9C, 0x9D, 0x14}
+
+	mmOcarinaStages = []uint8{0x05, 0x00}
+	mmTrade1Stages  = []uint8{0xB0, 0x28, 0x29, 0x2A, 0x2B, 0x2C}
+	mmTrade2Stages  = []uint8{0xAE, 0xB1, 0xB3, 0x2D, 0x2E}
+	mmHookshotStages = []uint8{0x11, 0x0F}
+	mmGFSStages      = []uint8{0x10, 0xB5}
+	mmTrade3Stages   = []uint8{0xAF, 0xB2, 0xB4, 0x2F, 0x30}
+)
+
+func ootInventorySlotQty(slot int, itemID, beans uint8) int {
+	if itemID == emptyInventoryItem {
+		return 0
+	}
+
+	switch slot {
+	case ootSlotOcarina:
+		return stageQty(itemID, ootOcarinaStages)
+	case ootSlotHookshot:
+		return stageQty(itemID, ootHookshotStages)
+	case ootSlotBeans:
+		if beans > 0 {
+			return int(beans)
+		}
+		return 1
+	case ootSlotTradeAdult:
+		if isOotBottleItem(itemID) {
+			return len(ootAdultTradeStages)
+		}
+		return stageQty(itemID, ootAdultTradeStages)
+	case ootSlotTradeChild:
+		if isOotBottleItem(itemID) {
+			return len(ootChildTradeStages)
+		}
+		return stageQty(itemID, ootChildTradeStages)
+	default:
+		return 1
+	}
+}
+
+func mmInventorySlotQty(slot int, itemID uint8) int {
+	if itemID == emptyInventoryItem {
+		return 0
+	}
+
+	switch slot {
+	case mmSlotOcarina:
+		return stageQty(itemID, mmOcarinaStages)
+	case mmSlotTrade1:
+		return stageQty(itemID, mmTrade1Stages)
+	case mmSlotTrade2:
+		return stageQty(itemID, mmTrade2Stages)
+	case mmSlotHookshot:
+		return stageQty(itemID, mmHookshotStages)
+	case mmSlotGFS:
+		return stageQty(itemID, mmGFSStages)
+	case mmSlotTrade3:
+		return stageQty(itemID, mmTrade3Stages)
+	default:
+		return 1
+	}
+}
+
+func stageQty(itemID uint8, stages []uint8) int {
+	for index, stageID := range stages {
+		if stageID == itemID {
+			return index + 1
+		}
+	}
+	return 1
+}
+
+func isOotBottleItem(itemID uint8) bool {
+	switch {
+	case itemID >= 0x14 && itemID <= 0x20:
+		return true
+	case itemID == 0x82:
+		return true
+	case itemID >= 0x9E && itemID <= 0xA5:
+		return true
+	default:
+		return false
+	}
 }
