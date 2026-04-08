@@ -262,16 +262,8 @@ func itoa(i int) string {
 
 // OoT inventory slot names. Returns "" for unused/unknown slots.
 func ootInventorySlotName(slot int) string {
-	names := [24]string{
-		"OOT_DEKU_STICKS", "OOT_DEKU_NUTS", "OOT_BOMBS", "OOT_BOW",
-		"OOT_FIRE_ARROWS", "OOT_DINS_FIRE", "OOT_SLINGSHOT", "OOT_OCARINA",
-		"OOT_BOMBCHUS", "OOT_HOOKSHOT", "OOT_ICE_ARROWS", "OOT_FARORES_WIND",
-		"OOT_BOOMERANG", "OOT_LENS", "OOT_MAGIC_BEANS", "OOT_MEGATON_HAMMER",
-		"OOT_LIGHT_ARROWS", "OOT_NAYRUS_LOVE", "OOT_BOTTLE_1", "OOT_BOTTLE_2",
-		"OOT_BOTTLE_3", "OOT_BOTTLE_4", "OOT_ADULT_TRADE", "OOT_CHILD_TRADE",
-	}
-	if slot >= 0 && slot < len(names) {
-		return names[slot]
+	if slot >= 0 && slot < len(ootInventorySlots) {
+		return ootInventorySlots[slot]
 	}
 	return ""
 }
@@ -294,27 +286,10 @@ func ootDungeonName(idx int) string {
 
 // MM inventory slot names.
 func mmInventorySlotName(slot int) string {
-	// MM has 48 slots — main items + masks
-	if slot >= 0 && slot < len(mmSlotNames) {
-		return mmSlotNames[slot]
+	if slot >= 0 && slot < len(mmInventorySlots) {
+		return mmInventorySlots[slot]
 	}
 	return ""
-}
-
-var mmSlotNames = [48]string{
-	"MM_OCARINA", "MM_BOW", "MM_FIRE_ARROWS", "MM_ICE_ARROWS",
-	"MM_LIGHT_ARROWS", "MM_TRADE_1", "MM_BOMBS", "MM_BOMBCHUS",
-	"MM_DEKU_STICKS", "MM_DEKU_NUTS", "MM_MAGIC_BEANS", "MM_TRADE_2",
-	"MM_POWDER_KEG", "MM_PICTOGRAPH", "MM_LENS", "MM_HOOKSHOT",
-	"MM_GREAT_FAIRY_SWORD", "MM_TRADE_3", "MM_BOTTLE_1", "MM_BOTTLE_2",
-	"MM_BOTTLE_3", "MM_BOTTLE_4", "MM_BOTTLE_5", "MM_BOTTLE_6",
-	// Masks (slots 24-47)
-	"MM_MASK_POSTMAN", "MM_MASK_ALL_NIGHT", "MM_MASK_BLAST", "MM_MASK_STONE",
-	"MM_MASK_GREAT_FAIRY", "MM_MASK_DEKU", "MM_MASK_KEATON", "MM_MASK_BREMEN",
-	"MM_MASK_BUNNY", "MM_MASK_DON_GERO", "MM_MASK_SCENTS", "MM_MASK_GORON",
-	"MM_MASK_ROMANI", "MM_MASK_TROUPE_LEADER", "MM_MASK_KAFEI", "MM_MASK_COUPLE",
-	"MM_MASK_TRUTH", "MM_MASK_ZORA", "MM_MASK_KAMARO", "MM_MASK_GIBDO",
-	"MM_MASK_GARO", "MM_MASK_CAPTAIN", "MM_MASK_GIANT", "MM_MASK_FIERCE_DEITY",
 }
 
 // MM dungeon names.

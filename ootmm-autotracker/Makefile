@@ -1,12 +1,16 @@
 BINARY_NAME=ootmm-autotracker
 VERSION=0.1.0
+OOTMM_REPO?=../OoTMM
 
-.PHONY: all build build-all clean deps
+.PHONY: all build build-all clean deps generate-slot-mapping
 
 all: build
 
 deps:
 	go mod tidy
+
+generate-slot-mapping:
+	python3 tools/generate_inventory_slots.py --ootmm-repo $(OOTMM_REPO) --output ootmm/inventory_slots.json
 
 build: deps
 	go build -o $(BINARY_NAME) .

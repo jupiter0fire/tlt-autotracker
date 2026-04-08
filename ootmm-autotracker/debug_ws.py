@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 from datetime import datetime
+from typing import Any
 
 import websockets
 
@@ -35,7 +36,57 @@ def parse_args() -> argparse.Namespace:
 	return parser.parse_args()
 
 
+def format_inventory(items: dict[str, int]) -> str:
+	entries = [f"{item_id} x{qty}" for item_id, qty in sorted(items.items()) if qty > 0]
+	return ", ".join(entries) if entries else "keine Items"
+
+
+def get_item_updates(payload: dict[str, Any], current_items: dict[str, int]) -> list[str]:
+	updates: list[str] = []
+	item_entries = payload.get("items", [])
+	if not isinstance(item_entries, list):
+		return updates
+
+	diff = bool(payload.get("diff"))
+	if diff:
+		for entry in item_entries:
+			if not isinstance(entry, dict):
+				continue
+			item_id = entry.get("id")
+			qty = entry.get("qty")
+			if not isinstance(item_id, str) or not isinstance(qty, int):
+				continue
+
+			previous_qty = current_items.get(item_id, 0)
+			new_qty = previous_qty + qty
+			if new_qty > 0:
+				current_items[item_id] = new_qty
+			else:
+				current_items.pop(item_id, None)
+
+			if qty > 0 and previous_qty == 0:
+				updates.append(f"neues Item: {item_id} (+{qty}, jetzt {new_qty})")
+			elif qty > 0:
+				updates.append(f"Item-Update: {item_id} (+{qty}, jetzt {new_qty})")
+			elif qty < 0:
+				updates.append(f"Item-Update: {item_id} ({qty}, jetzt {max(new_qty, 0)})")
+	else:
+		current_items.clear()
+		for entry in item_entries:
+			if not isinstance(entry, dict):
+				continue
+			item_id = entry.get("id")
+			qty = entry.get("qty")
+			if isinstance(item_id, str) and isinstance(qty, int) and qty > 0:
+				current_items[item_id] = qty
+		updates.append(f"aktueller Bestand: {format_inventory(current_items)}")
+
+	return updates
+
+
 async def recv_loop(ws: websockets.ClientConnection, raw: bool) -> None:
+	current_items: dict[str, int] = {}
+
 	async for message in ws:
 		now = datetime.now().strftime("%H:%M:%S")
 		try:
@@ -51,6 +102,8 @@ async def recv_loop(ws: websockets.ClientConnection, raw: bool) -> None:
 		msg_type = payload.get("type", "?")
 		refresh = payload.get("refresh")
 		if msg_type == "item":
+			for update in get_item_updates(payload, current_items):
+				print(f"[{now}] {update}")
 			print(f"[{now}] item diff={payload.get('diff')} refresh={refresh} count={len(payload.get('items', []))}")
 		elif msg_type == "check":
 			print(f"[{now}] check diff={payload.get('diff')} refresh={refresh} count={len(payload.get('checks', []))}")

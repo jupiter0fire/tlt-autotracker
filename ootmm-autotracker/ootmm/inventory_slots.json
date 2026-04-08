@@ -1,0 +1,366 @@
+{
+  "oot": [
+    {
+      "index": 0,
+      "slot": "ITS_OOT_STICKS",
+      "itemId": "OOT_DEKU_STICKS"
+    },
+    {
+      "index": 1,
+      "slot": "ITS_OOT_NUTS",
+      "itemId": "OOT_DEKU_NUTS"
+    },
+    {
+      "index": 2,
+      "slot": "ITS_OOT_BOMBS",
+      "itemId": "OOT_BOMBS"
+    },
+    {
+      "index": 3,
+      "slot": "ITS_OOT_BOW",
+      "itemId": "OOT_BOW"
+    },
+    {
+      "index": 4,
+      "slot": "ITS_OOT_ARROW_FIRE",
+      "itemId": "OOT_FIRE_ARROWS"
+    },
+    {
+      "index": 5,
+      "slot": "ITS_OOT_SPELL_FIRE",
+      "itemId": "OOT_DINS_FIRE"
+    },
+    {
+      "index": 6,
+      "slot": "ITS_OOT_SLINGSHOT",
+      "itemId": "OOT_SLINGSHOT"
+    },
+    {
+      "index": 7,
+      "slot": "ITS_OOT_OCARINA",
+      "itemId": "OOT_OCARINA"
+    },
+    {
+      "index": 8,
+      "slot": "ITS_OOT_BOMBCHU",
+      "itemId": "OOT_BOMBCHUS"
+    },
+    {
+      "index": 9,
+      "slot": "ITS_OOT_HOOKSHOT",
+      "itemId": "OOT_HOOKSHOT"
+    },
+    {
+      "index": 10,
+      "slot": "ITS_OOT_ARROW_ICE",
+      "itemId": "OOT_ICE_ARROWS"
+    },
+    {
+      "index": 11,
+      "slot": "ITS_OOT_SPELL_WIND",
+      "itemId": "OOT_FARORES_WIND"
+    },
+    {
+      "index": 12,
+      "slot": "ITS_OOT_BOOMERANG",
+      "itemId": "OOT_BOOMERANG"
+    },
+    {
+      "index": 13,
+      "slot": "ITS_OOT_LENS",
+      "itemId": "OOT_LENS"
+    },
+    {
+      "index": 14,
+      "slot": "ITS_OOT_MAGIC_BEAN",
+      "itemId": "OOT_MAGIC_BEANS"
+    },
+    {
+      "index": 15,
+      "slot": "ITS_OOT_HAMMER",
+      "itemId": "OOT_MEGATON_HAMMER"
+    },
+    {
+      "index": 16,
+      "slot": "ITS_OOT_ARROW_LIGHT",
+      "itemId": "OOT_LIGHT_ARROWS"
+    },
+    {
+      "index": 17,
+      "slot": "ITS_OOT_SPELL_LOVE",
+      "itemId": "OOT_NAYRUS_LOVE"
+    },
+    {
+      "index": 18,
+      "slot": "ITS_OOT_BOTTLE",
+      "itemId": "OOT_BOTTLE_1"
+    },
+    {
+      "index": 19,
+      "slot": "ITS_OOT_BOTTLE2",
+      "itemId": "OOT_BOTTLE_2"
+    },
+    {
+      "index": 20,
+      "slot": "ITS_OOT_BOTTLE3",
+      "itemId": "OOT_BOTTLE_3"
+    },
+    {
+      "index": 21,
+      "slot": "ITS_OOT_BOTTLE4",
+      "itemId": "OOT_BOTTLE_4"
+    },
+    {
+      "index": 22,
+      "slot": "ITS_OOT_TRADE_ADULT",
+      "itemId": "OOT_ADULT_TRADE"
+    },
+    {
+      "index": 23,
+      "slot": "ITS_OOT_TRADE_CHILD",
+      "itemId": "OOT_CHILD_TRADE"
+    }
+  ],
+  "mm": [
+    {
+      "index": 0,
+      "slot": "ITS_MM_OCARINA",
+      "itemId": "MM_OCARINA"
+    },
+    {
+      "index": 1,
+      "slot": "ITS_MM_BOW",
+      "itemId": "MM_BOW"
+    },
+    {
+      "index": 2,
+      "slot": "ITS_MM_ARROW_FIRE",
+      "itemId": "MM_FIRE_ARROWS"
+    },
+    {
+      "index": 3,
+      "slot": "ITS_MM_ARROW_ICE",
+      "itemId": "MM_ICE_ARROWS"
+    },
+    {
+      "index": 4,
+      "slot": "ITS_MM_ARROW_LIGHT",
+      "itemId": "MM_LIGHT_ARROWS"
+    },
+    {
+      "index": 5,
+      "slot": "ITS_MM_TRADE1",
+      "itemId": "MM_TRADE_1"
+    },
+    {
+      "index": 6,
+      "slot": "ITS_MM_BOMBS",
+      "itemId": "MM_BOMBS"
+    },
+    {
+      "index": 7,
+      "slot": "ITS_MM_BOMBCHU",
+      "itemId": "MM_BOMBCHUS"
+    },
+    {
+      "index": 8,
+      "slot": "ITS_MM_STICKS",
+      "itemId": "MM_DEKU_STICKS"
+    },
+    {
+      "index": 9,
+      "slot": "ITS_MM_NUTS",
+      "itemId": "MM_DEKU_NUTS"
+    },
+    {
+      "index": 10,
+      "slot": "ITS_MM_BEANS",
+      "itemId": "MM_MAGIC_BEANS"
+    },
+    {
+      "index": 11,
+      "slot": "ITS_MM_TRADE2",
+      "itemId": "MM_TRADE_2"
+    },
+    {
+      "index": 12,
+      "slot": "ITS_MM_KEG",
+      "itemId": "MM_POWDER_KEG"
+    },
+    {
+      "index": 13,
+      "slot": "ITS_MM_PICTOBOX",
+      "itemId": "MM_PICTOGRAPH"
+    },
+    {
+      "index": 14,
+      "slot": "ITS_MM_LENS",
+      "itemId": "MM_LENS"
+    },
+    {
+      "index": 15,
+      "slot": "ITS_MM_HOOKSHOT",
+      "itemId": "MM_HOOKSHOT"
+    },
+    {
+      "index": 16,
+      "slot": "ITS_MM_GREAT_FAIRY_SWORD",
+      "itemId": "MM_GREAT_FAIRY_SWORD"
+    },
+    {
+      "index": 17,
+      "slot": "ITS_MM_TRADE3",
+      "itemId": "MM_TRADE_3"
+    },
+    {
+      "index": 18,
+      "slot": "ITS_MM_BOTTLE",
+      "itemId": "MM_BOTTLE_1"
+    },
+    {
+      "index": 19,
+      "slot": "ITS_MM_BOTTLE2",
+      "itemId": "MM_BOTTLE_2"
+    },
+    {
+      "index": 20,
+      "slot": "ITS_MM_BOTTLE3",
+      "itemId": "MM_BOTTLE_3"
+    },
+    {
+      "index": 21,
+      "slot": "ITS_MM_BOTTLE4",
+      "itemId": "MM_BOTTLE_4"
+    },
+    {
+      "index": 22,
+      "slot": "ITS_MM_BOTTLE5",
+      "itemId": "MM_BOTTLE_5"
+    },
+    {
+      "index": 23,
+      "slot": "ITS_MM_BOTTLE6",
+      "itemId": "MM_BOTTLE_6"
+    },
+    {
+      "index": 24,
+      "slot": "ITS_MM_MASK_POSTMAN",
+      "itemId": "MM_MASK_POSTMAN"
+    },
+    {
+      "index": 25,
+      "slot": "ITS_MM_MASK_ALL_NIGHT",
+      "itemId": "MM_MASK_ALL_NIGHT"
+    },
+    {
+      "index": 26,
+      "slot": "ITS_MM_MASK_BLAST",
+      "itemId": "MM_MASK_BLAST"
+    },
+    {
+      "index": 27,
+      "slot": "ITS_MM_MASK_STONE",
+      "itemId": "MM_MASK_STONE"
+    },
+    {
+      "index": 28,
+      "slot": "ITS_MM_MASK_GREAT_FAIRY",
+      "itemId": "MM_MASK_GREAT_FAIRY"
+    },
+    {
+      "index": 29,
+      "slot": "ITS_MM_MASK_DEKU",
+      "itemId": "MM_MASK_DEKU"
+    },
+    {
+      "index": 30,
+      "slot": "ITS_MM_MASK_KEATON",
+      "itemId": "MM_MASK_KEATON"
+    },
+    {
+      "index": 31,
+      "slot": "ITS_MM_MASK_BREMEN",
+      "itemId": "MM_MASK_BREMEN"
+    },
+    {
+      "index": 32,
+      "slot": "ITS_MM_MASK_BUNNY",
+      "itemId": "MM_MASK_BUNNY"
+    },
+    {
+      "index": 33,
+      "slot": "ITS_MM_MASK_DON_GERO",
+      "itemId": "MM_MASK_DON_GERO"
+    },
+    {
+      "index": 34,
+      "slot": "ITS_MM_MASK_SCENTS",
+      "itemId": "MM_MASK_SCENTS"
+    },
+    {
+      "index": 35,
+      "slot": "ITS_MM_MASK_GORON",
+      "itemId": "MM_MASK_GORON"
+    },
+    {
+      "index": 36,
+      "slot": "ITS_MM_MASK_ROMANI",
+      "itemId": "MM_MASK_ROMANI"
+    },
+    {
+      "index": 37,
+      "slot": "ITS_MM_MASK_TROUPE_LEADER",
+      "itemId": "MM_MASK_TROUPE_LEADER"
+    },
+    {
+      "index": 38,
+      "slot": "ITS_MM_MASK_KAFEI",
+      "itemId": "MM_MASK_KAFEI"
+    },
+    {
+      "index": 39,
+      "slot": "ITS_MM_MASK_COUPLE",
+      "itemId": "MM_MASK_COUPLE"
+    },
+    {
+      "index": 40,
+      "slot": "ITS_MM_MASK_TRUTH",
+      "itemId": "MM_MASK_TRUTH"
+    },
+    {
+      "index": 41,
+      "slot": "ITS_MM_MASK_ZORA",
+      "itemId": "MM_MASK_ZORA"
+    },
+    {
+      "index": 42,
+      "slot": "ITS_MM_MASK_KAMARO",
+      "itemId": "MM_MASK_KAMARO"
+    },
+    {
+      "index": 43,
+      "slot": "ITS_MM_MASK_GIBDO",
+      "itemId": "MM_MASK_GIBDO"
+    },
+    {
+      "index": 44,
+      "slot": "ITS_MM_MASK_GARO",
+      "itemId": "MM_MASK_GARO"
+    },
+    {
+      "index": 45,
+      "slot": "ITS_MM_MASK_CAPTAIN",
+      "itemId": "MM_MASK_CAPTAIN"
+    },
+    {
+      "index": 46,
+      "slot": "ITS_MM_MASK_GIANT",
+      "itemId": "MM_MASK_GIANT"
+    },
+    {
+      "index": 47,
+      "slot": "ITS_MM_MASK_FIERCE_DEITY",
+      "itemId": "MM_MASK_FIERCE_DEITY"
+    }
+  ]
+}
