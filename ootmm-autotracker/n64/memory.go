@@ -41,7 +41,7 @@ func (m *Memory) Probe() error {
 
 	// Try physical first (most common for Mupen64Plus-Next)
 	for _, addr := range ctxAddrs {
-		data, err := m.client.ReadMemory(addr, 8)
+		data, err := m.readCoreLogical(addr, 8)
 		if err == nil && string(data) == string(magic) {
 			m.baseShift = 0
 			log.Println("N64 core uses physical addressing")
@@ -51,7 +51,7 @@ func (m *Memory) Probe() error {
 
 	// Try virtual
 	for _, addr := range ctxAddrs {
-		data, err := m.client.ReadMemory(addr|VirtualBase, 8)
+		data, err := m.readCoreLogical(addr|VirtualBase, 8)
 		if err == nil && string(data) == string(magic) {
 			m.baseShift = VirtualBase
 			log.Println("N64 core uses virtual addressing")
@@ -62,14 +62,14 @@ func (m *Memory) Probe() error {
 	// Fallback: OoTMM loads a payload into the Expansion Pack area (0x80400000).
 	// Regular OoT doesn't use this region, so non-zero data here indicates OoTMM.
 	payloadAddr := uint32(0x00400000)
-	data, err := m.client.ReadMemory(payloadAddr, 8)
+	data, err := m.readCoreLogical(payloadAddr, 8)
 	if err == nil && !isAllZero(data) {
 		m.baseShift = 0
 		log.Println("N64 core uses physical addressing (detected via payload)")
 		return nil
 	}
 
-	data, err = m.client.ReadMemory(payloadAddr|VirtualBase, 8)
+	data, err = m.readCoreLogical(payloadAddr|VirtualBase, 8)
 	if err == nil && !isAllZero(data) {
 		m.baseShift = VirtualBase
 		log.Println("N64 core uses virtual addressing (detected via payload)")
@@ -98,7 +98,7 @@ func (m *Memory) translate(virtualAddr uint32) uint32 {
 // Read reads `size` bytes from a virtual N64 address.
 func (m *Memory) Read(virtualAddr uint32, size int) ([]byte, error) {
 	coreAddr := m.translate(virtualAddr)
-	return m.client.ReadMemoryLarge(coreAddr, size)
+	return m.readCoreLogical(coreAddr, size)
 }
 
 // ReadU8 reads a single byte.
@@ -126,4 +126,33 @@ func (m *Memory) ReadU32BE(virtualAddr uint32) (uint32, error) {
 		return 0, err
 	}
 	return binary.BigEndian.Uint32(data), nil
+}
+
+func (m *Memory) readCoreLogical(coreAddr uint32, size int) ([]byte, error) {
+	alignedStart, alignedSize := alignedWordRead(coreAddr, size)
+	raw, err := m.client.ReadMemoryLarge(alignedStart, alignedSize)
+	if err != nil {
+		return nil, err
+	}
+	return unswizzleRange(raw, alignedStart, coreAddr, size)
+}
+
+func alignedWordRead(coreAddr uint32, size int) (uint32, int) {
+	alignedStart := coreAddr &^ 3
+	end := coreAddr + uint32(size)
+	alignedEnd := (end + 3) &^ 3
+	return alignedStart, int(alignedEnd - alignedStart)
+}
+
+func unswizzleRange(raw []byte, rawBase uint32, logicalBase uint32, size int) ([]byte, error) {
+	data := make([]byte, size)
+	for index := 0; index < size; index++ {
+		rawAddr := (logicalBase + uint32(index)) ^ 3
+		rawIndex := int(rawAddr - rawBase)
+		if rawIndex < 0 || rawIndex >= len(raw) {
+			return nil, fmt.Errorf("unswizzle out of range: raw index %d for base 0x%x size %d", rawIndex, rawBase, len(raw))
+		}
+		data[index] = raw[rawIndex]
+	}
+	return data, nil
 }

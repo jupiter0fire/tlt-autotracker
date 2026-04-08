@@ -23,6 +23,10 @@ const (
 	// Payload region where gSharedCustomSave lives (OoT side)
 	AddrOotPayload     uint32 = 0x80400000
 	OotPayloadSize     int    = 0x80000 // 512KB
+
+	// Payload region in MM where the foreign OoT save is kept.
+	AddrMmPayload      uint32 = 0x80730000
+	MmPayloadSize      int    = 0x50000 // 320KB
 )
 
 // ComboContext offsets (32 bytes, PACKED ALIGNED(4))
@@ -82,25 +86,26 @@ const (
 
 	// MmSaveInfo starts at 0x24
 	// MmSavePlayerData at 0x24 (size 0x28)
-	// MmItemEquips at 0x4C (size 0x22)
-	// MmInventory at 0x6E
-	MmOffInvItems      = 0x6E  // u8[48]
-	MmOffInvAmmo       = 0x9E  // s8[24]
-	MmOffInvUpgrades   = 0xB6  // u32 bitfield
-	MmOffInvQuest      = 0xBA  // u32 MmQuestItems
-	MmOffDungeonItems  = 0xBE  // MmDungeonItems[10]
-	MmOffDungeonKeys   = 0xC8  // s8[9]
-	MmOffStrayFairies  = 0xD2  // s8[10]
+	// MmItemEquips starts at 0x4C and is followed by 2 bytes of padding so
+	// the 4-byte aligned MmInventory begins at 0x70.
+	MmOffInvItems      = 0x70  // u8[48]
+	MmOffInvAmmo       = 0xA0  // s8[24]
+	MmOffInvUpgrades   = 0xB8  // u32 bitfield
+	MmOffInvQuest      = 0xBC  // u32 MmQuestItems
+	MmOffDungeonItems  = 0xC0  // MmDungeonItems[10]
+	MmOffDungeonKeys   = 0xCA  // s8[9]
+	MmOffStrayFairies  = 0xD4  // s8[10]
 
 	// Permanent scene flags (within MmSaveInfo, offset from MmSave start)
-	// MmSaveInfo starts at 0x24, then playerData(0x28) + itemEquips(0x22) + inventory(0x86)
-	MmOffPermScenes    = 0xF4 // 0x24 + 0x28 + 0x22 + 0x86
+	// MmSaveInfo starts at 0x24, then playerData(0x28) + itemEquips(0x24 with padding)
+	// + inventory(0x88 with padding)
+	MmOffPermScenes    = 0xF8
 	MmPermEntrySize    = 0x1C
 	MmPermCount        = 120
 
 	// Skull counts in MmSaveInfo
-	MmOffSkullSwamp  = 0x24 + 0xE9E // approx — from MmSaveInfo offset
-	MmOffSkullOcean  = 0x24 + 0xEA0
+	MmOffSkullSwamp  = 0x24 + 0xEA2
+	MmOffSkullOcean  = 0x24 + 0xEA4
 
 	// MmSaveContext fields beyond MmSave
 	MmCtxOffGameMode   = 0x3CA8 // s32
