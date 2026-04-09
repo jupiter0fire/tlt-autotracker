@@ -77,6 +77,30 @@ func TestLocateForeignOotSaveFindsChecksummedCandidate(t *testing.T) {
 	}
 }
 
+func TestLocateForeignMmSaveFindsChecksummedCandidate(t *testing.T) {
+	payload := make([]byte, 0x80000)
+	offset := 0x43970
+	candidate := payload[offset : offset+MmSaveSize]
+	candidate[MmOffPlayerForm] = 4
+	binary.BigEndian.PutUint32(candidate[MmOffDay:], 1)
+	binary.BigEndian.PutUint16(candidate[MmOffTime:], 0x60B1)
+	for i := 0; i < 48; i++ {
+		candidate[MmOffInvItems+i] = emptyInventoryItem
+	}
+	candidate[MmOffInvItems] = 0x00
+	candidate[MmOffInvItems+15] = 0x0F
+	candidate[MmOffInvItems+42] = 0x37
+	binary.BigEndian.PutUint16(candidate[MmOffChecksum:], mmChecksum(candidate))
+
+	addr, ok := locateForeignMmSave(payload, AddrOotPayload)
+	if !ok {
+		t.Fatal("expected foreign MM save candidate")
+	}
+	if want := AddrOotPayload + uint32(offset); addr != want {
+		t.Fatalf("unexpected foreign MM addr: got %08x want %08x", addr, want)
+	}
+}
+
 func TestValidateOotSaveRejectsGarbage(t *testing.T) {
 	data := make([]byte, OotSaveSize)
 	data[OotOffChecksum] = 0x12
@@ -109,6 +133,17 @@ func ootChecksum(data []byte) uint16 {
 			continue
 		}
 		checksum += binary.BigEndian.Uint16(data[i:])
+	}
+	return checksum
+}
+
+func mmChecksum(data []byte) uint16 {
+	checksum := uint16(0)
+	for i := 0; i < MmSaveSize; i++ {
+		if i == MmOffChecksum || i == MmOffChecksum+1 {
+			continue
+		}
+		checksum += uint16(data[i])
 	}
 	return checksum
 }
