@@ -143,3 +143,31 @@ func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 		t.Fatalf("unexpected MM stray fairies: % x", mm.StrayFairies[:4])
 	}
 }
+
+func TestAcceptStableStateRequiresTwoMatchingObservations(t *testing.T) {
+	r := &Reader{}
+
+	if r.acceptStableState(GameOot, 1) {
+		t.Fatal("first observation should not be accepted")
+	}
+	if !r.acceptStableState(GameOot, 1) {
+		t.Fatal("second matching observation should be accepted")
+	}
+	if !r.acceptStableState(GameOot, 1) {
+		t.Fatal("stable state should continue to be accepted")
+	}
+}
+
+func TestAcceptStableStateResetsOnChangedCandidate(t *testing.T) {
+	r := &Reader{}
+
+	if r.acceptStableState(GameMm, 0) {
+		t.Fatal("first MM observation should not be accepted")
+	}
+	if r.acceptStableState(GameMm, 1) {
+		t.Fatal("changed save slot should restart stabilization")
+	}
+	if !r.acceptStableState(GameMm, 1) {
+		t.Fatal("second matching changed observation should be accepted")
+	}
+}

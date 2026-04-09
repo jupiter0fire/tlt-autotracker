@@ -17,6 +17,11 @@ type Reader struct {
 	lastKnownMm        MmState
 	hasLastKnownOot    bool
 	hasLastKnownMm     bool
+	stableGame         ActiveGame
+	stableSaveIndex    uint32
+	pendingGame        ActiveGame
+	pendingSaveIndex   uint32
+	hasPendingState    bool
 }
 
 func NewReader(mem *n64.Memory) *Reader {
@@ -42,6 +47,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 	state.Valid = valid
 
 	if !valid {
+		r.resetPendingState()
 		return state, nil
 	}
 
@@ -51,6 +57,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 		return nil, fmt.Errorf("detect game: %w", err)
 	}
 	if game == GameNone {
+		r.resetPendingState()
 		return state, nil
 	}
 	state.ActiveGame = game
@@ -67,7 +74,6 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readOotSave(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read OoT save: %w", err)
 		}
-		r.rememberOotState(state.Oot)
 		if err := r.readForeignMmState(&state.Mm, activeSaveIndex); err != nil {
 			return nil, fmt.Errorf("read foreign MM save: %w", err)
 		}
@@ -75,7 +81,6 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readMmSave(&state.Mm); err != nil {
 			return nil, fmt.Errorf("read MM save: %w", err)
 		}
-		r.rememberMmState(state.Mm)
 		if err := r.readForeignOotState(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read foreign OoT save: %w", err)
 		}
@@ -88,8 +93,28 @@ func (r *Reader) ReadState() (*GameState, error) {
 	}
 	if gameAfter != game {
 		// Game changed mid-read — the data is unreliable, discard it
+		r.resetPendingState()
 		state.ActiveGame = GameNone
+		return state, nil
 	}
+
+	saveIndexAfter, err := r.readActiveSaveIndex(gameAfter)
+	if err != nil {
+		return nil, fmt.Errorf("re-read active save index: %w", err)
+	}
+	if saveIndexAfter != activeSaveIndex {
+		r.resetPendingState()
+		state.ActiveGame = GameNone
+		return state, nil
+	}
+
+	if !r.acceptStableState(game, activeSaveIndex) {
+		state.ActiveGame = GameNone
+		return state, nil
+	}
+
+	r.rememberOotState(state.Oot)
+	r.rememberMmState(state.Mm)
 
 	return state, nil
 }
@@ -299,7 +324,6 @@ func (r *Reader) readForeignMmSave(mm *MmState, saveIndex uint32) error {
 
 func (r *Reader) readForeignOotState(oot *OotState) error {
 	if err := r.readForeignOotSave(oot); err == nil {
-		r.rememberOotState(*oot)
 		return nil
 	}
 
@@ -313,7 +337,6 @@ func (r *Reader) readForeignOotState(oot *OotState) error {
 
 func (r *Reader) readForeignMmState(mm *MmState, saveIndex uint32) error {
 	if err := r.readForeignMmSave(mm, saveIndex); err == nil {
-		r.rememberMmState(*mm)
 		return nil
 	}
 
@@ -333,6 +356,29 @@ func (r *Reader) rememberOotState(oot OotState) {
 func (r *Reader) rememberMmState(mm MmState) {
 	r.lastKnownMm = mm
 	r.hasLastKnownMm = true
+}
+
+func (r *Reader) resetPendingState() {
+	r.hasPendingState = false
+}
+
+func (r *Reader) acceptStableState(game ActiveGame, saveIndex uint32) bool {
+	if game == r.stableGame && saveIndex == r.stableSaveIndex {
+		r.resetPendingState()
+		return true
+	}
+
+	if r.hasPendingState && game == r.pendingGame && saveIndex == r.pendingSaveIndex {
+		r.stableGame = game
+		r.stableSaveIndex = saveIndex
+		r.resetPendingState()
+		return true
+	}
+
+	r.pendingGame = game
+	r.pendingSaveIndex = saveIndex
+	r.hasPendingState = true
+	return false
 }
 
 func foreignOotSaveAddr(saveIndex uint32) (uint32, error) {
