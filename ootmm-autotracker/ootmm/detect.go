@@ -32,8 +32,57 @@ type Detector struct {
 	mem *n64.Memory
 }
 
+const playableSaveSlotCount uint32 = 3
+const addrMmRegEditorPtr uint32 = 0x801F3F60
+
 func NewDetector(mem *n64.Memory) *Detector {
 	return &Detector{mem: mem}
+}
+
+func isReadyGameState(game ActiveGame, gameMode, saveIndex, runtimeMarker uint32) bool {
+	if gameMode != GameModeNormal || saveIndex >= playableSaveSlotCount {
+		return false
+	}
+
+	if game == GameMm && runtimeMarker == 0 {
+		return false
+	}
+
+	return true
+}
+
+func (d *Detector) detectReadyGame(game ActiveGame) (uint32, bool, error) {
+	var modeAddr uint32
+	var saveAddr uint32
+	runtimeMarker := uint32(1)
+
+	switch game {
+	case GameOot:
+		modeAddr = AddrOotSaveCtx + uint32(OotCtxOffGameMode)
+		saveAddr = AddrOotSaveCtx + uint32(OotCtxOffFileNum)
+	case GameMm:
+		modeAddr = AddrMmSaveCtx + uint32(MmCtxOffGameMode)
+		saveAddr = AddrMmSaveCtx + uint32(MmCtxOffFileNum)
+		ptr, err := d.mem.ReadU32BE(addrMmRegEditorPtr)
+		if err != nil {
+			return 0, false, err
+		}
+		runtimeMarker = ptr
+	default:
+		return 0, false, nil
+	}
+
+	gameMode, err := d.mem.ReadU32BE(modeAddr)
+	if err != nil {
+		return 0, false, err
+	}
+
+	saveIndex, err := d.mem.ReadU32BE(saveAddr)
+	if err != nil {
+		return 0, false, err
+	}
+
+	return saveIndex, isReadyGameState(game, gameMode, saveIndex, runtimeMarker), nil
 }
 
 // DetectOoTMM checks if the ComboContext magic is valid.
@@ -68,22 +117,22 @@ func (d *Detector) DetectOoTMM() (uint32, bool, error) {
 		return saveIndex, valid != 0, nil
 	}
 
-	// Fallback: Context_Init has cleared the magic. Check if a game is
-	// in normal mode (gameMode == 0), which indicates active gameplay.
-	ootMode, err := d.mem.ReadU32BE(AddrOotSaveCtx + uint32(OotCtxOffGameMode))
+	// Fallback: Context_Init has cleared the magic. Only accept a game once it
+	// is in normal gameplay and points at one of the three real save slots.
+	saveIndex, ready, err := d.detectReadyGame(GameOot)
 	if err != nil {
 		return 0, false, err
 	}
-	if ootMode == GameModeNormal {
-		return 0, true, nil
+	if ready {
+		return saveIndex, true, nil
 	}
 
-	mmMode, err := d.mem.ReadU32BE(AddrMmSaveCtx + uint32(MmCtxOffGameMode))
+	saveIndex, ready, err = d.detectReadyGame(GameMm)
 	if err != nil {
 		return 0, false, err
 	}
-	if mmMode == GameModeNormal {
-		return 0, true, nil
+	if ready {
+		return saveIndex, true, nil
 	}
 
 	return 0, false, nil
@@ -101,20 +150,20 @@ func (d *Detector) DetectActiveGame() (ActiveGame, error) {
 		return GameNone, nil
 	}
 
-	ootMode, err := d.mem.ReadU32BE(AddrOotSaveCtx + uint32(OotCtxOffGameMode))
+	_, ootReady, err := d.detectReadyGame(GameOot)
 	if err != nil {
-		return GameNone, fmt.Errorf("read OoT gameMode: %w", err)
+		return GameNone, fmt.Errorf("detect OoT readiness: %w", err)
 	}
 
-	mmMode, err := d.mem.ReadU32BE(AddrMmSaveCtx + uint32(MmCtxOffGameMode))
+	_, mmReady, err := d.detectReadyGame(GameMm)
 	if err != nil {
-		return GameNone, fmt.Errorf("read MM gameMode: %w", err)
+		return GameNone, fmt.Errorf("detect MM readiness: %w", err)
 	}
 
-	if ootMode == GameModeNormal {
+	if ootReady {
 		return GameOot, nil
 	}
-	if mmMode == GameModeNormal {
+	if mmReady {
 		return GameMm, nil
 	}
 
