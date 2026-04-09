@@ -89,8 +89,18 @@ func (d *Detector) DetectOoTMM() (uint32, bool, error) {
 	return 0, false, nil
 }
 
-// DetectActiveGame reads both game modes to determine which game is active.
+// DetectActiveGame determines which game is currently running.
+// It first checks that neither ComboContext still contains the init magic.
+// If the magic is present at either address then Context_Init has not yet
+// finished and the save data is unreliable — the same approach multi-client
+// uses (checking NET_GLOBAL magic before any read).
 func (d *Detector) DetectActiveGame() (ActiveGame, error) {
+	// Guard: if the ComboCtx magic is still visible at either address the
+	// game is mid-transition (Context_Init clears it when ready).
+	if d.isComboCtxMagicPresent() {
+		return GameNone, nil
+	}
+
 	ootMode, err := d.mem.ReadU32BE(AddrOotSaveCtx + uint32(OotCtxOffGameMode))
 	if err != nil {
 		return GameNone, fmt.Errorf("read OoT gameMode: %w", err)
@@ -109,4 +119,21 @@ func (d *Detector) DetectActiveGame() (ActiveGame, error) {
 	}
 
 	return GameNone, nil
+}
+
+// isComboCtxMagicPresent returns true when the ComboContext init magic is
+// found at either the OoT or MM address.  This indicates Context_Init is
+// still running and save data should not be read.
+func (d *Detector) isComboCtxMagicPresent() bool {
+	if data, err := d.mem.Read(AddrComboCtxOot, ComboCtxSize); err == nil {
+		if string(data[CtxOffMagic:CtxOffMagic+8]) == "OoT+MM<3" {
+			return true
+		}
+	}
+	if data, err := d.mem.Read(AddrComboCtxMm, ComboCtxSize); err == nil {
+		if string(data[CtxOffMagic:CtxOffMagic+8]) == "OoT+MM<3" {
+			return true
+		}
+	}
+	return false
 }

@@ -89,6 +89,7 @@ func main() {
 		}
 
 		if gs.ActiveGame == ootmm.GameNone {
+			// Game transition in progress or data discarded due to mid-read switch
 			continue
 		}
 

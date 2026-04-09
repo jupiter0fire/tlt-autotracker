@@ -9,11 +9,13 @@ import (
 )
 
 const (
-	DefaultHost = "127.0.0.1"
-	DefaultPort = 55355
-	SendTimeout = 1 * time.Second
-	RecvTimeout = 10 * time.Second
-	MaxReadSize = 2048
+	DefaultHost  = "127.0.0.1"
+	DefaultPort  = 55355
+	SendTimeout  = 1 * time.Second
+	ProbeTimeout = 500 * time.Millisecond
+	RecvTimeout  = 10 * time.Second
+	MaxReadSize  = 2048
+	MaxProbeSize = 256
 )
 
 type Client struct {
@@ -35,6 +37,10 @@ func (c *Client) Connect() error {
 	if err != nil {
 		return fmt.Errorf("dial %s: %w", addr, err)
 	}
+	if err := c.pingConn(conn); err != nil {
+		conn.Close()
+		return err
+	}
 	c.conn = conn
 	return nil
 }
@@ -50,9 +56,25 @@ func (c *Client) IsConnected() bool {
 	if c.conn == nil {
 		return false
 	}
-	// Probe with a tiny read to check connectivity
-	_, err := c.ReadMemory(0, 1)
-	return err == nil
+	return c.pingConn(c.conn) == nil
+}
+
+func (c *Client) pingConn(conn net.Conn) error {
+	conn.SetWriteDeadline(time.Now().Add(SendTimeout))
+	if _, err := conn.Write([]byte("VERSION\n")); err != nil {
+		return fmt.Errorf("probe write: %w", err)
+	}
+
+	buf := make([]byte, MaxProbeSize)
+	conn.SetReadDeadline(time.Now().Add(ProbeTimeout))
+	n, err := conn.Read(buf)
+	if err != nil {
+		return fmt.Errorf("probe read: %w", err)
+	}
+	if strings.TrimSpace(string(buf[:n])) == "" {
+		return fmt.Errorf("probe read: empty response")
+	}
+	return nil
 }
 
 // ReadMemory reads `size` bytes from the emulated core's memory at `addr`.

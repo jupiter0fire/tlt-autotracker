@@ -49,6 +49,12 @@ func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChe
 			changedItems = append(changedItems, ItemDiff{ID: it.ID, Qty: delta})
 		}
 	}
+	// Emit negative deltas for items that disappeared
+	for id, prevQty := range s.prevItems {
+		if _, exists := currentItems[id]; !exists && prevQty != 0 {
+			changedItems = append(changedItems, ItemDiff{ID: id, Qty: -prevQty})
+		}
+	}
 	s.prevItems = currentItems
 
 	// Checks diff
@@ -58,6 +64,12 @@ func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChe
 		prev, existed := s.prevChecks[ch.ID]
 		if !existed || prev != ch.Checked {
 			changedChecks = append(changedChecks, CheckDiff{ID: ch.ID, Checked: ch.Checked})
+		}
+	}
+	// Emit unchecked for checks that disappeared
+	for id, prevChecked := range s.prevChecks {
+		if _, exists := currentChecks[id]; !exists && prevChecked {
+			changedChecks = append(changedChecks, CheckDiff{ID: id, Checked: false})
 		}
 	}
 	s.prevChecks = currentChecks

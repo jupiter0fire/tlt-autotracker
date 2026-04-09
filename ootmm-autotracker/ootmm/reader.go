@@ -1,7 +1,6 @@
 package ootmm
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -14,7 +13,6 @@ type Reader struct {
 	detector *Detector
 
 	foreignOotSaveAddr uint32
-	foreignMmSaveAddr  uint32
 	lastKnownOot       OotState
 	lastKnownMm        MmState
 	hasLastKnownOot    bool
@@ -29,6 +27,9 @@ func NewReader(mem *n64.Memory) *Reader {
 }
 
 // ReadState performs a full read of the current game state.
+// It guards against race conditions during game switches by verifying the
+// active game has not changed after reading is complete. When a change is
+// detected mid-read the data is discarded (ActiveGame set to GameNone).
 func (r *Reader) ReadState() (*GameState, error) {
 	state := &GameState{}
 
@@ -44,21 +45,30 @@ func (r *Reader) ReadState() (*GameState, error) {
 		return state, nil
 	}
 
-	// Detect active game
+	// Step 1: Detect active game — if no game is active, skip this frame
 	game, err := r.detector.DetectActiveGame()
 	if err != nil {
 		return nil, fmt.Errorf("detect game: %w", err)
 	}
+	if game == GameNone {
+		return state, nil
+	}
 	state.ActiveGame = game
 
-	// Read OoT save (always in memory, even when MM is active)
-	switch state.ActiveGame {
+	activeSaveIndex, err := r.readActiveSaveIndex(game)
+	if err != nil {
+		return nil, fmt.Errorf("read active save index: %w", err)
+	}
+	state.SaveIndex = activeSaveIndex
+
+	// Step 2: Read state for the detected game
+	switch game {
 	case GameOot:
 		if err := r.readOotSave(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read OoT save: %w", err)
 		}
 		r.rememberOotState(state.Oot)
-		if err := r.readForeignMmState(&state.Mm); err != nil {
+		if err := r.readForeignMmState(&state.Mm, activeSaveIndex); err != nil {
 			return nil, fmt.Errorf("read foreign MM save: %w", err)
 		}
 	case GameMm:
@@ -69,15 +79,16 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readForeignOotState(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read foreign OoT save: %w", err)
 		}
-	default:
-		if err := r.readOotSave(&state.Oot); err != nil {
-			return nil, fmt.Errorf("read OoT save: %w", err)
-		}
-		r.rememberOotState(state.Oot)
-		if err := r.readMmSave(&state.Mm); err != nil {
-			return nil, fmt.Errorf("read MM save: %w", err)
-		}
-		r.rememberMmState(state.Mm)
+	}
+
+	// Step 3: Re-verify the active game hasn't changed during the read
+	gameAfter, err := r.detector.DetectActiveGame()
+	if err != nil {
+		return nil, fmt.Errorf("re-detect game: %w", err)
+	}
+	if gameAfter != game {
+		// Game changed mid-read — the data is unreliable, discard it
+		state.ActiveGame = GameNone
 	}
 
 	return state, nil
@@ -241,6 +252,17 @@ func parseMmSave(mm *MmState, data []byte) error {
 	return nil
 }
 
+func (r *Reader) readActiveSaveIndex(game ActiveGame) (uint32, error) {
+	switch game {
+	case GameOot:
+		return r.mem.ReadU32BE(AddrOotSaveCtx + uint32(OotCtxOffFileNum))
+	case GameMm:
+		return r.mem.ReadU32BE(AddrMmSaveCtx + uint32(MmCtxOffFileNum))
+	default:
+		return 0, fmt.Errorf("no active game")
+	}
+}
+
 func (r *Reader) readForeignOotSave(oot *OotState) error {
 	addr, err := r.findForeignOotSaveAddr()
 	if err != nil {
@@ -251,12 +273,15 @@ func (r *Reader) readForeignOotSave(oot *OotState) error {
 	if err != nil {
 		return fmt.Errorf("read foreign OoT save: %w", err)
 	}
+	if err := validateOotSave(data); err != nil {
+		return fmt.Errorf("validate foreign OoT save: %w", err)
+	}
 
 	return parseOotSave(oot, data)
 }
 
-func (r *Reader) readForeignMmSave(mm *MmState) error {
-	addr, err := r.findForeignMmSaveAddr()
+func (r *Reader) readForeignMmSave(mm *MmState, saveIndex uint32) error {
+	addr, err := foreignMmSaveAddr(saveIndex)
 	if err != nil {
 		return err
 	}
@@ -264,6 +289,9 @@ func (r *Reader) readForeignMmSave(mm *MmState) error {
 	data, err := r.mem.Read(addr, MmSaveSize)
 	if err != nil {
 		return fmt.Errorf("read foreign MM save: %w", err)
+	}
+	if err := validateMmSave(data); err != nil {
+		return fmt.Errorf("validate foreign MM save: %w", err)
 	}
 
 	return parseMmSave(mm, data)
@@ -283,8 +311,8 @@ func (r *Reader) readForeignOotState(oot *OotState) error {
 	return nil
 }
 
-func (r *Reader) readForeignMmState(mm *MmState) error {
-	if err := r.readForeignMmSave(mm); err == nil {
+func (r *Reader) readForeignMmState(mm *MmState, saveIndex uint32) error {
+	if err := r.readForeignMmSave(mm, saveIndex); err == nil {
 		r.rememberMmState(*mm)
 		return nil
 	}
@@ -307,6 +335,10 @@ func (r *Reader) rememberMmState(mm MmState) {
 	r.hasLastKnownMm = true
 }
 
+func foreignOotSaveAddr(saveIndex uint32) (uint32, error) {
+	return foreignSaveAddr(AddrMmPayload, MmPayloadSize, ForeignOotSaveBaseOff, ForeignOotSaveStride, OotSaveSize, saveIndex)
+}
+
 func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
 	if r.foreignOotSaveAddr != 0 {
 		return r.foreignOotSaveAddr, nil
@@ -317,7 +349,7 @@ func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
 		return 0, fmt.Errorf("read MM payload: %w", err)
 	}
 
-	addr, ok := locateForeignSave(payload, AddrMmPayload, OotSaveSize, 0x20)
+	addr, ok := locateForeignOotSave(payload, AddrMmPayload)
 	if !ok {
 		return 0, fmt.Errorf("foreign OoT save not found in MM payload")
 	}
@@ -326,36 +358,90 @@ func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
 	return addr, nil
 }
 
-func (r *Reader) findForeignMmSaveAddr() (uint32, error) {
-	if r.foreignMmSaveAddr != 0 {
-		return r.foreignMmSaveAddr, nil
-	}
-
-	payload, err := r.mem.Read(AddrOotPayload, OotPayloadSize)
-	if err != nil {
-		return 0, fmt.Errorf("read OoT payload: %w", err)
-	}
-
-	addr, ok := locateForeignSave(payload, AddrOotPayload, MmSaveSize, 0x24)
-	if !ok {
-		return 0, fmt.Errorf("foreign MM save not found in OoT payload")
-	}
-
-	r.foreignMmSaveAddr = addr
-	return addr, nil
+func foreignMmSaveAddr(saveIndex uint32) (uint32, error) {
+	return foreignSaveAddr(AddrOotPayload, OotPayloadSize, ForeignMmSaveBaseOff, ForeignMmSaveStride, MmSaveSize, saveIndex)
 }
 
-func locateForeignSave(payload []byte, payloadBase uint32, saveSize, nameOffset int) (uint32, bool) {
-	if len(payload) < saveSize || nameOffset < 0 || nameOffset+5 > saveSize {
-		return 0, false
+func foreignSaveAddr(payloadBase uint32, payloadSize int, baseOffset, stride uint32, saveSize int, saveIndex uint32) (uint32, error) {
+	offset := uint64(baseOffset) + uint64(stride)*uint64(saveIndex)
+	end := offset + uint64(saveSize)
+	if end > uint64(payloadSize) {
+		return 0, fmt.Errorf("foreign save index %d out of range for payload %#x", saveIndex, payloadBase)
 	}
+	return payloadBase + uint32(offset), nil
+}
 
-	for offset := 0; offset+saveSize <= len(payload); offset += 16 {
-		if !bytes.HasPrefix(payload[offset+nameOffset:offset+nameOffset+5], []byte("ZELDA")) {
+func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
+	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
+		candidate := payload[offset : offset+OotSaveSize]
+		expected := binary.BigEndian.Uint16(candidate[OotOffChecksum:])
+		if expected == 0 {
+			continue
+		}
+		if err := validateOotSave(candidate); err != nil {
+			continue
+		}
+		if !isPlausibleOotSave(candidate) {
 			continue
 		}
 		return payloadBase + uint32(offset), true
 	}
 
 	return 0, false
+}
+
+func isPlausibleOotSave(data []byte) bool {
+	age := binary.BigEndian.Uint32(data[OotOffAge:])
+	if age > 1 {
+		return false
+	}
+
+	emptySlots := 0
+	for _, itemID := range data[OotOffInvItems : OotOffInvItems+24] {
+		if itemID == emptyInventoryItem {
+			emptySlots++
+		}
+	}
+
+	return emptySlots >= 8
+}
+
+func validateOotSave(data []byte) error {
+	if len(data) < OotSaveSize {
+		return fmt.Errorf("OoT save too small: got %#x bytes", len(data))
+	}
+
+	expected := binary.BigEndian.Uint16(data[OotOffChecksum:])
+	checksum := uint16(0)
+	for i := 0; i < OotSaveSize; i += 2 {
+		if i == OotOffChecksum {
+			continue
+		}
+		checksum += binary.BigEndian.Uint16(data[i:])
+	}
+	if checksum != expected {
+		return fmt.Errorf("invalid OoT checksum: got %04x want %04x", expected, checksum)
+	}
+
+	return nil
+}
+
+func validateMmSave(data []byte) error {
+	if len(data) < MmSaveSize {
+		return fmt.Errorf("MM save too small: got %#x bytes", len(data))
+	}
+
+	expected := binary.BigEndian.Uint16(data[MmOffChecksum:])
+	checksum := uint16(0)
+	for i := 0; i < MmSaveSize; i++ {
+		if i == MmOffChecksum || i == MmOffChecksum+1 {
+			continue
+		}
+		checksum += uint16(data[i])
+	}
+	if checksum != expected {
+		return fmt.Errorf("invalid MM checksum: got %04x want %04x", expected, checksum)
+	}
+
+	return nil
 }
