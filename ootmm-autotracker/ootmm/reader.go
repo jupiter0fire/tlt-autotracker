@@ -16,8 +16,10 @@ type Reader struct {
 	foreignMmSaveAddr  uint32
 	lastKnownOot       OotState
 	lastKnownMm        MmState
+	lastKnownShared    SharedCustomState
 	hasLastKnownOot    bool
 	hasLastKnownMm     bool
+	hasLastKnownShared bool
 	stableGame         ActiveGame
 	stableSaveIndex    uint32
 	pendingGame        ActiveGame
@@ -68,6 +70,9 @@ func (r *Reader) ReadState() (*GameState, error) {
 		return nil, fmt.Errorf("read active save index: %w", err)
 	}
 	state.SaveIndex = activeSaveIndex
+	if err := r.readSharedState(activeSaveIndex, &state.Shared); err != nil {
+		return nil, fmt.Errorf("read shared custom save: %w", err)
+	}
 
 	// Step 2: Read state for the detected game
 	switch game {
@@ -116,6 +121,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 
 	r.rememberOotState(state.Oot)
 	r.rememberMmState(state.Mm)
+	r.rememberSharedState(state.Shared)
 
 	return state, nil
 }
@@ -349,6 +355,53 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 	return nil
 }
 
+func (r *Reader) readSharedState(saveIndex uint32, shared *SharedCustomState) error {
+	if err := r.readSharedStateFromPayload(AddrOotPayload, OotPayloadSize, saveIndex, shared); err == nil {
+		return nil
+	}
+
+	if err := r.readSharedStateFromPayload(AddrMmPayload, MmPayloadSize, saveIndex, shared); err == nil {
+		return nil
+	}
+
+	if r.hasLastKnownShared {
+		*shared = r.lastKnownShared
+	}
+
+	return nil
+}
+
+func (r *Reader) readSharedStateFromPayload(payloadBase uint32, payloadSize int, saveIndex uint32, shared *SharedCustomState) error {
+	addr, err := sharedSaveAddr(payloadBase, payloadSize, saveIndex)
+	if err != nil {
+		return err
+	}
+
+	data, err := r.mem.Read(addr, SharedCustomTrackedSize)
+	if err != nil {
+		return fmt.Errorf("read shared custom save from %#x: %w", payloadBase, err)
+	}
+
+	parsed := SharedCustomState{}
+	copy(parsed.SoulsEnemyOot[:], data[SharedOffSoulsEnemyOot:SharedOffSoulsEnemyOot+len(parsed.SoulsEnemyOot)])
+	copy(parsed.SoulsEnemyMm[:], data[SharedOffSoulsEnemyMm:SharedOffSoulsEnemyMm+len(parsed.SoulsEnemyMm)])
+	copy(parsed.SoulsBossOot[:], data[SharedOffSoulsBossOot:SharedOffSoulsBossOot+len(parsed.SoulsBossOot)])
+	copy(parsed.SoulsBossMm[:], data[SharedOffSoulsBossMm:SharedOffSoulsBossMm+len(parsed.SoulsBossMm)])
+	copy(parsed.SoulsNpcOot[:], data[SharedOffSoulsNpcOot:SharedOffSoulsNpcOot+len(parsed.SoulsNpcOot)])
+	copy(parsed.SoulsNpcMm[:], data[SharedOffSoulsNpcMm:SharedOffSoulsNpcMm+len(parsed.SoulsNpcMm)])
+	copy(parsed.SoulsAnimalOot[:], data[SharedOffSoulsAnimalOot:SharedOffSoulsAnimalOot+len(parsed.SoulsAnimalOot)])
+	copy(parsed.SoulsAnimalMm[:], data[SharedOffSoulsAnimalMm:SharedOffSoulsAnimalMm+len(parsed.SoulsAnimalMm)])
+	copy(parsed.SoulsMiscOot[:], data[SharedOffSoulsMiscOot:SharedOffSoulsMiscOot+len(parsed.SoulsMiscOot)])
+	copy(parsed.SoulsMiscMm[:], data[SharedOffSoulsMiscMm:SharedOffSoulsMiscMm+len(parsed.SoulsMiscMm)])
+
+	if !isPlausibleSharedState(parsed) {
+		return fmt.Errorf("shared custom save at %#x failed plausibility checks", addr)
+	}
+
+	*shared = parsed
+	return nil
+}
+
 func (r *Reader) rememberOotState(oot OotState) {
 	r.lastKnownOot = oot
 	r.hasLastKnownOot = true
@@ -357,6 +410,11 @@ func (r *Reader) rememberOotState(oot OotState) {
 func (r *Reader) rememberMmState(mm MmState) {
 	r.lastKnownMm = mm
 	r.hasLastKnownMm = true
+}
+
+func (r *Reader) rememberSharedState(shared SharedCustomState) {
+	r.lastKnownShared = shared
+	r.hasLastKnownShared = true
 }
 
 func (r *Reader) resetPendingState() {
@@ -426,6 +484,10 @@ func (r *Reader) findForeignMmSaveAddr() (uint32, error) {
 
 func foreignMmSaveAddr(saveIndex uint32) (uint32, error) {
 	return foreignSaveAddr(AddrOotPayload, OotPayloadSize, ForeignMmSaveBaseOff, ForeignMmSaveStride, MmSaveSize, saveIndex)
+}
+
+func sharedSaveAddr(payloadBase uint32, payloadSize int, saveIndex uint32) (uint32, error) {
+	return foreignSaveAddr(payloadBase, payloadSize, SharedCustomSaveBaseOff, SharedCustomSaveStride, SharedCustomTrackedSize, saveIndex)
 }
 
 func foreignSaveAddr(payloadBase uint32, payloadSize int, baseOffset, stride uint32, saveSize int, saveIndex uint32) (uint32, error) {
@@ -510,6 +572,43 @@ func isPlausibleMmSave(data []byte) bool {
 	}
 
 	return emptySlots >= 16
+}
+
+func isPlausibleSharedState(shared SharedCustomState) bool {
+	return sharedBitmapHasNoUnusedBits(shared.SoulsEnemyOot[:], len(ootSoulEnemyIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsEnemyMm[:], len(mmSoulEnemyIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsBossOot[:], len(ootSoulBossIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsBossMm[:], len(mmSoulBossIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsNpcOot[:], len(ootSoulNpcIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsNpcMm[:], len(mmSoulNpcIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsAnimalOot[:], len(ootSoulAnimalIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsAnimalMm[:], len(mmSoulAnimalIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsMiscOot[:], len(ootSoulMiscIDs)) &&
+		sharedBitmapHasNoUnusedBits(shared.SoulsMiscMm[:], len(mmSoulMiscIDs))
+}
+
+func sharedBitmapHasNoUnusedBits(bitmap []uint8, usedBits int) bool {
+	if usedBits < 0 || usedBits > len(bitmap)*8 {
+		return false
+	}
+
+	fullBytes := usedBits / 8
+	remainingBits := usedBits % 8
+	if remainingBits != 0 && fullBytes < len(bitmap) {
+		mask := uint8(0xFF << uint(remainingBits))
+		if bitmap[fullBytes]&mask != 0 {
+			return false
+		}
+		fullBytes++
+	}
+
+	for _, value := range bitmap[fullBytes:] {
+		if value != 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateOotSave(data []byte) error {

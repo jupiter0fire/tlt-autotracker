@@ -7,8 +7,9 @@ import (
 )
 
 type inventorySlotFile struct {
-	Oot []inventorySlotEntry `json:"oot"`
-	Mm  []inventorySlotEntry `json:"mm"`
+	Oot     []inventorySlotEntry `json:"oot"`
+	Mm      []inventorySlotEntry `json:"mm"`
+	Catalog itemCatalog          `json:"catalog"`
 }
 
 type inventorySlotEntry struct {
@@ -17,11 +18,52 @@ type inventorySlotEntry struct {
 	ItemID string `json:"itemId"`
 }
 
+type itemCatalog struct {
+	Souls   soulCatalog    `json:"souls"`
+	Special specialCatalog `json:"special"`
+}
+
+type soulCatalog struct {
+	Oot soulGroups `json:"oot"`
+	Mm  soulGroups `json:"mm"`
+}
+
+type soulGroups struct {
+	Enemy  []string `json:"enemy"`
+	Boss   []string `json:"boss"`
+	Npc    []string `json:"npc"`
+	Animal []string `json:"animal"`
+	Misc   []string `json:"misc"`
+}
+
+type specialCatalog struct {
+	MmItems  []string `json:"mmItems"`
+	MmTrade1 []string `json:"mmTrade1"`
+	MmTrade2 []string `json:"mmTrade2"`
+	MmTrade3 []string `json:"mmTrade3"`
+	MmFlags3 []string `json:"mmFlags3"`
+}
+
 var (
-	ootInventorySlots []string
-	mmInventorySlots  []string
+	ootInventorySlots       []string
+	mmInventorySlots        []string
 	ootInventorySlotIndices map[string]int
 	mmInventorySlotIndices  map[string]int
+	ootSoulEnemyIDs         []string
+	ootSoulBossIDs          []string
+	ootSoulNpcIDs           []string
+	ootSoulAnimalIDs        []string
+	ootSoulMiscIDs          []string
+	mmSoulEnemyIDs          []string
+	mmSoulBossIDs           []string
+	mmSoulNpcIDs            []string
+	mmSoulAnimalIDs         []string
+	mmSoulMiscIDs           []string
+	mmItemIDs               []string
+	mmTrade1ItemIDs         []string
+	mmTrade2ItemIDs         []string
+	mmTrade3ItemIDs         []string
+	mmFlags3ItemIDs         []string
 )
 
 //go:embed inventory_slots.json
@@ -35,6 +77,21 @@ func init() {
 
 	ootInventorySlots, ootInventorySlotIndices = buildInventorySlotTable("OOT", slotFile.Oot)
 	mmInventorySlots, mmInventorySlotIndices = buildInventorySlotTable("MM", slotFile.Mm)
+	ootSoulEnemyIDs = slotFile.Catalog.Souls.Oot.Enemy
+	ootSoulBossIDs = slotFile.Catalog.Souls.Oot.Boss
+	ootSoulNpcIDs = slotFile.Catalog.Souls.Oot.Npc
+	ootSoulAnimalIDs = slotFile.Catalog.Souls.Oot.Animal
+	ootSoulMiscIDs = slotFile.Catalog.Souls.Oot.Misc
+	mmSoulEnemyIDs = slotFile.Catalog.Souls.Mm.Enemy
+	mmSoulBossIDs = slotFile.Catalog.Souls.Mm.Boss
+	mmSoulNpcIDs = slotFile.Catalog.Souls.Mm.Npc
+	mmSoulAnimalIDs = slotFile.Catalog.Souls.Mm.Animal
+	mmSoulMiscIDs = slotFile.Catalog.Souls.Mm.Misc
+	mmItemIDs = slotFile.Catalog.Special.MmItems
+	mmTrade1ItemIDs = slotFile.Catalog.Special.MmTrade1
+	mmTrade2ItemIDs = slotFile.Catalog.Special.MmTrade2
+	mmTrade3ItemIDs = slotFile.Catalog.Special.MmTrade3
+	mmFlags3ItemIDs = slotFile.Catalog.Special.MmFlags3
 }
 
 func buildInventorySlotTable(game string, entries []inventorySlotEntry) ([]string, map[string]int) {

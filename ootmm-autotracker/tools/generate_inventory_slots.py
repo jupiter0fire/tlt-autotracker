@@ -8,6 +8,56 @@ import sys
 
 
 SLOT_DEFINE_RE = re.compile(r"^#define\s+(ITS_(OOT|MM)_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
+GI_ID_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),")
+
+SOUL_GROUP_PREFIXES = {
+    "oot": {
+        "enemy": "OOT_SOUL_ENEMY_",
+        "boss": "OOT_SOUL_BOSS_",
+        "npc": "OOT_SOUL_NPC_",
+        "animal": "OOT_SOUL_ANIMAL_",
+        "misc": "OOT_SOUL_MISC_",
+    },
+    "mm": {
+        "enemy": "MM_SOUL_ENEMY_",
+        "boss": "MM_SOUL_BOSS_",
+        "npc": "MM_SOUL_NPC_",
+        "animal": "MM_SOUL_ANIMAL_",
+        "misc": "MM_SOUL_MISC_",
+    },
+}
+
+MM_SPECIAL_IDS = {
+    "mmItems": [
+        "MM_HAMMER",
+    ],
+    "mmTrade1": [
+        "MM_SPELL_FIRE",
+        "MM_MOON_TEAR",
+        "MM_DEED_LAND",
+        "MM_DEED_SWAMP",
+        "MM_DEED_MOUNTAIN",
+        "MM_DEED_OCEAN",
+    ],
+    "mmTrade2": [
+        "MM_SPELL_WIND",
+        "MM_BOOTS_IRON",
+        "MM_TUNIC_GORON",
+        "MM_ROOM_KEY",
+        "MM_LETTER_TO_MAMA",
+    ],
+    "mmTrade3": [
+        "MM_SPELL_LOVE",
+        "MM_BOOTS_HOVER",
+        "MM_TUNIC_ZORA",
+        "MM_LETTER_TO_KAFEI",
+        "MM_PENDANT_OF_MEMORIES",
+    ],
+    "mmFlags3": [
+        "MM_WALLET5",
+        "MM_STONE_OF_AGONY",
+    ],
+}
 
 OOT_OVERRIDES = {
     "STICKS": "DEKU_STICKS",
@@ -115,17 +165,64 @@ def extract_slots(items_header: pathlib.Path) -> dict[str, list[dict[str, object
     return {"oot": slots["OOT"], "mm": slots["MM"]}
 
 
+def extract_gi_ids(gi_defs: pathlib.Path) -> list[str]:
+    gi_ids: list[str] = []
+
+    for line in gi_defs.read_text(encoding="utf-8").splitlines():
+        match = GI_ID_RE.match(line)
+        if match:
+            gi_ids.append(match.group(1))
+
+    return gi_ids
+
+
+def collect_prefixed_ids(gi_ids: list[str], prefix: str) -> list[str]:
+    return [item_id for item_id in gi_ids if item_id.startswith(prefix)]
+
+
+def ensure_ids_exist(gi_ids: list[str], required_ids: list[str], label: str) -> None:
+    available = set(gi_ids)
+    missing = [item_id for item_id in required_ids if item_id not in available]
+    if missing:
+        raise ValueError(f"missing {label} IDs in gi.yml: {', '.join(missing)}")
+
+
+def build_catalog(gi_defs: pathlib.Path) -> dict[str, object]:
+    gi_ids = extract_gi_ids(gi_defs)
+
+    souls: dict[str, dict[str, list[str]]] = {}
+    for game, groups in SOUL_GROUP_PREFIXES.items():
+        souls[game] = {}
+        for group_name, prefix in groups.items():
+            souls[game][group_name] = collect_prefixed_ids(gi_ids, prefix)
+
+    special: dict[str, list[str]] = {}
+    for label, item_ids in MM_SPECIAL_IDS.items():
+        ensure_ids_exist(gi_ids, item_ids, label)
+        special[label] = item_ids
+
+    return {
+        "souls": souls,
+        "special": special,
+    }
+
+
 def main() -> int:
     args = parse_args()
     repo_root = pathlib.Path(args.ootmm_repo).resolve()
     items_header = repo_root / "packages/generator/include/combo/data/items.h"
+    gi_defs = repo_root / "packages/data/src/defs/gi.yml"
     output_path = pathlib.Path(args.output).resolve()
 
     if not items_header.is_file():
         print(f"items header not found: {items_header}", file=sys.stderr)
         return 1
+    if not gi_defs.is_file():
+        print(f"gi definitions not found: {gi_defs}", file=sys.stderr)
+        return 1
 
     mapping = extract_slots(items_header)
+    mapping["catalog"] = build_catalog(gi_defs)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(mapping, indent=2) + "\n", encoding="utf-8")
     return 0

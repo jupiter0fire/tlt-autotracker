@@ -6,8 +6,24 @@ type GameState struct {
 	SaveIndex  uint32
 	Valid      bool
 
-	Oot OotState
-	Mm  MmState
+	Oot    OotState
+	Mm     MmState
+	Shared SharedCustomState
+}
+
+// SharedCustomState holds the subset of OoTMM's shared custom save that is
+// relevant for item tracking across both games.
+type SharedCustomState struct {
+	SoulsEnemyOot  [8]uint8
+	SoulsEnemyMm   [8]uint8
+	SoulsBossOot   [2]uint8
+	SoulsBossMm    [1]uint8
+	SoulsNpcOot    [8]uint8
+	SoulsNpcMm     [8]uint8
+	SoulsAnimalOot [2]uint8
+	SoulsAnimalMm  [2]uint8
+	SoulsMiscOot   [1]uint8
+	SoulsMiscMm    [1]uint8
 }
 
 // OotState holds all tracked OoT data.
@@ -17,9 +33,9 @@ type OotState struct {
 	GameMode uint32
 
 	// Inventory
-	Items  [24]uint8
-	Ammo   [15]uint8
-	Beans  uint8
+	Items [24]uint8
+	Ammo  [15]uint8
+	Beans uint8
 
 	// Equipment bitfield: boots:4, tunics:4, shields:4, swords:4
 	Equipment uint16
@@ -65,13 +81,13 @@ type MmState struct {
 	// Upgrades bitfield
 	Upgrades uint32
 	// Quest items (remains, songs, notebook, heart pieces)
-	QuestItems uint32
+	QuestItems  uint32
 	HeartPieces uint8
 
 	// Per-dungeon
-	DungeonItems  [10]uint8
-	DungeonKeys   [9]int8
-	StrayFairies  [10]int8
+	DungeonItems [10]uint8
+	DungeonKeys  [9]int8
+	StrayFairies [10]int8
 
 	SceneFlags [120]SceneFlags
 
@@ -81,12 +97,12 @@ type MmState struct {
 
 // SceneFlags represents the permanent flags for a single scene.
 type SceneFlags struct {
-	Chests       uint32
-	Switches     uint32
-	RoomClear    uint32
-	Collectibles uint32
-	Unused       uint32
-	VisitedRooms uint32
+	Chests        uint32
+	Switches      uint32
+	RoomClear     uint32
+	Collectibles  uint32
+	Unused        uint32
+	VisitedRooms  uint32
 	VisitedFloors uint32
 }
 

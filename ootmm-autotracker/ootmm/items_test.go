@@ -103,6 +103,52 @@ func TestExtractItemsReadsMmEquipmentLevels(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesSoulBitmaps(t *testing.T) {
+	state := &GameState{}
+	state.Shared.SoulsEnemyOot[0] = 1 << 0
+	state.Shared.SoulsBossMm[0] = 1 << 1
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SOUL_ENEMY_STALFOS"]; got != 1 {
+		t.Fatalf("OOT_SOUL_ENEMY_STALFOS = %d, want 1", got)
+	}
+	if got := items["MM_SOUL_BOSS_GOHT"]; got != 1 {
+		t.Fatalf("MM_SOUL_BOSS_GOHT = %d, want 1", got)
+	}
+	if got := items["MM_SOUL_MISC_GS"]; got != 0 {
+		t.Fatalf("MM_SOUL_MISC_GS = %d, want 0", got)
+	}
+}
+
+func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxMmItems] = 1 << mmExtraHammerShift
+	state.Oot.ExtraRecords[ExtraIdxMmTrade] = (1 << mmExtraTradeObtained1Shift) | (1 << (mmExtraTradeObtained2Shift + 3))
+	state.Oot.ExtraRecords[ExtraIdxMmFlags3] = (1 << mmExtraFlags3Bottomless) | (1 << mmExtraFlags3StoneAgony)
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_HAMMER"]; got != 1 {
+		t.Fatalf("MM_HAMMER = %d, want 1", got)
+	}
+	if got := items["MM_SPELL_FIRE"]; got != 1 {
+		t.Fatalf("MM_SPELL_FIRE = %d, want 1", got)
+	}
+	if got := items["MM_ROOM_KEY"]; got != 1 {
+		t.Fatalf("MM_ROOM_KEY = %d, want 1", got)
+	}
+	if got := items["MM_WALLET5"]; got != 1 {
+		t.Fatalf("MM_WALLET5 = %d, want 1", got)
+	}
+	if got := items["MM_STONE_OF_AGONY"]; got != 1 {
+		t.Fatalf("MM_STONE_OF_AGONY = %d, want 1", got)
+	}
+	if got := items["MM_PENDANT_OF_MEMORIES"]; got != 0 {
+		t.Fatalf("MM_PENDANT_OF_MEMORIES = %d, want 0", got)
+	}
+}
+
 func itemQtyMap(items []TrackedItem) map[string]int {
 	result := make(map[string]int, len(items))
 	for _, item := range items {

@@ -110,6 +110,11 @@ func ExtractItems(state *GameState) []TrackedItem {
 	// Extra records
 	ootExtraFlags := oot.ExtraRecords[ExtraIdxOotFlags]
 	items = append(items, TrackedItem{"OOT_GANON_BK", boolToInt(ootExtraFlags&1 != 0)})
+	items = appendSoulItems(items, state.Shared.SoulsEnemyOot[:], ootSoulEnemyIDs)
+	items = appendSoulItems(items, state.Shared.SoulsBossOot[:], ootSoulBossIDs)
+	items = appendSoulItems(items, state.Shared.SoulsNpcOot[:], ootSoulNpcIDs)
+	items = appendSoulItems(items, state.Shared.SoulsAnimalOot[:], ootSoulAnimalIDs)
+	items = appendSoulItems(items, state.Shared.SoulsMiscOot[:], ootSoulMiscIDs)
 
 	// === MM ITEMS ===
 	mm := &state.Mm
@@ -150,6 +155,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 			items = append(items, TrackedItem{name, qty})
 		}
 	}
+	items = appendMmSpecialItems(items, oot.ExtraRecords[ExtraIdxMmItems], oot.ExtraRecords[ExtraIdxMmTrade], oot.ExtraRecords[ExtraIdxMmFlags3])
 
 	// MM Upgrades
 	items = append(items, TrackedItem{"MM_QUIVER", GetUpgradeLevel(mm.Upgrades, 0, 3)})
@@ -189,6 +195,11 @@ func ExtractItems(state *GameState) []TrackedItem {
 		}
 		items = append(items, TrackedItem{name + "_STRAY_FAIRIES", int(mm.StrayFairies[i])})
 	}
+	items = appendSoulItems(items, state.Shared.SoulsEnemyMm[:], mmSoulEnemyIDs)
+	items = appendSoulItems(items, state.Shared.SoulsBossMm[:], mmSoulBossIDs)
+	items = appendSoulItems(items, state.Shared.SoulsNpcMm[:], mmSoulNpcIDs)
+	items = appendSoulItems(items, state.Shared.SoulsAnimalMm[:], mmSoulAnimalIDs)
+	items = appendSoulItems(items, state.Shared.SoulsMiscMm[:], mmSoulMiscIDs)
 
 	return items
 }
@@ -315,18 +326,75 @@ func mmDungeonName(idx int) string {
 const emptyInventoryItem = 0xFF
 
 var (
-	ootOcarinaStages = []uint8{0x07, 0x08}
-	ootHookshotStages = []uint8{0x0A, 0x0B}
+	ootOcarinaStages    = []uint8{0x07, 0x08}
+	ootHookshotStages   = []uint8{0x0A, 0x0B}
 	ootAdultTradeStages = []uint8{0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x14}
 	ootChildTradeStages = []uint8{0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x9C, 0x9D, 0x14}
 
-	mmOcarinaStages = []uint8{0x05, 0x00}
-	mmTrade1Stages  = []uint8{0xB0, 0x28, 0x29, 0x2A, 0x2B, 0x2C}
-	mmTrade2Stages  = []uint8{0xAE, 0xB1, 0xB3, 0x2D, 0x2E}
+	mmOcarinaStages  = []uint8{0x05, 0x00}
+	mmTrade1Stages   = []uint8{0xB0, 0x28, 0x29, 0x2A, 0x2B, 0x2C}
+	mmTrade2Stages   = []uint8{0xAE, 0xB1, 0xB3, 0x2D, 0x2E}
 	mmHookshotStages = []uint8{0x11, 0x0F}
 	mmGFSStages      = []uint8{0x10, 0xB5}
 	mmTrade3Stages   = []uint8{0xAF, 0xB2, 0xB4, 0x2F, 0x30}
 )
+
+const (
+	mmExtraTradeObtained1Shift = 16
+	mmExtraTradeObtained2Shift = 22
+	mmExtraTradeObtained3Shift = 27
+	mmExtraHammerShift         = 6
+	mmExtraFlags3Bottomless    = 0
+	mmExtraFlags3StoneAgony    = 1
+)
+
+func appendSoulItems(items []TrackedItem, bitmap []uint8, ids []string) []TrackedItem {
+	for index, id := range ids {
+		items = append(items, TrackedItem{ID: id, Qty: boolToInt(bitmapHasBit(bitmap, index))})
+	}
+	return items
+}
+
+func bitmapHasBit(bitmap []uint8, bit int) bool {
+	byteIndex := bit / 8
+	if byteIndex < 0 || byteIndex >= len(bitmap) {
+		return false
+	}
+	return bitmap[byteIndex]&(1<<uint(bit%8)) != 0
+}
+
+func appendMmSpecialItems(items []TrackedItem, extraItems, extraTrade, extraFlags3 uint32) []TrackedItem {
+	items = appendMaskedItems(items, (extraItems>>mmExtraHammerShift)&maskForBits(len(mmItemIDs)), mmItemIDs)
+	items = appendMaskedItems(items, (extraTrade>>mmExtraTradeObtained1Shift)&maskForBits(len(mmTrade1ItemIDs)), mmTrade1ItemIDs)
+	items = appendMaskedItems(items, (extraTrade>>mmExtraTradeObtained2Shift)&maskForBits(len(mmTrade2ItemIDs)), mmTrade2ItemIDs)
+	items = appendMaskedItems(items, (extraTrade>>mmExtraTradeObtained3Shift)&maskForBits(len(mmTrade3ItemIDs)), mmTrade3ItemIDs)
+
+	if len(mmFlags3ItemIDs) > 0 {
+		items = append(items, TrackedItem{ID: mmFlags3ItemIDs[0], Qty: boolToInt(extraFlags3&(1<<mmExtraFlags3Bottomless) != 0)})
+	}
+	if len(mmFlags3ItemIDs) > 1 {
+		items = append(items, TrackedItem{ID: mmFlags3ItemIDs[1], Qty: boolToInt(extraFlags3&(1<<mmExtraFlags3StoneAgony) != 0)})
+	}
+
+	return items
+}
+
+func appendMaskedItems(items []TrackedItem, mask uint32, ids []string) []TrackedItem {
+	for index, id := range ids {
+		items = append(items, TrackedItem{ID: id, Qty: boolToInt(mask&(1<<uint(index)) != 0)})
+	}
+	return items
+}
+
+func maskForBits(n int) uint32 {
+	if n <= 0 {
+		return 0
+	}
+	if n >= 32 {
+		return ^uint32(0)
+	}
+	return (uint32(1) << uint(n)) - 1
+}
 
 func ootInventorySlotQty(itemName string, itemID, beans uint8) int {
 	if itemID == emptyInventoryItem {
