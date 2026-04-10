@@ -120,30 +120,10 @@ const (
 // Foreign save copies inside the payload areas use the same flash layout as
 // Save_ReadForeign in OoTMM common/save.c and must be indexed by fileNum.
 const (
-	ForeignOotSaveBaseOff   uint32 = 0x20
-	ForeignOotSaveStride    uint32 = 0x1450
-	ForeignMmSaveBaseOff    uint32 = 0x8000
-	ForeignMmSaveStride     uint32 = 0x8000
-	SharedCustomSaveBaseOff uint32 = 0x18000
-	SharedCustomSaveStride  uint32 = 0x4000
-)
-
-// SharedCustomSave tracked subset offsets inside OoTMM's custom save block.
-// These offsets are derived from combo/save.h, combo/oot/save.h and
-// combo/mm/save.h. Only the soul bitmaps are needed for the autotracker.
-const (
-	SharedCustomTrackedSize = 0x800
-
-	SharedOffSoulsEnemyOot  = 0x7CC
-	SharedOffSoulsEnemyMm   = 0x7D4
-	SharedOffSoulsBossOot   = 0x7DC
-	SharedOffSoulsBossMm    = 0x7DE
-	SharedOffSoulsNpcOot    = 0x7DF
-	SharedOffSoulsNpcMm     = 0x7E7
-	SharedOffSoulsAnimalOot = 0x7EF
-	SharedOffSoulsAnimalMm  = 0x7F1
-	SharedOffSoulsMiscOot   = 0x7F3
-	SharedOffSoulsMiscMm    = 0x7F4
+	ForeignOotSaveBaseOff uint32 = 0x20
+	ForeignOotSaveStride  uint32 = 0x1450
+	ForeignMmSaveBaseOff  uint32 = 0x8000
+	ForeignMmSaveStride   uint32 = 0x8000
 )
 
 // XFlags counts

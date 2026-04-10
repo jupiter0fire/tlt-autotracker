@@ -74,13 +74,13 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	// Main inventory items (track which slots have items, 0xFF = empty)
 	for i, itemID := range oot.Items {
-		name := ootInventorySlotName(i)
-		if name == "" {
+		entry := ootInventorySlotEntry(i)
+		if entry.ItemID == "" {
 			continue
 		}
-		qty := ootInventorySlotQty(name, itemID, oot.Beans)
+		qty := inventorySlotQty(entry, itemID, oot.Beans)
 		if qty > 0 {
-			items = append(items, TrackedItem{name, qty})
+			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
 	}
 
@@ -110,11 +110,6 @@ func ExtractItems(state *GameState) []TrackedItem {
 	// Extra records
 	ootExtraFlags := oot.ExtraRecords[ExtraIdxOotFlags]
 	items = append(items, TrackedItem{"OOT_GANON_BK", boolToInt(ootExtraFlags&1 != 0)})
-	items = appendSoulItems(items, state.Shared.SoulsEnemyOot[:], ootSoulEnemyIDs)
-	items = appendSoulItems(items, state.Shared.SoulsBossOot[:], ootSoulBossIDs)
-	items = appendSoulItems(items, state.Shared.SoulsNpcOot[:], ootSoulNpcIDs)
-	items = appendSoulItems(items, state.Shared.SoulsAnimalOot[:], ootSoulAnimalIDs)
-	items = appendSoulItems(items, state.Shared.SoulsMiscOot[:], ootSoulMiscIDs)
 
 	// === MM ITEMS ===
 	mm := &state.Mm
@@ -146,16 +141,15 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	// MM inventory items
 	for i, itemID := range mm.Items {
-		name := mmInventorySlotName(i)
-		if name == "" {
+		entry := mmInventorySlotEntry(i)
+		if entry.ItemID == "" {
 			continue
 		}
-		qty := mmInventorySlotQty(name, itemID)
+		qty := inventorySlotQty(entry, itemID, 0)
 		if qty > 0 {
-			items = append(items, TrackedItem{name, qty})
+			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
 	}
-	items = appendMmSpecialItems(items, oot.ExtraRecords[ExtraIdxMmItems], oot.ExtraRecords[ExtraIdxMmTrade], oot.ExtraRecords[ExtraIdxMmFlags3])
 
 	// MM Upgrades
 	items = append(items, TrackedItem{"MM_QUIVER", GetUpgradeLevel(mm.Upgrades, 0, 3)})
@@ -195,11 +189,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		}
 		items = append(items, TrackedItem{name + "_STRAY_FAIRIES", int(mm.StrayFairies[i])})
 	}
-	items = appendSoulItems(items, state.Shared.SoulsEnemyMm[:], mmSoulEnemyIDs)
-	items = appendSoulItems(items, state.Shared.SoulsBossMm[:], mmSoulBossIDs)
-	items = appendSoulItems(items, state.Shared.SoulsNpcMm[:], mmSoulNpcIDs)
-	items = appendSoulItems(items, state.Shared.SoulsAnimalMm[:], mmSoulAnimalIDs)
-	items = appendSoulItems(items, state.Shared.SoulsMiscMm[:], mmSoulMiscIDs)
+	items = appendCatalogItems(items, state)
 
 	return items
 }
@@ -279,14 +269,6 @@ func itoa(i int) string {
 	return itoa(i/10) + string(rune('0'+i%10))
 }
 
-// OoT inventory slot names. Returns "" for unused/unknown slots.
-func ootInventorySlotName(slot int) string {
-	if slot >= 0 && slot < len(ootInventorySlots) {
-		return ootInventorySlots[slot]
-	}
-	return ""
-}
-
 // OoT dungeon names by index.
 func ootDungeonName(idx int) string {
 	names := [20]string{
@@ -299,14 +281,6 @@ func ootDungeonName(idx int) string {
 	}
 	if idx >= 0 && idx < len(names) {
 		return names[idx]
-	}
-	return ""
-}
-
-// MM inventory slot names.
-func mmInventorySlotName(slot int) string {
-	if slot >= 0 && slot < len(mmInventorySlots) {
-		return mmInventorySlots[slot]
 	}
 	return ""
 }
@@ -325,32 +299,18 @@ func mmDungeonName(idx int) string {
 
 const emptyInventoryItem = 0xFF
 
-var (
-	ootOcarinaStages    = []uint8{0x07, 0x08}
-	ootHookshotStages   = []uint8{0x0A, 0x0B}
-	ootAdultTradeStages = []uint8{0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x14}
-	ootChildTradeStages = []uint8{0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x9C, 0x9D, 0x14}
-
-	mmOcarinaStages  = []uint8{0x05, 0x00}
-	mmTrade1Stages   = []uint8{0xB0, 0x28, 0x29, 0x2A, 0x2B, 0x2C}
-	mmTrade2Stages   = []uint8{0xAE, 0xB1, 0xB3, 0x2D, 0x2E}
-	mmHookshotStages = []uint8{0x11, 0x0F}
-	mmGFSStages      = []uint8{0x10, 0xB5}
-	mmTrade3Stages   = []uint8{0xAF, 0xB2, 0xB4, 0x2F, 0x30}
-)
-
-const (
-	mmExtraTradeObtained1Shift = 16
-	mmExtraTradeObtained2Shift = 22
-	mmExtraTradeObtained3Shift = 27
-	mmExtraHammerShift         = 6
-	mmExtraFlags3Bottomless    = 0
-	mmExtraFlags3StoneAgony    = 1
-)
-
-func appendSoulItems(items []TrackedItem, bitmap []uint8, ids []string) []TrackedItem {
-	for index, id := range ids {
-		items = append(items, TrackedItem{ID: id, Qty: boolToInt(bitmapHasBit(bitmap, index))})
+func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
+	for _, entry := range trackedCatalogItems {
+		qty := 0
+		switch entry.Source.Kind {
+		case "shared-bitmap-bit":
+			qty = boolToInt(bitmapHasBit(state.Shared.Bitmap(entry.Source.Block), entry.Source.Bit))
+		case "oot-extra-bit":
+			if entry.Source.Record >= 0 && entry.Source.Record < len(state.Oot.ExtraRecords) {
+				qty = boolToInt(state.Oot.ExtraRecords[entry.Source.Record]&(1<<uint(entry.Source.Bit)) != 0)
+			}
+		}
+		items = append(items, TrackedItem{ID: entry.ItemID, Qty: qty})
 	}
 	return items
 }
@@ -363,90 +323,26 @@ func bitmapHasBit(bitmap []uint8, bit int) bool {
 	return bitmap[byteIndex]&(1<<uint(bit%8)) != 0
 }
 
-func appendMmSpecialItems(items []TrackedItem, extraItems, extraTrade, extraFlags3 uint32) []TrackedItem {
-	items = appendMaskedItems(items, (extraItems>>mmExtraHammerShift)&maskForBits(len(mmItemIDs)), mmItemIDs)
-	items = appendMaskedItems(items, (extraTrade>>mmExtraTradeObtained1Shift)&maskForBits(len(mmTrade1ItemIDs)), mmTrade1ItemIDs)
-	items = appendMaskedItems(items, (extraTrade>>mmExtraTradeObtained2Shift)&maskForBits(len(mmTrade2ItemIDs)), mmTrade2ItemIDs)
-	items = appendMaskedItems(items, (extraTrade>>mmExtraTradeObtained3Shift)&maskForBits(len(mmTrade3ItemIDs)), mmTrade3ItemIDs)
-
-	if len(mmFlags3ItemIDs) > 0 {
-		items = append(items, TrackedItem{ID: mmFlags3ItemIDs[0], Qty: boolToInt(extraFlags3&(1<<mmExtraFlags3Bottomless) != 0)})
-	}
-	if len(mmFlags3ItemIDs) > 1 {
-		items = append(items, TrackedItem{ID: mmFlags3ItemIDs[1], Qty: boolToInt(extraFlags3&(1<<mmExtraFlags3StoneAgony) != 0)})
-	}
-
-	return items
-}
-
-func appendMaskedItems(items []TrackedItem, mask uint32, ids []string) []TrackedItem {
-	for index, id := range ids {
-		items = append(items, TrackedItem{ID: id, Qty: boolToInt(mask&(1<<uint(index)) != 0)})
-	}
-	return items
-}
-
-func maskForBits(n int) uint32 {
-	if n <= 0 {
-		return 0
-	}
-	if n >= 32 {
-		return ^uint32(0)
-	}
-	return (uint32(1) << uint(n)) - 1
-}
-
-func ootInventorySlotQty(itemName string, itemID, beans uint8) int {
+func inventorySlotQty(entry inventorySlotEntry, itemID, beans uint8) int {
 	if itemID == emptyInventoryItem {
 		return 0
 	}
 
-	switch itemName {
-	case "OOT_OCARINA":
-		return stageQty(itemID, ootOcarinaStages)
-	case "OOT_HOOKSHOT":
-		return stageQty(itemID, ootHookshotStages)
-	case "OOT_MAGIC_BEANS":
+	if entry.Quantity.UseBeansCount {
 		if beans > 0 {
 			return int(beans)
 		}
 		return 1
-	case "OOT_ADULT_TRADE":
-		if isOotBottleItem(itemID) {
-			return len(ootAdultTradeStages)
-		}
-		return stageQty(itemID, ootAdultTradeStages)
-	case "OOT_CHILD_TRADE":
-		if isOotBottleItem(itemID) {
-			return len(ootChildTradeStages)
-		}
-		return stageQty(itemID, ootChildTradeStages)
-	default:
-		return 1
-	}
-}
-
-func mmInventorySlotQty(itemName string, itemID uint8) int {
-	if itemID == emptyInventoryItem {
-		return 0
 	}
 
-	switch itemName {
-	case "MM_OCARINA":
-		return stageQty(itemID, mmOcarinaStages)
-	case "MM_TRADE_1":
-		return stageQty(itemID, mmTrade1Stages)
-	case "MM_TRADE_2":
-		return stageQty(itemID, mmTrade2Stages)
-	case "MM_HOOKSHOT":
-		return stageQty(itemID, mmHookshotStages)
-	case "MM_GREAT_FAIRY_SWORD":
-		return stageQty(itemID, mmGFSStages)
-	case "MM_TRADE_3":
-		return stageQty(itemID, mmTrade3Stages)
-	default:
-		return 1
+	if len(entry.Quantity.Stages) > 0 {
+		if entry.Quantity.MaxWithBottle && isOotBottleItem(itemID) {
+			return len(entry.Quantity.Stages)
+		}
+		return stageQty(itemID, entry.Quantity.Stages)
 	}
+
+	return 1
 }
 
 func stageQty(itemID uint8, stages []uint8) int {

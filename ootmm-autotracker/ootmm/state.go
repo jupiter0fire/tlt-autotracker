@@ -14,16 +14,51 @@ type GameState struct {
 // SharedCustomState holds the subset of OoTMM's shared custom save that is
 // relevant for item tracking across both games.
 type SharedCustomState struct {
-	SoulsEnemyOot  [8]uint8
-	SoulsEnemyMm   [8]uint8
-	SoulsBossOot   [2]uint8
-	SoulsBossMm    [1]uint8
-	SoulsNpcOot    [8]uint8
-	SoulsNpcMm     [8]uint8
-	SoulsAnimalOot [2]uint8
-	SoulsAnimalMm  [2]uint8
-	SoulsMiscOot   [1]uint8
-	SoulsMiscMm    [1]uint8
+	Bitmaps map[string][]uint8
+}
+
+func (s SharedCustomState) Clone() SharedCustomState {
+	if len(s.Bitmaps) == 0 {
+		return SharedCustomState{}
+	}
+
+	clone := SharedCustomState{Bitmaps: make(map[string][]uint8, len(s.Bitmaps))}
+	for name, bitmap := range s.Bitmaps {
+		clone.Bitmaps[name] = append([]uint8(nil), bitmap...)
+	}
+	return clone
+}
+
+func (s SharedCustomState) Bitmap(name string) []uint8 {
+	if s.Bitmaps == nil {
+		return nil
+	}
+	return s.Bitmaps[name]
+}
+
+func (s *SharedCustomState) SetBitmap(name string, bitmap []uint8) {
+	if s.Bitmaps == nil {
+		s.Bitmaps = make(map[string][]uint8)
+	}
+	s.Bitmaps[name] = append([]uint8(nil), bitmap...)
+}
+
+func (s *SharedCustomState) SetBit(name string, bit int) {
+	if bit < 0 {
+		return
+	}
+	if s.Bitmaps == nil {
+		s.Bitmaps = make(map[string][]uint8)
+	}
+	byteIndex := bit / 8
+	bitmap := s.Bitmaps[name]
+	if len(bitmap) <= byteIndex {
+		grown := make([]uint8, byteIndex+1)
+		copy(grown, bitmap)
+		bitmap = grown
+	}
+	bitmap[byteIndex] |= 1 << uint(bit%8)
+	s.Bitmaps[name] = bitmap
 }
 
 // OotState holds all tracked OoT data.

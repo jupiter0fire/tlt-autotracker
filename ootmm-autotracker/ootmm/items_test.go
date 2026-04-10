@@ -105,8 +105,10 @@ func TestExtractItemsReadsMmEquipmentLevels(t *testing.T) {
 
 func TestExtractItemsIncludesSoulBitmaps(t *testing.T) {
 	state := &GameState{}
-	state.Shared.SoulsEnemyOot[0] = 1 << 0
-	state.Shared.SoulsBossMm[0] = 1 << 1
+	ootSoul := mustCatalogItemSource("OOT_SOUL_ENEMY_STALFOS")
+	mmSoul := mustCatalogItemSource("MM_SOUL_BOSS_GOHT")
+	state.Shared.SetBit(ootSoul.Block, ootSoul.Bit)
+	state.Shared.SetBit(mmSoul.Block, mmSoul.Bit)
 
 	items := itemQtyMap(ExtractItems(state))
 
@@ -123,9 +125,10 @@ func TestExtractItemsIncludesSoulBitmaps(t *testing.T) {
 
 func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
 	state := &GameState{}
-	state.Oot.ExtraRecords[ExtraIdxMmItems] = 1 << mmExtraHammerShift
-	state.Oot.ExtraRecords[ExtraIdxMmTrade] = (1 << mmExtraTradeObtained1Shift) | (1 << (mmExtraTradeObtained2Shift + 3))
-	state.Oot.ExtraRecords[ExtraIdxMmFlags3] = (1 << mmExtraFlags3Bottomless) | (1 << mmExtraFlags3StoneAgony)
+	for _, itemID := range []string{"MM_HAMMER", "MM_SPELL_FIRE", "MM_ROOM_KEY", "MM_WALLET5", "MM_STONE_OF_AGONY"} {
+		source := mustCatalogItemSource(itemID)
+		state.Oot.ExtraRecords[source.Record] |= 1 << uint(source.Bit)
+	}
 
 	items := itemQtyMap(ExtractItems(state))
 

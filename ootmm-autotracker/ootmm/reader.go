@@ -365,7 +365,7 @@ func (r *Reader) readSharedState(saveIndex uint32, shared *SharedCustomState) er
 	}
 
 	if r.hasLastKnownShared {
-		*shared = r.lastKnownShared
+		*shared = r.lastKnownShared.Clone()
 	}
 
 	return nil
@@ -377,22 +377,19 @@ func (r *Reader) readSharedStateFromPayload(payloadBase uint32, payloadSize int,
 		return err
 	}
 
-	data, err := r.mem.Read(addr, SharedCustomTrackedSize)
+	data, err := r.mem.Read(addr, sharedStorage.TrackedSize)
 	if err != nil {
 		return fmt.Errorf("read shared custom save from %#x: %w", payloadBase, err)
 	}
 
 	parsed := SharedCustomState{}
-	copy(parsed.SoulsEnemyOot[:], data[SharedOffSoulsEnemyOot:SharedOffSoulsEnemyOot+len(parsed.SoulsEnemyOot)])
-	copy(parsed.SoulsEnemyMm[:], data[SharedOffSoulsEnemyMm:SharedOffSoulsEnemyMm+len(parsed.SoulsEnemyMm)])
-	copy(parsed.SoulsBossOot[:], data[SharedOffSoulsBossOot:SharedOffSoulsBossOot+len(parsed.SoulsBossOot)])
-	copy(parsed.SoulsBossMm[:], data[SharedOffSoulsBossMm:SharedOffSoulsBossMm+len(parsed.SoulsBossMm)])
-	copy(parsed.SoulsNpcOot[:], data[SharedOffSoulsNpcOot:SharedOffSoulsNpcOot+len(parsed.SoulsNpcOot)])
-	copy(parsed.SoulsNpcMm[:], data[SharedOffSoulsNpcMm:SharedOffSoulsNpcMm+len(parsed.SoulsNpcMm)])
-	copy(parsed.SoulsAnimalOot[:], data[SharedOffSoulsAnimalOot:SharedOffSoulsAnimalOot+len(parsed.SoulsAnimalOot)])
-	copy(parsed.SoulsAnimalMm[:], data[SharedOffSoulsAnimalMm:SharedOffSoulsAnimalMm+len(parsed.SoulsAnimalMm)])
-	copy(parsed.SoulsMiscOot[:], data[SharedOffSoulsMiscOot:SharedOffSoulsMiscOot+len(parsed.SoulsMiscOot)])
-	copy(parsed.SoulsMiscMm[:], data[SharedOffSoulsMiscMm:SharedOffSoulsMiscMm+len(parsed.SoulsMiscMm)])
+	for _, bitmap := range sharedStorage.Bitmaps {
+		end := bitmap.Offset + bitmap.Size
+		if bitmap.Offset < 0 || end > len(data) {
+			return fmt.Errorf("shared bitmap %s out of bounds in payload copy", bitmap.Name)
+		}
+		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
+	}
 
 	if !isPlausibleSharedState(parsed) {
 		return fmt.Errorf("shared custom save at %#x failed plausibility checks", addr)
@@ -413,7 +410,7 @@ func (r *Reader) rememberMmState(mm MmState) {
 }
 
 func (r *Reader) rememberSharedState(shared SharedCustomState) {
-	r.lastKnownShared = shared
+	r.lastKnownShared = shared.Clone()
 	r.hasLastKnownShared = true
 }
 
@@ -487,7 +484,7 @@ func foreignMmSaveAddr(saveIndex uint32) (uint32, error) {
 }
 
 func sharedSaveAddr(payloadBase uint32, payloadSize int, saveIndex uint32) (uint32, error) {
-	return foreignSaveAddr(payloadBase, payloadSize, SharedCustomSaveBaseOff, SharedCustomSaveStride, SharedCustomTrackedSize, saveIndex)
+	return foreignSaveAddr(payloadBase, payloadSize, sharedStorage.BaseOffset, sharedStorage.Stride, sharedStorage.TrackedSize, saveIndex)
 }
 
 func foreignSaveAddr(payloadBase uint32, payloadSize int, baseOffset, stride uint32, saveSize int, saveIndex uint32) (uint32, error) {
@@ -575,19 +572,19 @@ func isPlausibleMmSave(data []byte) bool {
 }
 
 func isPlausibleSharedState(shared SharedCustomState) bool {
-	return sharedBitmapHasNoUnusedBits(shared.SoulsEnemyOot[:], len(ootSoulEnemyIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsEnemyMm[:], len(mmSoulEnemyIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsBossOot[:], len(ootSoulBossIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsBossMm[:], len(mmSoulBossIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsNpcOot[:], len(ootSoulNpcIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsNpcMm[:], len(mmSoulNpcIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsAnimalOot[:], len(ootSoulAnimalIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsAnimalMm[:], len(mmSoulAnimalIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsMiscOot[:], len(ootSoulMiscIDs)) &&
-		sharedBitmapHasNoUnusedBits(shared.SoulsMiscMm[:], len(mmSoulMiscIDs))
+	for name, bitmapInfo := range sharedBitmaps {
+		usedBits := sharedBitmapUsedBits[name]
+		if !sharedBitmapHasNoUnusedBits(shared.Bitmap(name), usedBits, bitmapInfo.Size) {
+			return false
+		}
+	}
+	return true
 }
 
-func sharedBitmapHasNoUnusedBits(bitmap []uint8, usedBits int) bool {
+func sharedBitmapHasNoUnusedBits(bitmap []uint8, usedBits, expectedSize int) bool {
+	if len(bitmap) != expectedSize {
+		return false
+	}
 	if usedBits < 0 || usedBits > len(bitmap)*8 {
 		return false
 	}

@@ -10,55 +10,6 @@ import sys
 SLOT_DEFINE_RE = re.compile(r"^#define\s+(ITS_(OOT|MM)_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
 GI_ID_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),")
 
-SOUL_GROUP_PREFIXES = {
-    "oot": {
-        "enemy": "OOT_SOUL_ENEMY_",
-        "boss": "OOT_SOUL_BOSS_",
-        "npc": "OOT_SOUL_NPC_",
-        "animal": "OOT_SOUL_ANIMAL_",
-        "misc": "OOT_SOUL_MISC_",
-    },
-    "mm": {
-        "enemy": "MM_SOUL_ENEMY_",
-        "boss": "MM_SOUL_BOSS_",
-        "npc": "MM_SOUL_NPC_",
-        "animal": "MM_SOUL_ANIMAL_",
-        "misc": "MM_SOUL_MISC_",
-    },
-}
-
-MM_SPECIAL_IDS = {
-    "mmItems": [
-        "MM_HAMMER",
-    ],
-    "mmTrade1": [
-        "MM_SPELL_FIRE",
-        "MM_MOON_TEAR",
-        "MM_DEED_LAND",
-        "MM_DEED_SWAMP",
-        "MM_DEED_MOUNTAIN",
-        "MM_DEED_OCEAN",
-    ],
-    "mmTrade2": [
-        "MM_SPELL_WIND",
-        "MM_BOOTS_IRON",
-        "MM_TUNIC_GORON",
-        "MM_ROOM_KEY",
-        "MM_LETTER_TO_MAMA",
-    ],
-    "mmTrade3": [
-        "MM_SPELL_LOVE",
-        "MM_BOOTS_HOVER",
-        "MM_TUNIC_ZORA",
-        "MM_LETTER_TO_KAFEI",
-        "MM_PENDANT_OF_MEMORIES",
-    ],
-    "mmFlags3": [
-        "MM_WALLET5",
-        "MM_STONE_OF_AGONY",
-    ],
-}
-
 OOT_OVERRIDES = {
     "STICKS": "DEKU_STICKS",
     "NUTS": "DEKU_NUTS",
@@ -105,6 +56,79 @@ EXPECTED_SLOT_COUNTS = {
     "MM": 48,
 }
 
+SLOT_QUANTITY_RULES = {
+    "ITS_OOT_OCARINA": {"stages": [0x07, 0x08]},
+    "ITS_OOT_HOOKSHOT": {"stages": [0x0A, 0x0B]},
+    "ITS_OOT_MAGIC_BEAN": {"useBeansCount": True},
+    "ITS_OOT_TRADE_ADULT": {
+        "stages": [0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x14],
+        "maxWithBottle": True,
+    },
+    "ITS_OOT_TRADE_CHILD": {
+        "stages": [0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x9C, 0x9D, 0x14],
+        "maxWithBottle": True,
+    },
+    "ITS_MM_OCARINA": {"stages": [0x05, 0x00]},
+    "ITS_MM_TRADE1": {"stages": [0xB0, 0x28, 0x29, 0x2A, 0x2B, 0x2C]},
+    "ITS_MM_TRADE2": {"stages": [0xAE, 0xB1, 0xB3, 0x2D, 0x2E]},
+    "ITS_MM_HOOKSHOT": {"stages": [0x11, 0x0F]},
+    "ITS_MM_GREAT_FAIRY_SWORD": {"stages": [0x10, 0xB5]},
+    "ITS_MM_TRADE3": {"stages": [0xAF, 0xB2, 0xB4, 0x2F, 0x30]},
+}
+
+SHARED_STORAGE = {
+    "baseOffset": 0x18000,
+    "stride": 0x4000,
+    "trackedSize": 0x800,
+    "bitmaps": [
+        {"name": "soulsEnemyOot", "offset": 0x7CC, "size": 8},
+        {"name": "soulsEnemyMm", "offset": 0x7D4, "size": 8},
+        {"name": "soulsBossOot", "offset": 0x7DC, "size": 2},
+        {"name": "soulsBossMm", "offset": 0x7DE, "size": 1},
+        {"name": "soulsNpcOot", "offset": 0x7DF, "size": 8},
+        {"name": "soulsNpcMm", "offset": 0x7E7, "size": 8},
+        {"name": "soulsAnimalOot", "offset": 0x7EF, "size": 2},
+        {"name": "soulsAnimalMm", "offset": 0x7F1, "size": 2},
+        {"name": "soulsMiscOot", "offset": 0x7F3, "size": 1},
+        {"name": "soulsMiscMm", "offset": 0x7F4, "size": 1},
+    ],
+}
+
+SOUL_SOURCE_SPECS = [
+    {"prefix": "OOT_SOUL_ENEMY_", "block": "soulsEnemyOot"},
+    {"prefix": "OOT_SOUL_BOSS_", "block": "soulsBossOot"},
+    {"prefix": "OOT_SOUL_NPC_", "block": "soulsNpcOot"},
+    {"prefix": "OOT_SOUL_ANIMAL_", "block": "soulsAnimalOot"},
+    {"prefix": "OOT_SOUL_MISC_", "block": "soulsMiscOot"},
+    {"prefix": "MM_SOUL_ENEMY_", "block": "soulsEnemyMm"},
+    {"prefix": "MM_SOUL_BOSS_", "block": "soulsBossMm"},
+    {"prefix": "MM_SOUL_NPC_", "block": "soulsNpcMm"},
+    {"prefix": "MM_SOUL_ANIMAL_", "block": "soulsAnimalMm"},
+    {"prefix": "MM_SOUL_MISC_", "block": "soulsMiscMm"},
+]
+
+SPECIAL_ITEM_SOURCES = [
+    {"itemId": "MM_HAMMER", "source": {"kind": "oot-extra-bit", "record": 4, "bit": 6}},
+    {"itemId": "MM_SPELL_FIRE", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 16}},
+    {"itemId": "MM_MOON_TEAR", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 17}},
+    {"itemId": "MM_DEED_LAND", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 18}},
+    {"itemId": "MM_DEED_SWAMP", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 19}},
+    {"itemId": "MM_DEED_MOUNTAIN", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 20}},
+    {"itemId": "MM_DEED_OCEAN", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 21}},
+    {"itemId": "MM_SPELL_WIND", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 22}},
+    {"itemId": "MM_BOOTS_IRON", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 23}},
+    {"itemId": "MM_TUNIC_GORON", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 24}},
+    {"itemId": "MM_ROOM_KEY", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 25}},
+    {"itemId": "MM_LETTER_TO_MAMA", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 26}},
+    {"itemId": "MM_SPELL_LOVE", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 27}},
+    {"itemId": "MM_BOOTS_HOVER", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 28}},
+    {"itemId": "MM_TUNIC_ZORA", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 29}},
+    {"itemId": "MM_LETTER_TO_KAFEI", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 30}},
+    {"itemId": "MM_PENDANT_OF_MEMORIES", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 31}},
+    {"itemId": "MM_WALLET5", "source": {"kind": "oot-extra-bit", "record": 13, "bit": 0}},
+    {"itemId": "MM_STONE_OF_AGONY", "source": {"kind": "oot-extra-bit", "record": 13, "bit": 1}},
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -140,13 +164,15 @@ def extract_slots(items_header: pathlib.Path) -> dict[str, list[dict[str, object
 
         slot_name, game, raw_index = match.groups()
         index = int(raw_index, 16)
-        slots[game].append(
-            {
-                "index": index,
-                "slot": slot_name,
-                "itemId": tracker_id_for(slot_name, game),
-            }
-        )
+        entry = {
+            "index": index,
+            "slot": slot_name,
+            "itemId": tracker_id_for(slot_name, game),
+        }
+        quantity = SLOT_QUANTITY_RULES.get(slot_name)
+        if quantity is not None:
+            entry["quantity"] = quantity
+        slots[game].append(entry)
 
     for game, entries in slots.items():
         entries.sort(key=lambda entry: int(entry["index"]))
@@ -158,9 +184,7 @@ def extract_slots(items_header: pathlib.Path) -> dict[str, list[dict[str, object
 
         indices = [int(entry["index"]) for entry in entries]
         if indices != list(range(expected)):
-            raise ValueError(
-                f"{game} slot indices are not contiguous: {indices}"
-            )
+            raise ValueError(f"{game} slot indices are not contiguous: {indices}")
 
     return {"oot": slots["OOT"], "mm": slots["MM"]}
 
@@ -189,21 +213,34 @@ def ensure_ids_exist(gi_ids: list[str], required_ids: list[str], label: str) -> 
 
 def build_catalog(gi_defs: pathlib.Path) -> dict[str, object]:
     gi_ids = extract_gi_ids(gi_defs)
+    bitmap_sizes = {bitmap["name"]: bitmap["size"] for bitmap in SHARED_STORAGE["bitmaps"]}
 
-    souls: dict[str, dict[str, list[str]]] = {}
-    for game, groups in SOUL_GROUP_PREFIXES.items():
-        souls[game] = {}
-        for group_name, prefix in groups.items():
-            souls[game][group_name] = collect_prefixed_ids(gi_ids, prefix)
+    items: list[dict[str, object]] = []
+    for spec in SOUL_SOURCE_SPECS:
+        soul_ids = collect_prefixed_ids(gi_ids, spec["prefix"])
+        max_bits = bitmap_sizes[spec["block"]] * 8
+        if len(soul_ids) > max_bits:
+            raise ValueError(
+                f"{spec['block']} only has space for {max_bits} bits, found {len(soul_ids)} items"
+            )
+        for bit, item_id in enumerate(soul_ids):
+            items.append(
+                {
+                    "itemId": item_id,
+                    "source": {
+                        "kind": "shared-bitmap-bit",
+                        "block": spec["block"],
+                        "bit": bit,
+                    },
+                }
+            )
 
-    special: dict[str, list[str]] = {}
-    for label, item_ids in MM_SPECIAL_IDS.items():
-        ensure_ids_exist(gi_ids, item_ids, label)
-        special[label] = item_ids
+    ensure_ids_exist(gi_ids, [entry["itemId"] for entry in SPECIAL_ITEM_SOURCES], "special item")
+    items.extend(SPECIAL_ITEM_SOURCES)
 
     return {
-        "souls": souls,
-        "special": special,
+        "shared": SHARED_STORAGE,
+        "items": items,
     }
 
 
