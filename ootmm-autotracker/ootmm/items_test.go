@@ -8,7 +8,7 @@ func TestExtractItemsNormalizesOotInventorySlots(t *testing.T) {
 	state.Oot.Items[mustOotInventorySlotIndex("OOT_HOOKSHOT")] = 0x0B
 	state.Oot.Items[mustOotInventorySlotIndex("OOT_BOTTLE_1")] = 0x14
 	state.Oot.Items[mustOotInventorySlotIndex("OOT_ADULT_TRADE")] = 0x37
-	state.Oot.Items[mustOotInventorySlotIndex("OOT_MAGIC_BEANS")] = 0x10
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_MAGIC_BEAN")] = 0x10
 	state.Oot.Beans = 5
 
 	items := itemQtyMap(ExtractItems(state))
@@ -25,8 +25,8 @@ func TestExtractItemsNormalizesOotInventorySlots(t *testing.T) {
 	if got := items["OOT_ADULT_TRADE"]; got != 11 {
 		t.Fatalf("OOT_ADULT_TRADE = %d, want 11", got)
 	}
-	if got := items["OOT_MAGIC_BEANS"]; got != 5 {
-		t.Fatalf("OOT_MAGIC_BEANS = %d, want 5", got)
+	if got := items["OOT_MAGIC_BEAN"]; got != 5 {
+		t.Fatalf("OOT_MAGIC_BEAN = %d, want 5", got)
 	}
 }
 

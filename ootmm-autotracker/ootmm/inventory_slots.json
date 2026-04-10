@@ -3,7 +3,7 @@
     {
       "index": 0,
       "slot": "ITS_OOT_STICKS",
-      "itemId": "OOT_DEKU_STICKS"
+      "itemId": "OOT_STICK"
     },
     {
       "index": 1,
@@ -23,12 +23,12 @@
     {
       "index": 4,
       "slot": "ITS_OOT_ARROW_FIRE",
-      "itemId": "OOT_FIRE_ARROWS"
+      "itemId": "OOT_ARROW_FIRE"
     },
     {
       "index": 5,
       "slot": "ITS_OOT_SPELL_FIRE",
-      "itemId": "OOT_DINS_FIRE"
+      "itemId": "OOT_SPELL_FIRE"
     },
     {
       "index": 6,
@@ -65,12 +65,12 @@
     {
       "index": 10,
       "slot": "ITS_OOT_ARROW_ICE",
-      "itemId": "OOT_ICE_ARROWS"
+      "itemId": "OOT_ARROW_ICE"
     },
     {
       "index": 11,
       "slot": "ITS_OOT_SPELL_WIND",
-      "itemId": "OOT_FARORES_WIND"
+      "itemId": "OOT_SPELL_WIND"
     },
     {
       "index": 12,
@@ -85,7 +85,7 @@
     {
       "index": 14,
       "slot": "ITS_OOT_MAGIC_BEAN",
-      "itemId": "OOT_MAGIC_BEANS",
+      "itemId": "OOT_MAGIC_BEAN",
       "quantity": {
         "useBeansCount": true
       }
@@ -93,17 +93,17 @@
     {
       "index": 15,
       "slot": "ITS_OOT_HAMMER",
-      "itemId": "OOT_MEGATON_HAMMER"
+      "itemId": "OOT_HAMMER"
     },
     {
       "index": 16,
       "slot": "ITS_OOT_ARROW_LIGHT",
-      "itemId": "OOT_LIGHT_ARROWS"
+      "itemId": "OOT_ARROW_LIGHT"
     },
     {
       "index": 17,
       "slot": "ITS_OOT_SPELL_LOVE",
-      "itemId": "OOT_NAYRUS_LOVE"
+      "itemId": "OOT_SPELL_LOVE"
     },
     {
       "index": 18,
@@ -192,17 +192,17 @@
     {
       "index": 2,
       "slot": "ITS_MM_ARROW_FIRE",
-      "itemId": "MM_FIRE_ARROWS"
+      "itemId": "MM_ARROW_FIRE"
     },
     {
       "index": 3,
       "slot": "ITS_MM_ARROW_ICE",
-      "itemId": "MM_ICE_ARROWS"
+      "itemId": "MM_ARROW_ICE"
     },
     {
       "index": 4,
       "slot": "ITS_MM_ARROW_LIGHT",
-      "itemId": "MM_LIGHT_ARROWS"
+      "itemId": "MM_ARROW_LIGHT"
     },
     {
       "index": 5,
@@ -227,22 +227,22 @@
     {
       "index": 7,
       "slot": "ITS_MM_BOMBCHU",
-      "itemId": "MM_BOMBCHUS"
+      "itemId": "MM_BOMBCHU"
     },
     {
       "index": 8,
       "slot": "ITS_MM_STICKS",
-      "itemId": "MM_DEKU_STICKS"
+      "itemId": "MM_STICK"
     },
     {
       "index": 9,
       "slot": "ITS_MM_NUTS",
-      "itemId": "MM_DEKU_NUTS"
+      "itemId": "MM_NUT"
     },
     {
       "index": 10,
       "slot": "ITS_MM_BEANS",
-      "itemId": "MM_MAGIC_BEANS"
+      "itemId": "MM_MAGIC_BEAN"
     },
     {
       "index": 11,
@@ -266,7 +266,7 @@
     {
       "index": 13,
       "slot": "ITS_MM_PICTOBOX",
-      "itemId": "MM_PICTOGRAPH"
+      "itemId": "MM_PICTOGRAPH_BOX"
     },
     {
       "index": 14,
