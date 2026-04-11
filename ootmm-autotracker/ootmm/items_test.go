@@ -81,11 +81,58 @@ func TestExtractItemsCountsOotEquipmentStages(t *testing.T) {
 	if got := items["OOT_SHIELD"]; got != 2 {
 		t.Fatalf("OOT_SHIELD = %d, want 2", got)
 	}
-	if got := items["OOT_TUNIC"]; got != 2 {
-		t.Fatalf("OOT_TUNIC = %d, want 2", got)
+	if got := items["OOT_TUNIC"]; got != 3 {
+		t.Fatalf("OOT_TUNIC = %d, want 3", got)
 	}
 	if got := items["OOT_BOOTS"]; got != 1 {
 		t.Fatalf("OOT_BOOTS = %d, want 1", got)
+	}
+}
+
+func TestExtractItemsReportsOotMasterSwordWithoutKokiri(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Equipment = 0x0002
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SWORD"]; got != 2 {
+		t.Fatalf("OOT_SWORD = %d, want 2", got)
+	}
+}
+
+func TestExtractItemsReportsOotBiggoronSword(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Equipment = 0x0004
+	state.Oot.IsBiggoronSword = true
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SWORD"]; got != 4 {
+		t.Fatalf("OOT_SWORD = %d, want 4", got)
+	}
+}
+
+func TestExtractItemsTreatsBrokenKnifeAsStageThree(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Equipment = 0x0008
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SWORD"]; got != 3 {
+		t.Fatalf("OOT_SWORD = %d, want 3", got)
+	}
+}
+
+func TestParseOotSaveReadsBiggoronFlag(t *testing.T) {
+	data := make([]byte, OotSaveSize)
+	data[OotOffIsBiggoronSword] = 1
+
+	var oot OotState
+	if err := parseOotSave(&oot, data); err != nil {
+		t.Fatalf("parseOotSave: %v", err)
+	}
+	if !oot.IsBiggoronSword {
+		t.Fatal("expected Biggoron flag to be true")
 	}
 }
 

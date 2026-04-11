@@ -42,10 +42,11 @@ const (
 // Source: OoTMM/packages/generator/include/combo/oot/save.h (ASSERT_OFFSET verified)
 const (
 	// Within OotSave
-	OotOffEntrance = 0x00 // u32
-	OotOffAge      = 0x04 // u32 (0=adult, 1=child)
-	OotOffSceneID  = 0x66 // u16 — current scene
-	OotOffEquips   = 0x68 // OotItemEquips (0x0A bytes)
+	OotOffEntrance        = 0x00 // u32
+	OotOffAge             = 0x04 // u32 (0=adult, 1=child)
+	OotOffSceneID         = 0x66 // u16 — current scene
+	OotOffIsBiggoronSword = 0x3E // u8 in OotSaveInfo
+	OotOffEquips          = 0x68 // OotItemEquips (0x0A bytes)
 
 	// OotInventory starts at OotSave + 0x74 (after equips + padding)
 	// But ASSERT_OFFSET says equipment is at 0x9C

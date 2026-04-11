@@ -56,11 +56,11 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_GOLD_TOKENS", int(oot.GoldTokens)})
 	items = append(items, TrackedItem{"OOT_HEART_PIECES", int(oot.HeartPieces)})
 
-	// Equipment levels (from bitfield: boots:4, tunics:4, shields:4, swords:4)
-	items = append(items, TrackedItem{"OOT_SWORD", bits.OnesCount16(oot.Equipment & 0xF)})
-	items = append(items, TrackedItem{"OOT_SHIELD", bits.OnesCount16((oot.Equipment >> 4) & 0xF)})
-	items = append(items, TrackedItem{"OOT_TUNIC", bits.OnesCount16((oot.Equipment >> 8) & 0xF)})
-	items = append(items, TrackedItem{"OOT_BOOTS", bits.OnesCount16((oot.Equipment >> 12) & 0xF)})
+	// OoT inventory equipment is stored as ownership bitmasks; tracker quantities are stages.
+	items = append(items, TrackedItem{"OOT_SWORD", ootSwordLevel(oot)})
+	items = append(items, TrackedItem{"OOT_SHIELD", ootEquipmentLevel((oot.Equipment >> 4) & 0xF)})
+	items = append(items, TrackedItem{"OOT_TUNIC", ootEquipmentLevel((oot.Equipment >> 8) & 0xF)})
+	items = append(items, TrackedItem{"OOT_BOOTS", ootEquipmentLevel((oot.Equipment >> 12) & 0xF)})
 
 	// Upgrades
 	items = append(items, TrackedItem{"OOT_QUIVER", GetUpgradeLevel(oot.Upgrades, 0, 3)})
@@ -256,6 +256,21 @@ func ootSceneCheckID(scene int, kind string, bit int) string {
 
 func mmSceneCheckID(scene int, kind string, bit int) string {
 	return "MM_" + kind + "_" + itoa(scene) + "_" + itoa(bit)
+}
+
+func ootSwordLevel(oot *OotState) int {
+	swords := oot.Equipment & 0xF
+	if swords&(0x4|0x8) != 0 {
+		if oot.IsBiggoronSword {
+			return 4
+		}
+		return 3
+	}
+	return ootEquipmentLevel(swords)
+}
+
+func ootEquipmentLevel(mask uint16) int {
+	return bits.Len16(mask)
 }
 
 func itoa(i int) string {

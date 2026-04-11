@@ -143,6 +143,7 @@ func parseOotSave(oot *OotState, data []byte) error {
 	// Parse OotSave (starts at offset 0 within OotSaveContext)
 	oot.Age = binary.BigEndian.Uint32(data[OotOffAge:])
 	oot.SceneID = binary.BigEndian.Uint16(data[OotOffSceneID:])
+	oot.IsBiggoronSword = data[OotOffIsBiggoronSword] != 0
 
 	// Inventory
 	copy(oot.Items[:], data[OotOffInvItems:OotOffInvItems+24])
