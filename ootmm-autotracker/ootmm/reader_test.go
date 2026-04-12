@@ -275,6 +275,22 @@ func TestIsPlausibleSharedStateRejectsUnknownFutureBits(t *testing.T) {
 	}
 }
 
+func TestParseSharedStateReadsBombchuBagBits(t *testing.T) {
+	data := make([]byte, SharedCustomSaveSize)
+	data[sharedBombchuBagFlagsOffset] = (2 << sharedBombchuBagOotShift) | (3 << sharedBombchuBagMmShift)
+
+	shared, err := parseSharedState(data)
+	if err != nil {
+		t.Fatalf("parseSharedState: %v", err)
+	}
+	if shared.BombchuBagOot != 2 {
+		t.Fatalf("BombchuBagOot = %d, want 2", shared.BombchuBagOot)
+	}
+	if shared.BombchuBagMm != 3 {
+		t.Fatalf("BombchuBagMm = %d, want 3", shared.BombchuBagMm)
+	}
+}
+
 func TestValidateSilverRupeeDataAcceptsLiveLikeMqConfig(t *testing.T) {
 	data := []byte{
 		0x00, 0x01, 0x25, 0x05,

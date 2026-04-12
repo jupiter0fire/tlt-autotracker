@@ -143,6 +143,7 @@ func buildSharedBitmapTable(layout sharedStorageLayout) map[string]sharedBitmapI
 }
 
 func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitmapInfo) ([]catalogItemEntry, map[string]catalogItemSource, map[string]int) {
+	tracked := make([]catalogItemEntry, 0, len(items))
 	sources := make(map[string]catalogItemSource, len(items))
 	usedBits := make(map[string]int)
 	for _, item := range items {
@@ -181,8 +182,20 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			panic(fmt.Sprintf("catalog item %s has unsupported source kind %s", item.ItemID, source.Kind))
 		}
 		sources[item.ItemID] = source
+		if shouldTrackCatalogItem(source) {
+			tracked = append(tracked, item)
+		}
 	}
-	return items, sources, usedBits
+	return tracked, sources, usedBits
+}
+
+func shouldTrackCatalogItem(source catalogItemSource) bool {
+	switch source.Kind {
+	case "oot-derived-key-ring", "mm-derived-key-ring", "oot-derived-skeleton-key", "oot-derived-platinum-token", "mm-derived-platinum-token", "oot-derived-magical-rupee", "mm-derived-skeleton-key", "mm-derived-transcendent-fairy":
+		return false
+	default:
+		return true
+	}
 }
 
 func mustOotInventorySlotIndex(itemID string) int {

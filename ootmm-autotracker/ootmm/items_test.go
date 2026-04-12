@@ -251,11 +251,11 @@ func TestExtractItemsKeepsMmComponentsWhenSpecialItemsPresent(t *testing.T) {
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["MM_SKELETON_KEY"]; got != 1 {
-		t.Fatalf("MM_SKELETON_KEY = %d, want 1", got)
+	if _, ok := items["MM_SKELETON_KEY"]; ok {
+		t.Fatal("MM_SKELETON_KEY should not be exported")
 	}
-	if got := items["MM_TRANSCENDENT_FAIRY"]; got != 1 {
-		t.Fatalf("MM_TRANSCENDENT_FAIRY = %d, want 1", got)
+	if _, ok := items["MM_TRANSCENDENT_FAIRY"]; ok {
+		t.Fatal("MM_TRANSCENDENT_FAIRY should not be exported")
 	}
 	if got := items["MM_SMALL_KEY_WF"]; got != 1 {
 		t.Fatalf("MM_SMALL_KEY_WF = %d, want 1", got)
@@ -328,7 +328,7 @@ func TestExtractItemsTradeIgnoresInventorySlot(t *testing.T) {
 	state := &GameState{}
 	// Set inventory slot to a trade item but leave ExtraRecords empty.
 	state.Oot.Items[mustOotInventorySlotIndex("OOT_ADULT_TRADE")] = 0x37 // Claim Check
-	state.Mm.Items[mustMmInventorySlotIndex("MM_TRADE_1")] = 0x2C       // Ocean Title Deed
+	state.Mm.Items[mustMmInventorySlotIndex("MM_TRADE_1")] = 0x2C        // Ocean Title Deed
 
 	items := itemQtyMap(ExtractItems(state))
 
@@ -380,22 +380,22 @@ func TestExtractItemsDerivesRequestedMmSpecialItems(t *testing.T) {
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["MM_SKELETON_KEY"]; got != 1 {
-		t.Fatalf("MM_SKELETON_KEY = %d, want 1", got)
+	if _, ok := items["MM_SKELETON_KEY"]; ok {
+		t.Fatal("MM_SKELETON_KEY should not be exported")
 	}
-	if got := items["MM_TRANSCENDENT_FAIRY"]; got != 1 {
-		t.Fatalf("MM_TRANSCENDENT_FAIRY = %d, want 1", got)
+	if _, ok := items["MM_TRANSCENDENT_FAIRY"]; ok {
+		t.Fatal("MM_TRANSCENDENT_FAIRY should not be exported")
 	}
 
 	state.Mm.DungeonItems[0] = 0
 	state.Mm.StrayFairies[0] = 0
 	items = itemQtyMap(ExtractItems(state))
 
-	if got := items["MM_SKELETON_KEY"]; got != 0 {
-		t.Fatalf("MM_SKELETON_KEY = %d, want 0 after clearing dungeon state", got)
+	if _, ok := items["MM_SKELETON_KEY"]; ok {
+		t.Fatal("MM_SKELETON_KEY should stay omitted after clearing dungeon state")
 	}
-	if got := items["MM_TRANSCENDENT_FAIRY"]; got != 0 {
-		t.Fatalf("MM_TRANSCENDENT_FAIRY = %d, want 0 after clearing fairy state", got)
+	if _, ok := items["MM_TRANSCENDENT_FAIRY"]; ok {
+		t.Fatal("MM_TRANSCENDENT_FAIRY should stay omitted after clearing fairy state")
 	}
 }
 
@@ -427,8 +427,8 @@ func TestExtractItemsDerivesOotCombinedItems(t *testing.T) {
 	items := itemQtyMap(ExtractItems(state))
 
 	for _, itemID := range []string{"OOT_KEY_RING_FOREST", "OOT_KEY_RING_FIRE", "OOT_KEY_RING_WATER", "OOT_KEY_RING_SPIRIT", "OOT_KEY_RING_SHADOW", "OOT_KEY_RING_BOTW", "OOT_KEY_RING_GTG", "OOT_KEY_RING_GF", "OOT_KEY_RING_GANON", "OOT_KEY_RING_TCG", "OOT_SKELETON_KEY", "OOT_PLATINUM_TOKEN", "OOT_RUPEE_MAGICAL"} {
-		if got := items[itemID]; got != 1 {
-			t.Fatalf("%s = %d, want 1", itemID, got)
+		if _, ok := items[itemID]; ok {
+			t.Fatalf("%s should not be exported", itemID)
 		}
 	}
 
@@ -437,17 +437,10 @@ func TestExtractItemsDerivesOotCombinedItems(t *testing.T) {
 	state.Oot.DungeonItems[3] = 0
 	items = itemQtyMap(ExtractItems(state))
 
-	if got := items["OOT_PLATINUM_TOKEN"]; got != 0 {
-		t.Fatalf("OOT_PLATINUM_TOKEN = %d, want 0 after lowering tokens", got)
-	}
-	if got := items["OOT_RUPEE_MAGICAL"]; got != 0 {
-		t.Fatalf("OOT_RUPEE_MAGICAL = %d, want 0 after lowering silver rupees", got)
-	}
-	if got := items["OOT_KEY_RING_FOREST"]; got != 0 {
-		t.Fatalf("OOT_KEY_RING_FOREST = %d, want 0 after lowering forest keys", got)
-	}
-	if got := items["OOT_SKELETON_KEY"]; got != 0 {
-		t.Fatalf("OOT_SKELETON_KEY = %d, want 0 after lowering forest keys", got)
+	for _, itemID := range []string{"OOT_KEY_RING_FOREST", "OOT_KEY_RING_FIRE", "OOT_KEY_RING_WATER", "OOT_KEY_RING_SPIRIT", "OOT_KEY_RING_SHADOW", "OOT_KEY_RING_BOTW", "OOT_KEY_RING_GTG", "OOT_KEY_RING_GF", "OOT_KEY_RING_GANON", "OOT_KEY_RING_TCG", "OOT_SKELETON_KEY", "OOT_PLATINUM_TOKEN", "OOT_RUPEE_MAGICAL"} {
+		if _, ok := items[itemID]; ok {
+			t.Fatalf("%s should stay omitted after lowering source state", itemID)
+		}
 	}
 }
 
@@ -462,8 +455,8 @@ func TestExtractItemsDerivesMmCombinedItems(t *testing.T) {
 	items := itemQtyMap(ExtractItems(state))
 
 	for _, itemID := range []string{"MM_KEY_RING_WF", "MM_KEY_RING_SH", "MM_KEY_RING_GB", "MM_KEY_RING_ST", "MM_PLATINUM_TOKEN"} {
-		if got := items[itemID]; got != 1 {
-			t.Fatalf("%s = %d, want 1", itemID, got)
+		if _, ok := items[itemID]; ok {
+			t.Fatalf("%s should not be exported", itemID)
 		}
 	}
 
@@ -471,11 +464,31 @@ func TestExtractItemsDerivesMmCombinedItems(t *testing.T) {
 	state.Mm.DungeonItems[0] = 0
 	items = itemQtyMap(ExtractItems(state))
 
-	if got := items["MM_PLATINUM_TOKEN"]; got != 0 {
-		t.Fatalf("MM_PLATINUM_TOKEN = %d, want 0 after lowering skull tokens", got)
+	for _, itemID := range []string{"MM_KEY_RING_WF", "MM_KEY_RING_SH", "MM_KEY_RING_GB", "MM_KEY_RING_ST", "MM_PLATINUM_TOKEN"} {
+		if _, ok := items[itemID]; ok {
+			t.Fatalf("%s should stay omitted after lowering source state", itemID)
+		}
 	}
-	if got := items["MM_KEY_RING_WF"]; got != 0 {
-		t.Fatalf("MM_KEY_RING_WF = %d, want 0 after lowering woodfall keys", got)
+}
+
+func TestExtractItemsTreatsSharedBombchuBagAsOwnedBombchu(t *testing.T) {
+	state := &GameState{}
+	for i := range state.Oot.Items {
+		state.Oot.Items[i] = emptyInventoryItem
+	}
+	for i := range state.Mm.Items {
+		state.Mm.Items[i] = emptyInventoryItem
+	}
+	state.Shared.BombchuBagOot = 2
+	state.Shared.BombchuBagMm = 1
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_BOMBCHUS"]; got != 1 {
+		t.Fatalf("OOT_BOMBCHUS = %d, want 1 from shared bombchu bag", got)
+	}
+	if got := items["MM_BOMBCHU"]; got != 1 {
+		t.Fatalf("MM_BOMBCHU = %d, want 1 from shared bombchu bag", got)
 	}
 }
 

@@ -7,7 +7,16 @@ import (
 	"github.com/ootmm-autotracker/n64"
 )
 
-const maxForeignMmChecksumDelta = 0x400
+const (
+	maxForeignMmChecksumDelta = 0x400
+
+	// SharedCustomSave stores bombchu bag progression in the flag byte after
+	// the souls, fish, and respawn blocks.
+	sharedBombchuBagFlagsOffset = 2114
+	sharedBombchuBagOotShift    = 4
+	sharedBombchuBagMmShift     = 6
+	sharedBombchuBagMask        = 0x3
+)
 
 // Reader reads OoTMM game state from N64 RDRAM.
 type Reader struct {
@@ -16,8 +25,8 @@ type Reader struct {
 
 	foreignOotSaveAddr uint32
 	foreignMmSaveAddr  uint32
-	ootMaxKeysAddr      uint32
-	ootSilverDataAddr   uint32
+	ootMaxKeysAddr     uint32
+	ootSilverDataAddr  uint32
 	lastKnownOot       OotState
 	lastKnownMm        MmState
 	lastKnownShared    SharedCustomState
@@ -522,7 +531,7 @@ func (r *Reader) readForeignOotSave(oot *OotState) error {
 	}
 
 	return r.readOotSaveAt(addr, oot)
-	}
+}
 
 func (r *Reader) readOotSaveAt(addr uint32, oot *OotState) error {
 	data, err := r.mem.Read(addr, OotSaveSize)
@@ -550,7 +559,7 @@ func (r *Reader) readForeignMmSave(mm *MmState) error {
 	}
 
 	return r.readMmSaveAt(addr, mm)
-	}
+}
 
 func (r *Reader) readMmSaveAt(addr uint32, mm *MmState) error {
 	data, err := r.mem.Read(addr, MmSaveSize)
@@ -640,27 +649,20 @@ func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedC
 	}
 
 	addr := foreignSaveAddr - SharedCustomSaveSize
-	end := uint64(addr-payloadBase) + uint64(sharedStorage.TrackedSize)
+	readSize := sharedStateReadSize()
+	end := uint64(addr-payloadBase) + uint64(readSize)
 	if end > uint64(payloadSize) {
 		return fmt.Errorf("shared custom save near %#x exceeds payload bounds", foreignSaveAddr)
 	}
 
-	data, err := r.mem.Read(addr, sharedStorage.TrackedSize)
+	data, err := r.mem.Read(addr, readSize)
 	if err != nil {
 		return fmt.Errorf("read shared custom save near %#x: %w", foreignSaveAddr, err)
 	}
 
-	parsed := SharedCustomState{}
-	for _, bitmap := range sharedStorage.Bitmaps {
-		end := bitmap.Offset + bitmap.Size
-		if bitmap.Offset < 0 || end > len(data) {
-			return fmt.Errorf("shared bitmap %s out of bounds near foreign save", bitmap.Name)
-		}
-		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
-	}
-
-	if !isPlausibleSharedState(parsed) {
-		return fmt.Errorf("shared custom save near %#x failed plausibility checks", foreignSaveAddr)
+	parsed, err := parseSharedState(data)
+	if err != nil {
+		return fmt.Errorf("parse shared custom save near %#x: %w", foreignSaveAddr, err)
 	}
 
 	*shared = parsed
@@ -673,26 +675,49 @@ func (r *Reader) readSharedStateFromPayload(payloadBase uint32, payloadSize int,
 		return err
 	}
 
-	data, err := r.mem.Read(addr, sharedStorage.TrackedSize)
+	data, err := r.mem.Read(addr, sharedStateReadSize())
 	if err != nil {
 		return fmt.Errorf("read shared custom save from %#x: %w", payloadBase, err)
 	}
 
-	parsed := SharedCustomState{}
-	for _, bitmap := range sharedStorage.Bitmaps {
-		end := bitmap.Offset + bitmap.Size
-		if bitmap.Offset < 0 || end > len(data) {
-			return fmt.Errorf("shared bitmap %s out of bounds in payload copy", bitmap.Name)
-		}
-		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
-	}
-
-	if !isPlausibleSharedState(parsed) {
-		return fmt.Errorf("shared custom save at %#x failed plausibility checks", addr)
+	parsed, err := parseSharedState(data)
+	if err != nil {
+		return fmt.Errorf("parse shared custom save at %#x: %w", addr, err)
 	}
 
 	*shared = parsed
 	return nil
+}
+
+func sharedStateReadSize() int {
+	readSize := int(SharedCustomSaveSize)
+	if readSize < sharedStorage.TrackedSize {
+		readSize = sharedStorage.TrackedSize
+	}
+	if readSize < sharedBombchuBagFlagsOffset+1 {
+		readSize = sharedBombchuBagFlagsOffset + 1
+	}
+	return readSize
+}
+
+func parseSharedState(data []byte) (SharedCustomState, error) {
+	parsed := SharedCustomState{}
+	for _, bitmap := range sharedStorage.Bitmaps {
+		end := bitmap.Offset + bitmap.Size
+		if bitmap.Offset < 0 || end > len(data) {
+			return SharedCustomState{}, fmt.Errorf("shared bitmap %s out of bounds", bitmap.Name)
+		}
+		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
+	}
+	if len(data) > sharedBombchuBagFlagsOffset {
+		flags := data[sharedBombchuBagFlagsOffset]
+		parsed.BombchuBagOot = uint8((flags >> sharedBombchuBagOotShift) & sharedBombchuBagMask)
+		parsed.BombchuBagMm = uint8((flags >> sharedBombchuBagMmShift) & sharedBombchuBagMask)
+	}
+	if !isPlausibleSharedState(parsed) {
+		return SharedCustomState{}, fmt.Errorf("shared custom save failed plausibility checks")
+	}
+	return parsed, nil
 }
 
 func (r *Reader) rememberOotState(oot OotState) {
@@ -780,7 +805,7 @@ func foreignMmSaveAddr(saveIndex uint32) (uint32, error) {
 }
 
 func sharedSaveAddr(payloadBase uint32, payloadSize int, saveIndex uint32) (uint32, error) {
-	return foreignSaveAddr(payloadBase, payloadSize, sharedStorage.BaseOffset, sharedStorage.Stride, sharedStorage.TrackedSize, saveIndex)
+	return foreignSaveAddr(payloadBase, payloadSize, sharedStorage.BaseOffset, sharedStorage.Stride, sharedStateReadSize(), saveIndex)
 }
 
 func foreignSaveAddr(payloadBase uint32, payloadSize int, baseOffset, stride uint32, saveSize int, saveIndex uint32) (uint32, error) {

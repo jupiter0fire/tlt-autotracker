@@ -14,15 +14,24 @@ type GameState struct {
 // SharedCustomState holds the subset of OoTMM's shared custom save that is
 // relevant for item tracking across both games.
 type SharedCustomState struct {
-	Bitmaps map[string][]uint8
+	Bitmaps       map[string][]uint8
+	BombchuBagOot uint8
+	BombchuBagMm  uint8
 }
 
 func (s SharedCustomState) Clone() SharedCustomState {
 	if len(s.Bitmaps) == 0 {
-		return SharedCustomState{}
+		return SharedCustomState{
+			BombchuBagOot: s.BombchuBagOot,
+			BombchuBagMm:  s.BombchuBagMm,
+		}
 	}
 
-	clone := SharedCustomState{Bitmaps: make(map[string][]uint8, len(s.Bitmaps))}
+	clone := SharedCustomState{
+		Bitmaps:       make(map[string][]uint8, len(s.Bitmaps)),
+		BombchuBagOot: s.BombchuBagOot,
+		BombchuBagMm:  s.BombchuBagMm,
+	}
 	for name, bitmap := range s.Bitmaps {
 		clone.Bitmaps[name] = append([]uint8(nil), bitmap...)
 	}
@@ -86,7 +95,7 @@ type OotState struct {
 	DungeonItems [20]uint8
 	DungeonKeys  [19]int8
 
-	GoldTokens uint16
+	GoldTokens                  uint16
 	RuntimeMaxKeys              [OotRuntimeSceneCount]uint8
 	RuntimeSilverRupeeCounts    [OotSilverRupeeSetCount]uint8
 	HasRuntimeMaxKeys           bool
@@ -125,10 +134,10 @@ type MmState struct {
 	HeartPieces uint8
 
 	// Per-dungeon packed byte: boss key/compass/map use low bits, max keys use upper bits.
-	DungeonItems [10]uint8
-	DungeonKeys  [9]int8
-	StrayFairies [10]int8
-	TownStrayFairy bool
+	DungeonItems     [10]uint8
+	DungeonKeys      [9]int8
+	StrayFairies     [10]int8
+	TownStrayFairy   bool
 	SkullTokensSwamp uint16
 	SkullTokensOcean uint16
 

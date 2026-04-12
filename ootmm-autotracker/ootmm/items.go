@@ -96,6 +96,9 @@ func ExtractItems(state *GameState) []TrackedItem {
 			continue
 		}
 		qty := inventorySlotQty(entry, itemID, oot.Beans)
+		if entry.ItemID == "OOT_BOMBCHUS" && qty == 0 && state.Shared.BombchuBagOot > 0 {
+			qty = 1
+		}
 		if qty > 0 {
 			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
@@ -178,6 +181,9 @@ func ExtractItems(state *GameState) []TrackedItem {
 			continue
 		}
 		qty := inventorySlotQty(entry, itemID, 0)
+		if entry.ItemID == "MM_BOMBCHU" && qty == 0 && state.Shared.BombchuBagMm > 0 {
+			qty = 1
+		}
 		if qty > 0 {
 			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
