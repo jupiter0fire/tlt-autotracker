@@ -2,6 +2,12 @@ package ootmm
 
 import "math/bits"
 
+const (
+	dungeonItemMapMask     = 0x04
+	dungeonItemCompassMask = 0x02
+	dungeonItemBossKeyMask = 0x01
+)
+
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
 	ID  string `json:"id"`
@@ -78,33 +84,49 @@ func ExtractItems(state *GameState) []TrackedItem {
 		if entry.ItemID == "" {
 			continue
 		}
+		// Skip trade slots — tracked via ExtraRecord bitmasks below.
+		if entry.ItemID == "OOT_ADULT_TRADE" || entry.ItemID == "OOT_CHILD_TRADE" {
+			continue
+		}
 		qty := inventorySlotQty(entry, itemID, oot.Beans)
 		if qty > 0 {
 			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
 	}
 
+	// OoT trade items — bitmasks from ExtraRecords.
+	// OotExtraTrade: u16 child (upper 16 bits) | u16 adult (lower 16 bits).
+	ootTradeRec := oot.ExtraRecords[ExtraIdxOotTrade]
+	items = append(items, TrackedItem{"OOT_CHILD_TRADE", int(ootTradeRec >> 16)})
+	items = append(items, TrackedItem{"OOT_ADULT_TRADE", int(ootTradeRec & 0xFFFF)})
+
 	// Dungeon items
 	for i := 0; i < 20; i++ {
 		di := oot.DungeonItems[i]
-		prefix := ootDungeonName(i)
-		if prefix == "" {
+		bossKeyID, compassID, mapID := ootDungeonItemIDs(i)
+		if bossKeyID == "" && compassID == "" && mapID == "" {
 			continue
 		}
-		items = append(items, TrackedItem{prefix + "_BOSS_KEY", boolToInt(di&0x80 != 0)})
-		items = append(items, TrackedItem{prefix + "_COMPASS", boolToInt(di&0x40 != 0)})
-		items = append(items, TrackedItem{prefix + "_MAP", boolToInt(di&0x20 != 0)})
+		if bossKeyID != "" {
+			items = append(items, TrackedItem{bossKeyID, boolToInt(di&dungeonItemBossKeyMask != 0)})
+		}
+		if compassID != "" {
+			items = append(items, TrackedItem{compassID, boolToInt(di&dungeonItemCompassMask != 0)})
+		}
+		if mapID != "" {
+			items = append(items, TrackedItem{mapID, boolToInt(di&dungeonItemMapMask != 0)})
+		}
 	}
 	for i := 0; i < 19; i++ {
-		name := ootDungeonName(i)
-		if name == "" {
+		keyID := ootDungeonSmallKeyID(i)
+		if keyID == "" {
 			continue
 		}
 		keys := oot.DungeonKeys[i]
 		if keys < 0 {
 			keys = 0
 		}
-		items = append(items, TrackedItem{name + "_KEYS", int(keys)})
+		items = append(items, TrackedItem{keyID, int(keys)})
 	}
 
 	// Extra records
@@ -145,11 +167,23 @@ func ExtractItems(state *GameState) []TrackedItem {
 		if entry.ItemID == "" {
 			continue
 		}
+		// Skip trade slots — tracked via ExtraRecord bitmasks below.
+		if entry.ItemID == "MM_TRADE_1" || entry.ItemID == "MM_TRADE_2" || entry.ItemID == "MM_TRADE_3" {
+			continue
+		}
 		qty := inventorySlotQty(entry, itemID, 0)
 		if qty > 0 {
 			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
 	}
+
+	// MM trade items — bitmasks from ExtraRecords (stored in OoT save).
+	// MmExtraTrade (big-endian): trade1:6|trade2:5|trade3:5|tradeObtained1:6|tradeObtained2:5|tradeObtained3:5
+	// We use the "tradeObtained" fields which persist across MM cycles.
+	mmTradeRec := oot.ExtraRecords[ExtraIdxMmTrade]
+	items = append(items, TrackedItem{"MM_TRADE_1", int((mmTradeRec >> 10) & 0x3F)})
+	items = append(items, TrackedItem{"MM_TRADE_2", int((mmTradeRec >> 5) & 0x1F)})
+	items = append(items, TrackedItem{"MM_TRADE_3", int(mmTradeRec & 0x1F)})
 
 	// MM Upgrades
 	items = append(items, TrackedItem{"MM_QUIVER", GetUpgradeLevel(mm.Upgrades, 0, 3)})
@@ -161,34 +195,41 @@ func ExtractItems(state *GameState) []TrackedItem {
 	// MM Dungeon items
 	for i := 0; i < 10; i++ {
 		di := mm.DungeonItems[i]
-		prefix := mmDungeonName(i)
-		if prefix == "" {
+		bossKeyID, compassID, mapID := mmDungeonItemIDs(i)
+		if bossKeyID == "" && compassID == "" && mapID == "" {
 			continue
 		}
-		items = append(items, TrackedItem{prefix + "_BOSS_KEY", boolToInt(di&0x80 != 0)})
-		items = append(items, TrackedItem{prefix + "_COMPASS", boolToInt(di&0x40 != 0)})
-		items = append(items, TrackedItem{prefix + "_MAP", boolToInt(di&0x20 != 0)})
+		if bossKeyID != "" {
+			items = append(items, TrackedItem{bossKeyID, boolToInt(di&dungeonItemBossKeyMask != 0)})
+		}
+		if compassID != "" {
+			items = append(items, TrackedItem{compassID, boolToInt(di&dungeonItemCompassMask != 0)})
+		}
+		if mapID != "" {
+			items = append(items, TrackedItem{mapID, boolToInt(di&dungeonItemMapMask != 0)})
+		}
 	}
 	for i := 0; i < 9; i++ {
-		name := mmDungeonName(i)
-		if name == "" {
+		keyID := mmDungeonSmallKeyID(i)
+		if keyID == "" {
 			continue
 		}
 		keys := mm.DungeonKeys[i]
 		if keys < 0 {
 			keys = 0
 		}
-		items = append(items, TrackedItem{name + "_KEYS", int(keys)})
+		items = append(items, TrackedItem{keyID, int(keys)})
 	}
 
 	// MM Stray Fairies
 	for i := 0; i < 10; i++ {
-		name := mmDungeonName(i)
-		if name == "" {
+		fairyID := mmDungeonStrayFairyID(i)
+		if fairyID == "" {
 			continue
 		}
-		items = append(items, TrackedItem{name + "_STRAY_FAIRIES", int(mm.StrayFairies[i])})
+		items = append(items, TrackedItem{fairyID, int(mm.StrayFairies[i])})
 	}
+	items = append(items, TrackedItem{"MM_STRAY_FAIRY_TOWN", boolToInt(mm.TownStrayFairy)})
 	items = appendCatalogItems(items, state)
 
 	return items
@@ -300,6 +341,66 @@ func ootDungeonName(idx int) string {
 	return ""
 }
 
+func ootDungeonItemIDs(idx int) (bossKeyID, compassID, mapID string) {
+	switch idx {
+	case 0:
+		return "", "OOT_COMPASS_DT", "OOT_MAP_DT"
+	case 1:
+		return "", "OOT_COMPASS_DC", "OOT_MAP_DC"
+	case 2:
+		return "", "OOT_COMPASS_JJ", "OOT_MAP_JJ"
+	case 3:
+		return "OOT_BOSS_KEY_FOREST", "OOT_COMPASS_FOREST", "OOT_MAP_FOREST"
+	case 4:
+		return "OOT_BOSS_KEY_FIRE", "OOT_COMPASS_FIRE", "OOT_MAP_FIRE"
+	case 5:
+		return "OOT_BOSS_KEY_WATER", "OOT_COMPASS_WATER", "OOT_MAP_WATER"
+	case 6:
+		return "OOT_BOSS_KEY_SPIRIT", "OOT_COMPASS_SPIRIT", "OOT_MAP_SPIRIT"
+	case 7:
+		return "OOT_BOSS_KEY_SHADOW", "OOT_COMPASS_SHADOW", "OOT_MAP_SHADOW"
+	case 8:
+		return "", "OOT_COMPASS_BOTW", "OOT_MAP_BOTW"
+	case 9:
+		return "", "OOT_COMPASS_ICE", "OOT_MAP_ICE"
+	case 10:
+		return "OOT_BOSS_KEY_GANON", "", ""
+	case 17:
+		return "", "", ""
+	case 18:
+		return "", "OOT_COMPASS_GTG", "OOT_MAP_GTG"
+	case 19:
+		return "", "OOT_COMPASS_GANON", "OOT_MAP_GANON"
+	default:
+		return "", "", ""
+	}
+}
+
+func ootDungeonSmallKeyID(idx int) string {
+	switch idx {
+	case 3:
+		return "OOT_SMALL_KEY_FOREST"
+	case 4:
+		return "OOT_SMALL_KEY_FIRE"
+	case 5:
+		return "OOT_SMALL_KEY_WATER"
+	case 6:
+		return "OOT_SMALL_KEY_SPIRIT"
+	case 7:
+		return "OOT_SMALL_KEY_SHADOW"
+	case 8:
+		return "OOT_SMALL_KEY_BOTW"
+	case 10:
+		return "OOT_SMALL_KEY_GANON"
+	case 17:
+		return "OOT_SMALL_KEY_GF"
+	case 18:
+		return "OOT_SMALL_KEY_GTG"
+	default:
+		return ""
+	}
+}
+
 // MM dungeon names.
 func mmDungeonName(idx int) string {
 	names := [10]string{
@@ -310,6 +411,51 @@ func mmDungeonName(idx int) string {
 		return names[idx]
 	}
 	return ""
+}
+
+func mmDungeonItemIDs(idx int) (bossKeyID, compassID, mapID string) {
+	switch idx {
+	case 0:
+		return "MM_BOSS_KEY_WF", "MM_COMPASS_WF", "MM_MAP_WF"
+	case 1:
+		return "MM_BOSS_KEY_SH", "MM_COMPASS_SH", "MM_MAP_SH"
+	case 2:
+		return "MM_BOSS_KEY_GB", "MM_COMPASS_GB", "MM_MAP_GB"
+	case 3:
+		return "MM_BOSS_KEY_ST", "MM_COMPASS_ST", "MM_MAP_ST"
+	default:
+		return "", "", ""
+	}
+}
+
+func mmDungeonSmallKeyID(idx int) string {
+	switch idx {
+	case 0:
+		return "MM_SMALL_KEY_WF"
+	case 1:
+		return "MM_SMALL_KEY_SH"
+	case 2:
+		return "MM_SMALL_KEY_GB"
+	case 3:
+		return "MM_SMALL_KEY_ST"
+	default:
+		return ""
+	}
+}
+
+func mmDungeonStrayFairyID(idx int) string {
+	switch idx {
+	case 0:
+		return "MM_STRAY_FAIRY_WF"
+	case 1:
+		return "MM_STRAY_FAIRY_SH"
+	case 2:
+		return "MM_STRAY_FAIRY_GB"
+	case 3:
+		return "MM_STRAY_FAIRY_ST"
+	default:
+		return ""
+	}
 }
 
 const emptyInventoryItem = 0xFF

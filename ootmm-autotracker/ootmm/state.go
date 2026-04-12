@@ -82,8 +82,8 @@ type OotState struct {
 	// Heart pieces (top 4 bits of questItems)
 	HeartPieces uint8
 
-	// Per-dungeon
-	DungeonItems [20]uint8 // bossKey:1, compass:1, map:1, maxKeys:5
+	// Per-dungeon packed byte: boss key/compass/map use low bits, max keys use upper bits.
+	DungeonItems [20]uint8
 	DungeonKeys  [19]int8
 
 	GoldTokens uint16
@@ -120,10 +120,11 @@ type MmState struct {
 	QuestItems  uint32
 	HeartPieces uint8
 
-	// Per-dungeon
+	// Per-dungeon packed byte: boss key/compass/map use low bits, max keys use upper bits.
 	DungeonItems [10]uint8
 	DungeonKeys  [9]int8
 	StrayFairies [10]int8
+	TownStrayFairy bool
 
 	SceneFlags [120]SceneFlags
 

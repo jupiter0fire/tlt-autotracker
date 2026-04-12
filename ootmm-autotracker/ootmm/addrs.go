@@ -99,6 +99,7 @@ const (
 	MmOffDungeonItems = 0xC0   // MmDungeonItems[10]
 	MmOffDungeonKeys  = 0xCA   // s8[9]
 	MmOffStrayFairies = 0xD4   // s8[10]
+	MmOffWeekEventReg = 0xEF8  // u8[100]
 	MmOffChecksum     = 0x100A // u16 additive checksum over MmSave with checksum zeroed
 
 	// Permanent scene flags (within MmSaveInfo, offset from MmSave start)
@@ -212,4 +213,9 @@ const (
 	QuestMmSongStorms      = 16
 	QuestMmSongSun         = 17
 	QuestMmNotebook        = 18
+)
+
+const (
+	mmWeekEventTownStrayFairyByte = 8
+	mmWeekEventTownStrayFairyMask = 0x80
 )

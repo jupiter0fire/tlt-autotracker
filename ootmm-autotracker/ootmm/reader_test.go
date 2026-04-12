@@ -179,6 +179,19 @@ func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 	}
 }
 
+func TestParseMmSaveReadsTownStrayFairyWeekEvent(t *testing.T) {
+	data := make([]byte, MmSaveSize)
+	data[MmOffWeekEventReg+mmWeekEventTownStrayFairyByte] = mmWeekEventTownStrayFairyMask
+
+	var mm MmState
+	if err := parseMmSave(&mm, data); err != nil {
+		t.Fatalf("parseMmSave: %v", err)
+	}
+	if !mm.TownStrayFairy {
+		t.Fatal("expected MM town stray fairy to be true")
+	}
+}
+
 func TestAcceptStableStateRequiresTwoMatchingObservations(t *testing.T) {
 	r := &Reader{}
 
