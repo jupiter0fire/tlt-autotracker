@@ -10,14 +10,9 @@ const (
 
 var mmSkeletonKeyMaxKeys = [...]int{1, 3, 1, 4}
 
-var ootKeyRingMaxKeys = [...]int{
-	0, 0, 0,
-	5, 7, 5, 5, 5, 3, 0,
-	2, 0, 0, 0, 0, 0, 0,
-	4, 9, 0,
-}
+var ootFallbackMaxKeys = [...]int{0, 0, 0, 5, 7, 5, 5, 5, 3, 0, 0, 9, 4, 2, 0, 0, 0}
 
-var ootSilverRupeeMaxCounts = [...]int{0, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}
+var ootFallbackSilverRupeeMaxCounts = [...]int{0, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}
 
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
@@ -342,9 +337,8 @@ func ootDungeonName(idx int) string {
 		"OOT_DEKU_TREE", "OOT_DODONGOS_CAVERN", "OOT_JABU_JABU",
 		"OOT_FOREST_TEMPLE", "OOT_FIRE_TEMPLE", "OOT_WATER_TEMPLE",
 		"OOT_SPIRIT_TEMPLE", "OOT_SHADOW_TEMPLE", "OOT_BOTTOM_WELL",
-		"OOT_ICE_CAVERN", "OOT_GANONS_TOWER", "", "", "",
-		"", "", "", "OOT_GERUDO_FORTRESS", "OOT_GERUDO_TRAINING",
-		"OOT_GANONS_CASTLE",
+		"OOT_ICE_CAVERN", "OOT_GANONS_TOWER", "OOT_GERUDO_TRAINING", "OOT_GERUDO_FORTRESS", "OOT_GANONS_CASTLE",
+		"", "", "OOT_TREASURE_CHEST_GAME", "", "", "",
 	}
 	if idx >= 0 && idx < len(names) {
 		return names[idx]
@@ -376,11 +370,9 @@ func ootDungeonItemIDs(idx int) (bossKeyID, compassID, mapID string) {
 		return "", "OOT_COMPASS_ICE", "OOT_MAP_ICE"
 	case 10:
 		return "OOT_BOSS_KEY_GANON", "", ""
-	case 17:
-		return "", "", ""
-	case 18:
+	case 11:
 		return "", "OOT_COMPASS_GTG", "OOT_MAP_GTG"
-	case 19:
+	case 13:
 		return "", "OOT_COMPASS_GANON", "OOT_MAP_GANON"
 	default:
 		return "", "", ""
@@ -401,12 +393,14 @@ func ootDungeonSmallKeyID(idx int) string {
 		return "OOT_SMALL_KEY_SHADOW"
 	case 8:
 		return "OOT_SMALL_KEY_BOTW"
-	case 10:
-		return "OOT_SMALL_KEY_GANON"
-	case 17:
-		return "OOT_SMALL_KEY_GF"
-	case 18:
+	case 11:
 		return "OOT_SMALL_KEY_GTG"
+	case 12:
+		return "OOT_SMALL_KEY_GF"
+	case 13:
+		return "OOT_SMALL_KEY_GANON"
+	case 16:
+		return "OOT_SMALL_KEY_TCG"
 	default:
 		return ""
 	}
@@ -477,6 +471,8 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 		switch entry.Source.Kind {
 		case "oot-derived-key-ring":
 			qty = boolToInt(hasOotKeyRing(&state.Oot, entry.Source.Record))
+		case "oot-derived-skeleton-key":
+			qty = boolToInt(hasOotSkeletonKey(&state.Oot))
 		case "mm-derived-key-ring":
 			qty = boolToInt(hasMmKeyRing(&state.Mm, entry.Source.Record))
 		case "oot-derived-platinum-token":
@@ -511,14 +507,29 @@ func hasMmSkeletonKey(mm *MmState) bool {
 }
 
 func hasOotKeyRing(oot *OotState, dungeonIndex int) bool {
-	if dungeonIndex < 0 || dungeonIndex >= len(ootKeyRingMaxKeys) {
+	if dungeonIndex < 0 || dungeonIndex >= OotRuntimeSceneCount {
 		return false
 	}
-	want := ootKeyRingMaxKeys[dungeonIndex]
+	want := ootMaxKeyLimit(oot, dungeonIndex)
 	if want == 0 {
 		return false
 	}
 	return dungeonMaxKeys(oot.DungeonItems[dungeonIndex]) >= want
+}
+
+func hasOotSkeletonKey(oot *OotState) bool {
+	totalWant := 0
+	for sceneID := 0; sceneID < OotRuntimeSceneCount; sceneID++ {
+		want := ootMaxKeyLimit(oot, sceneID)
+		if want == 0 {
+			continue
+		}
+		totalWant += want
+		if dungeonMaxKeys(oot.DungeonItems[sceneID]) < want {
+			return false
+		}
+	}
+	return totalWant > 0
 }
 
 func hasMmKeyRing(mm *MmState, dungeonIndex int) bool {
@@ -537,7 +548,8 @@ func hasMmPlatinumToken(mm *MmState) bool {
 }
 
 func hasOotMagicalRupee(oot *OotState) bool {
-	for silverRupeeID, want := range ootSilverRupeeMaxCounts {
+	for silverRupeeID := 0; silverRupeeID < OotSilverRupeeSetCount; silverRupeeID++ {
+		want := ootSilverRupeeLimit(oot, silverRupeeID)
 		if want == 0 {
 			continue
 		}
@@ -570,6 +582,26 @@ func hasMmTranscendentFairy(mm *MmState) bool {
 		}
 	}
 	return true
+}
+
+func ootMaxKeyLimit(oot *OotState, sceneID int) int {
+	if sceneID < 0 || sceneID >= OotRuntimeSceneCount {
+		return 0
+	}
+	if oot.HasRuntimeMaxKeys {
+		return int(oot.RuntimeMaxKeys[sceneID])
+	}
+	return ootFallbackMaxKeys[sceneID]
+}
+
+func ootSilverRupeeLimit(oot *OotState, silverRupeeID int) int {
+	if silverRupeeID < 0 || silverRupeeID >= OotSilverRupeeSetCount {
+		return 0
+	}
+	if oot.HasRuntimeSilverRupeeCounts {
+		return int(oot.RuntimeSilverRupeeCounts[silverRupeeID])
+	}
+	return ootFallbackSilverRupeeMaxCounts[silverRupeeID]
 }
 
 func dungeonMaxKeys(dungeonItem uint8) int {

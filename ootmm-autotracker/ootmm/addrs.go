@@ -32,6 +32,34 @@ const (
 	// It sits immediately before the inactive game's foreign save inside
 	// the payload, matching the layout produced by common/save.c.
 	SharedCustomSaveSize uint32 = 0x870
+
+	// Runtime OoT config objects read from the live payload.
+	OotRuntimeSceneCount      = 17
+	OotSilverRupeeSetCount    = 18
+	OotSilverRupeeDataSize    = OotSilverRupeeSetCount * 4
+	OotMaxKeysBlockSize       = OotRuntimeSceneCount + 4
+	ootMaxKeysFromSilverDelta = 0x13068
+)
+
+// OoT scene IDs used by OoTMM's runtime key and silver-rupee metadata.
+const (
+	OotSceneDekuTree = iota
+	OotSceneDodongosCavern
+	OotSceneInsideJabuJabu
+	OotSceneTempleForest
+	OotSceneTempleFire
+	OotSceneTempleWater
+	OotSceneTempleSpirit
+	OotSceneTempleShadow
+	OotSceneBottomOfTheWell
+	OotSceneIceCavern
+	OotSceneGanonTower
+	OotSceneGerudoTrainingGround
+	OotSceneThievesHideout
+	OotSceneInsideGanonCastle
+	OotSceneUnused14
+	OotSceneUnused15
+	OotSceneTreasureShop
 )
 
 // ComboContext offsets (32 bytes, PACKED ALIGNED(4))

@@ -2178,18 +2178,6 @@
         }
       },
       {
-        "itemId": "MM_SKELETON_KEY",
-        "source": {
-          "kind": "mm-derived-skeleton-key"
-        }
-      },
-      {
-        "itemId": "MM_TRANSCENDENT_FAIRY",
-        "source": {
-          "kind": "mm-derived-transcendent-fairy"
-        }
-      },
-      {
         "itemId": "OOT_KEY_RING_FOREST",
         "source": {
           "kind": "oot-derived-key-ring",
@@ -2232,24 +2220,37 @@
         }
       },
       {
-        "itemId": "OOT_KEY_RING_GANON",
+        "itemId": "OOT_KEY_RING_GTG",
         "source": {
           "kind": "oot-derived-key-ring",
-          "record": 10
+          "record": 11
         }
       },
       {
         "itemId": "OOT_KEY_RING_GF",
         "source": {
           "kind": "oot-derived-key-ring",
-          "record": 17
+          "record": 12
         }
       },
       {
-        "itemId": "OOT_KEY_RING_GTG",
+        "itemId": "OOT_KEY_RING_GANON",
         "source": {
           "kind": "oot-derived-key-ring",
-          "record": 18
+          "record": 13
+        }
+      },
+      {
+        "itemId": "OOT_KEY_RING_TCG",
+        "source": {
+          "kind": "oot-derived-key-ring",
+          "record": 16
+        }
+      },
+      {
+        "itemId": "OOT_SKELETON_KEY",
+        "source": {
+          "kind": "oot-derived-skeleton-key"
         }
       },
       {
@@ -2296,6 +2297,18 @@
         "itemId": "OOT_RUPEE_MAGICAL",
         "source": {
           "kind": "oot-derived-magical-rupee"
+        }
+      },
+      {
+        "itemId": "MM_SKELETON_KEY",
+        "source": {
+          "kind": "mm-derived-skeleton-key"
+        }
+      },
+      {
+        "itemId": "MM_TRANSCENDENT_FAIRY",
+        "source": {
+          "kind": "mm-derived-transcendent-fairy"
         }
       },
       {

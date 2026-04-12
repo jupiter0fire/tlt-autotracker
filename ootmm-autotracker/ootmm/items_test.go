@@ -402,16 +402,22 @@ func TestExtractItemsDerivesRequestedMmSpecialItems(t *testing.T) {
 func TestExtractItemsDerivesOotCombinedItems(t *testing.T) {
 	state := &GameState{}
 	state.Oot.GoldTokens = 100
-	state.Oot.DungeonItems[3] = uint8(ootKeyRingMaxKeys[3] << 3)
-	state.Oot.DungeonItems[4] = uint8(ootKeyRingMaxKeys[4] << 3)
-	state.Oot.DungeonItems[5] = uint8(ootKeyRingMaxKeys[5] << 3)
-	state.Oot.DungeonItems[6] = uint8(ootKeyRingMaxKeys[6] << 3)
-	state.Oot.DungeonItems[7] = uint8(ootKeyRingMaxKeys[7] << 3)
-	state.Oot.DungeonItems[8] = uint8(ootKeyRingMaxKeys[8] << 3)
-	state.Oot.DungeonItems[10] = uint8(ootKeyRingMaxKeys[10] << 3)
-	state.Oot.DungeonItems[17] = uint8(ootKeyRingMaxKeys[17] << 3)
-	state.Oot.DungeonItems[18] = uint8(ootKeyRingMaxKeys[18] << 3)
-	for silverRupeeID, want := range ootSilverRupeeMaxCounts {
+	state.Oot.RuntimeMaxKeys = [OotRuntimeSceneCount]uint8{0, 0, 0, 5, 7, 5, 5, 5, 3, 0, 0, 9, 4, 2, 0, 0, 6}
+	state.Oot.HasRuntimeMaxKeys = true
+	state.Oot.DungeonItems[3] = uint8(state.Oot.RuntimeMaxKeys[3] << 3)
+	state.Oot.DungeonItems[4] = uint8(state.Oot.RuntimeMaxKeys[4] << 3)
+	state.Oot.DungeonItems[5] = uint8(state.Oot.RuntimeMaxKeys[5] << 3)
+	state.Oot.DungeonItems[6] = uint8(state.Oot.RuntimeMaxKeys[6] << 3)
+	state.Oot.DungeonItems[7] = uint8(state.Oot.RuntimeMaxKeys[7] << 3)
+	state.Oot.DungeonItems[8] = uint8(state.Oot.RuntimeMaxKeys[8] << 3)
+	state.Oot.DungeonItems[11] = uint8(state.Oot.RuntimeMaxKeys[11] << 3)
+	state.Oot.DungeonItems[12] = uint8(state.Oot.RuntimeMaxKeys[12] << 3)
+	state.Oot.DungeonItems[13] = uint8(state.Oot.RuntimeMaxKeys[13] << 3)
+	state.Oot.DungeonItems[16] = uint8(state.Oot.RuntimeMaxKeys[16] << 3)
+	state.Oot.RuntimeSilverRupeeCounts = [OotSilverRupeeSetCount]uint8{5, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 6, 3, 5, 5, 5, 0}
+	state.Oot.HasRuntimeSilverRupeeCounts = true
+	for silverRupeeID := 0; silverRupeeID < OotSilverRupeeSetCount; silverRupeeID++ {
+		want := int(state.Oot.RuntimeSilverRupeeCounts[silverRupeeID])
 		if want == 0 {
 			continue
 		}
@@ -420,14 +426,14 @@ func TestExtractItemsDerivesOotCombinedItems(t *testing.T) {
 
 	items := itemQtyMap(ExtractItems(state))
 
-	for _, itemID := range []string{"OOT_KEY_RING_FOREST", "OOT_KEY_RING_FIRE", "OOT_KEY_RING_WATER", "OOT_KEY_RING_SPIRIT", "OOT_KEY_RING_SHADOW", "OOT_KEY_RING_BOTW", "OOT_KEY_RING_GANON", "OOT_KEY_RING_GF", "OOT_KEY_RING_GTG", "OOT_PLATINUM_TOKEN", "OOT_RUPEE_MAGICAL"} {
+	for _, itemID := range []string{"OOT_KEY_RING_FOREST", "OOT_KEY_RING_FIRE", "OOT_KEY_RING_WATER", "OOT_KEY_RING_SPIRIT", "OOT_KEY_RING_SHADOW", "OOT_KEY_RING_BOTW", "OOT_KEY_RING_GTG", "OOT_KEY_RING_GF", "OOT_KEY_RING_GANON", "OOT_KEY_RING_TCG", "OOT_SKELETON_KEY", "OOT_PLATINUM_TOKEN", "OOT_RUPEE_MAGICAL"} {
 		if got := items[itemID]; got != 1 {
 			t.Fatalf("%s = %d, want 1", itemID, got)
 		}
 	}
 
 	state.Oot.GoldTokens = 99
-	setOotSilverRupeeCount(state, 1, ootSilverRupeeMaxCounts[1]-1)
+	setOotSilverRupeeCount(state, 1, int(state.Oot.RuntimeSilverRupeeCounts[1])-1)
 	state.Oot.DungeonItems[3] = 0
 	items = itemQtyMap(ExtractItems(state))
 
@@ -439,6 +445,9 @@ func TestExtractItemsDerivesOotCombinedItems(t *testing.T) {
 	}
 	if got := items["OOT_KEY_RING_FOREST"]; got != 0 {
 		t.Fatalf("OOT_KEY_RING_FOREST = %d, want 0 after lowering forest keys", got)
+	}
+	if got := items["OOT_SKELETON_KEY"]; got != 0 {
+		t.Fatalf("OOT_SKELETON_KEY = %d, want 0 after lowering forest keys", got)
 	}
 }
 

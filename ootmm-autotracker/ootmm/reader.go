@@ -16,6 +16,8 @@ type Reader struct {
 
 	foreignOotSaveAddr uint32
 	foreignMmSaveAddr  uint32
+	ootMaxKeysAddr      uint32
+	ootSilverDataAddr   uint32
 	lastKnownOot       OotState
 	lastKnownMm        MmState
 	lastKnownShared    SharedCustomState
@@ -93,6 +95,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 	if err := r.readSharedState(game, activeSaveIndex, &state.Shared); err != nil {
 		return nil, fmt.Errorf("read shared custom save: %w", err)
 	}
+	r.readOotRuntimeConfig(&state.Oot)
 
 	// Step 3: Re-verify the active game hasn't changed during the read
 	gameAfter, err := r.detector.DetectActiveGame()
@@ -290,6 +293,208 @@ func parseMmSave(mm *MmState, data []byte) error {
 	}
 
 	return nil
+}
+
+func (r *Reader) readOotRuntimeConfig(oot *OotState) {
+	if oot == nil {
+		return
+	}
+
+	var payload []byte
+	if r.ootSilverDataAddr == 0 || r.ootMaxKeysAddr == 0 {
+		data, err := r.mem.Read(AddrOotPayload, OotPayloadSize)
+		if err == nil {
+			payload = data
+		}
+	}
+
+	if r.ootSilverDataAddr == 0 && len(payload) >= OotSilverRupeeDataSize {
+		if off, ok := locateSilverRupeeData(payload); ok {
+			r.ootSilverDataAddr = AddrOotPayload + uint32(off)
+		}
+	}
+	if r.ootSilverDataAddr != 0 {
+		if data, err := r.mem.Read(r.ootSilverDataAddr, OotSilverRupeeDataSize); err == nil && validateSilverRupeeData(data) {
+			for index := 0; index < OotSilverRupeeSetCount; index++ {
+				oot.RuntimeSilverRupeeCounts[index] = data[index*4+3]
+			}
+			oot.HasRuntimeSilverRupeeCounts = true
+		}
+	}
+
+	if r.ootMaxKeysAddr == 0 && r.ootSilverDataAddr != 0 {
+		candidate := r.ootSilverDataAddr + ootMaxKeysFromSilverDelta
+		if data, err := r.mem.Read(candidate, OotMaxKeysBlockSize); err == nil && validateOotMaxKeyBlock(data) {
+			r.ootMaxKeysAddr = candidate
+		}
+	}
+	if r.ootMaxKeysAddr == 0 && len(payload) >= OotMaxKeysBlockSize {
+		if off, ok := locateOotMaxKeys(payload); ok {
+			r.ootMaxKeysAddr = AddrOotPayload + uint32(off)
+		}
+	}
+	if r.ootMaxKeysAddr != 0 {
+		if data, err := r.mem.Read(r.ootMaxKeysAddr, OotMaxKeysBlockSize); err == nil && validateOotMaxKeyBlock(data) {
+			copy(oot.RuntimeMaxKeys[:], data[:OotRuntimeSceneCount])
+			oot.HasRuntimeMaxKeys = true
+		}
+	}
+}
+
+type silverRupeeFlagCount struct {
+	flag  byte
+	count byte
+}
+
+var ootSilverRupeeAllowed = [...][2]silverRupeeFlagCount{
+	{{0x00, 0x00}, {0x25, 0x05}},
+	{{0x1f, 0x05}, {0x00, 0x00}},
+	{{0x05, 0x05}, {0x37, 0x05}},
+	{{0x0a, 0x05}, {0x00, 0x00}},
+	{{0x02, 0x05}, {0x00, 0x00}},
+	{{0x01, 0x05}, {0x01, 0x05}},
+	{{0x00, 0x00}, {0x03, 0x0a}},
+	{{0x09, 0x05}, {0x11, 0x05}},
+	{{0x08, 0x05}, {0x08, 0x0a}},
+	{{0x08, 0x05}, {0x00, 0x00}},
+	{{0x09, 0x05}, {0x00, 0x00}},
+	{{0x1c, 0x05}, {0x1c, 0x05}},
+	{{0x0c, 0x05}, {0x0c, 0x06}},
+	{{0x1b, 0x05}, {0x1b, 0x03}},
+	{{0x0b, 0x05}, {0x0b, 0x05}},
+	{{0x12, 0x05}, {0x02, 0x05}},
+	{{0x09, 0x05}, {0x01, 0x05}},
+	{{0x0e, 0x05}, {0x00, 0x00}},
+}
+
+func locateSilverRupeeData(payload []byte) (int, bool) {
+	for off := 0; off+OotSilverRupeeDataSize <= len(payload); off++ {
+		if validateSilverRupeeData(payload[off : off+OotSilverRupeeDataSize]) {
+			return off, true
+		}
+	}
+	return 0, false
+}
+
+func validateSilverRupeeData(data []byte) bool {
+	if len(data) < OotSilverRupeeDataSize {
+		return false
+	}
+	for index := 0; index < OotSilverRupeeSetCount; index++ {
+		flag := data[index*4+2]
+		count := data[index*4+3]
+		allowed := ootSilverRupeeAllowed[index]
+		if (flag != allowed[0].flag || count != allowed[0].count) && (flag != allowed[1].flag || count != allowed[1].count) {
+			return false
+		}
+	}
+	return sameSilverScene(data, 2, 3) && sameSilverScene(data, 3, 4) &&
+		sameSilverScene(data, 5, 6) && sameSilverScene(data, 6, 7) && sameSilverScene(data, 7, 8) &&
+		sameSilverScene(data, 9, 10) &&
+		sameSilverScene(data, 11, 12) && sameSilverScene(data, 12, 13) &&
+		sameSilverScene(data, 14, 15) && sameSilverScene(data, 15, 16) && sameSilverScene(data, 16, 17)
+}
+
+func sameSilverScene(data []byte, left, right int) bool {
+	leftOff := left * 4
+	rightOff := right * 4
+	return data[leftOff] == data[rightOff] && data[leftOff+1] == data[rightOff+1]
+}
+
+func locateOotMaxKeys(payload []byte) (int, bool) {
+	bestOff := -1
+	bestScore := -1
+	for off := 0; off+OotMaxKeysBlockSize <= len(payload); off++ {
+		block := payload[off : off+OotMaxKeysBlockSize]
+		if !validateOotMaxKeyBlock(block) {
+			continue
+		}
+		score := maxKeyBlockScore(payload, off)
+		if score <= 0 {
+			continue
+		}
+		if score > bestScore {
+			bestScore = score
+			bestOff = off
+		}
+	}
+	return bestOff, bestOff >= 0
+}
+
+func maxKeyBlockScore(payload []byte, off int) int {
+	end := off + OotMaxKeysBlockSize
+	score := 0
+	for _, value := range payload[off:end] {
+		score += int(value)
+	}
+	for index := off - 8; index < off; index++ {
+		if index >= 0 && payload[index] != 0 {
+			score++
+		}
+	}
+	for index := end; index < end+12 && index < len(payload); index++ {
+		if payload[index] != 0 {
+			score++
+		}
+	}
+	return score
+}
+
+func validateOotMaxKeyBlock(data []byte) bool {
+	if len(data) < OotMaxKeysBlockSize {
+		return false
+	}
+	for sceneID := 0; sceneID < OotRuntimeSceneCount; sceneID++ {
+		if !ootMaxKeyValueAllowed(sceneID, data[sceneID]) {
+			return false
+		}
+	}
+	return mmMaxKeyValueAllowed(0, data[17]) &&
+		mmMaxKeyValueAllowed(1, data[18]) &&
+		mmMaxKeyValueAllowed(2, data[19]) &&
+		mmMaxKeyValueAllowed(3, data[20])
+}
+
+func ootMaxKeyValueAllowed(sceneID int, value byte) bool {
+	switch sceneID {
+	case OotSceneDekuTree, OotSceneDodongosCavern, OotSceneInsideJabuJabu, OotSceneIceCavern, OotSceneGanonTower, OotSceneUnused14, OotSceneUnused15:
+		return value == 0
+	case OotSceneTempleForest:
+		return value == 0 || value == 5 || value == 6
+	case OotSceneTempleFire:
+		return value == 0 || value == 5 || value == 7 || value == 8
+	case OotSceneTempleWater:
+		return value == 0 || value == 2 || value == 5
+	case OotSceneTempleSpirit:
+		return value == 0 || value == 5 || value == 7
+	case OotSceneTempleShadow:
+		return value == 0 || value == 5 || value == 6
+	case OotSceneBottomOfTheWell:
+		return value == 0 || value == 2 || value == 3
+	case OotSceneGerudoTrainingGround:
+		return value == 0 || value == 3 || value == 9
+	case OotSceneThievesHideout:
+		return value == 0 || value == 1 || value == 4
+	case OotSceneInsideGanonCastle:
+		return value == 0 || value == 2 || value == 3
+	case OotSceneTreasureShop:
+		return value == 0 || value == 6
+	default:
+		return false
+	}
+}
+
+func mmMaxKeyValueAllowed(dungeonIndex int, value byte) bool {
+	switch dungeonIndex {
+	case 0, 2:
+		return value == 0 || value == 1
+	case 1:
+		return value == 0 || value == 3
+	case 3:
+		return value == 0 || value == 4
+	default:
+		return false
+	}
 }
 
 func (r *Reader) readActiveSaveIndex(game ActiveGame) (uint32, error) {

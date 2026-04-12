@@ -176,7 +176,7 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			if source.Record < 0 {
 				panic(fmt.Sprintf("catalog item %s has invalid dungeon record %d", item.ItemID, source.Record))
 			}
-		case "oot-derived-platinum-token", "mm-derived-platinum-token", "oot-derived-magical-rupee", "mm-derived-skeleton-key", "mm-derived-transcendent-fairy":
+		case "oot-derived-skeleton-key", "oot-derived-platinum-token", "mm-derived-platinum-token", "oot-derived-magical-rupee", "mm-derived-skeleton-key", "mm-derived-transcendent-fairy":
 		default:
 			panic(fmt.Sprintf("catalog item %s has unsupported source kind %s", item.ItemID, source.Kind))
 		}

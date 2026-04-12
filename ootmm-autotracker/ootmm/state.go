@@ -87,6 +87,10 @@ type OotState struct {
 	DungeonKeys  [19]int8
 
 	GoldTokens uint16
+	RuntimeMaxKeys              [OotRuntimeSceneCount]uint8
+	RuntimeSilverRupeeCounts    [OotSilverRupeeSetCount]uint8
+	HasRuntimeMaxKeys           bool
+	HasRuntimeSilverRupeeCounts bool
 
 	// Scene flags: chests/switches/collectibles per scene
 	SceneFlags [124]SceneFlags
