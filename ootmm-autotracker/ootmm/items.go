@@ -62,9 +62,10 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_GOLD_TOKENS", int(oot.GoldTokens)})
 	items = append(items, TrackedItem{"OOT_HEART_PIECES", int(oot.HeartPieces)})
 
-	// OoT inventory equipment is stored as ownership bitmasks; tracker quantities are stages.
-	items = append(items, TrackedItem{"OOT_SWORD", ootSwordLevel(oot)})
-	items = append(items, TrackedItem{"OOT_SHIELD", ootEquipmentLevel((oot.Equipment >> 4) & 0xF)})
+	// OoT swords and shields are published as raw ownership bitmasks so the
+	// tracker can distinguish Kokiri/Deku ownership from later upgrades.
+	items = append(items, TrackedItem{"OOT_SWORD", int(oot.Equipment & 0xF)})
+	items = append(items, TrackedItem{"OOT_SHIELD", int((oot.Equipment >> 4) & 0xF)})
 	items = append(items, TrackedItem{"OOT_TUNIC", ootEquipmentLevel((oot.Equipment >> 8) & 0xF)})
 	items = append(items, TrackedItem{"OOT_BOOTS", ootEquipmentLevel((oot.Equipment >> 12) & 0xF)})
 

@@ -53,17 +53,17 @@ func TestExtractItemsNormalizesMmInventorySlots(t *testing.T) {
 	}
 }
 
-func TestExtractItemsCountsOotEquipmentStages(t *testing.T) {
+func TestExtractItemsPublishesOotSwordAndShieldBitmasks(t *testing.T) {
 	state := &GameState{}
 	state.Oot.Equipment = 0x1537
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["OOT_SWORD"]; got != 3 {
-		t.Fatalf("OOT_SWORD = %d, want 3", got)
+	if got := items["OOT_SWORD"]; got != 7 {
+		t.Fatalf("OOT_SWORD = %d, want 7", got)
 	}
-	if got := items["OOT_SHIELD"]; got != 2 {
-		t.Fatalf("OOT_SHIELD = %d, want 2", got)
+	if got := items["OOT_SHIELD"]; got != 3 {
+		t.Fatalf("OOT_SHIELD = %d, want 3", got)
 	}
 	if got := items["OOT_TUNIC"]; got != 3 {
 		t.Fatalf("OOT_TUNIC = %d, want 3", got)
@@ -73,7 +73,7 @@ func TestExtractItemsCountsOotEquipmentStages(t *testing.T) {
 	}
 }
 
-func TestExtractItemsReportsOotMasterSwordWithoutKokiri(t *testing.T) {
+func TestExtractItemsReportsOotSwordBitmaskWithoutKokiri(t *testing.T) {
 	state := &GameState{}
 	state.Oot.Equipment = 0x0002
 
@@ -84,26 +84,40 @@ func TestExtractItemsReportsOotMasterSwordWithoutKokiri(t *testing.T) {
 	}
 }
 
-func TestExtractItemsReportsOotBiggoronSword(t *testing.T) {
+func TestExtractItemsReportsOotSwordBitmaskWithBiggoron(t *testing.T) {
 	state := &GameState{}
-	state.Oot.Equipment = 0x0004
+	state.Oot.Equipment = 0x0006
 	state.Oot.IsBiggoronSword = true
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["OOT_SWORD"]; got != 4 {
-		t.Fatalf("OOT_SWORD = %d, want 4", got)
+	if got := items["OOT_SWORD"]; got != 6 {
+		t.Fatalf("OOT_SWORD = %d, want 6", got)
 	}
 }
 
-func TestExtractItemsTreatsBrokenKnifeAsStageThree(t *testing.T) {
+func TestExtractItemsReportsBrokenKnifeBitmask(t *testing.T) {
 	state := &GameState{}
 	state.Oot.Equipment = 0x0008
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["OOT_SWORD"]; got != 3 {
-		t.Fatalf("OOT_SWORD = %d, want 3", got)
+	if got := items["OOT_SWORD"]; got != 8 {
+		t.Fatalf("OOT_SWORD = %d, want 8", got)
+	}
+}
+
+func TestExtractItemsPublishesOotKokiriSwordAndDekuShieldBits(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Equipment = 0x0031
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SWORD"]; got != 1 {
+		t.Fatalf("OOT_SWORD = %d, want 1", got)
+	}
+	if got := items["OOT_SHIELD"]; got != 3 {
+		t.Fatalf("OOT_SHIELD = %d, want 3", got)
 	}
 }
 
