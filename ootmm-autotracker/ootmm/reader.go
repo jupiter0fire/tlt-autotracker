@@ -7,6 +7,8 @@ import (
 	"github.com/ootmm-autotracker/n64"
 )
 
+const maxForeignMmChecksumDelta = 0x400
+
 // Reader reads OoTMM game state from N64 RDRAM.
 type Reader struct {
 	mem      *n64.Memory
@@ -70,9 +72,6 @@ func (r *Reader) ReadState() (*GameState, error) {
 		return nil, fmt.Errorf("read active save index: %w", err)
 	}
 	state.SaveIndex = activeSaveIndex
-	if err := r.readSharedState(activeSaveIndex, &state.Shared); err != nil {
-		return nil, fmt.Errorf("read shared custom save: %w", err)
-	}
 
 	// Step 2: Read state for the detected game
 	switch game {
@@ -90,6 +89,9 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readForeignOotState(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read foreign OoT save: %w", err)
 		}
+	}
+	if err := r.readSharedState(game, activeSaveIndex, &state.Shared); err != nil {
+		return nil, fmt.Errorf("read shared custom save: %w", err)
 	}
 
 	// Step 3: Re-verify the active game hasn't changed during the read
@@ -300,11 +302,22 @@ func (r *Reader) readActiveSaveIndex(game ActiveGame) (uint32, error) {
 }
 
 func (r *Reader) readForeignOotSave(oot *OotState) error {
+	if r.foreignOotSaveAddr != 0 {
+		if err := r.readOotSaveAt(r.foreignOotSaveAddr, oot); err == nil {
+			return nil
+		}
+		r.foreignOotSaveAddr = 0
+	}
+
 	addr, err := r.findForeignOotSaveAddr()
 	if err != nil {
 		return err
 	}
 
+	return r.readOotSaveAt(addr, oot)
+	}
+
+func (r *Reader) readOotSaveAt(addr uint32, oot *OotState) error {
 	data, err := r.mem.Read(addr, OotSaveSize)
 	if err != nil {
 		return fmt.Errorf("read foreign OoT save: %w", err)
@@ -317,16 +330,27 @@ func (r *Reader) readForeignOotSave(oot *OotState) error {
 }
 
 func (r *Reader) readForeignMmSave(mm *MmState) error {
+	if r.foreignMmSaveAddr != 0 {
+		if err := r.readMmSaveAt(r.foreignMmSaveAddr, mm); err == nil {
+			return nil
+		}
+		r.foreignMmSaveAddr = 0
+	}
+
 	addr, err := r.findForeignMmSaveAddr()
 	if err != nil {
 		return err
 	}
 
+	return r.readMmSaveAt(addr, mm)
+	}
+
+func (r *Reader) readMmSaveAt(addr uint32, mm *MmState) error {
 	data, err := r.mem.Read(addr, MmSaveSize)
 	if err != nil {
 		return fmt.Errorf("read foreign MM save: %w", err)
 	}
-	if err := validateMmSave(data); err != nil {
+	if err := validateForeignMmSave(data); err != nil {
 		return fmt.Errorf("validate foreign MM save: %w", err)
 	}
 
@@ -343,6 +367,8 @@ func (r *Reader) readForeignOotState(oot *OotState) error {
 		return nil
 	}
 
+	resetEmptyOotState(oot)
+
 	return nil
 }
 
@@ -356,10 +382,16 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 		return nil
 	}
 
+	resetEmptyMmState(mm)
+
 	return nil
 }
 
-func (r *Reader) readSharedState(saveIndex uint32, shared *SharedCustomState) error {
+func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *SharedCustomState) error {
+	if err := r.readSharedStateNearForeignSave(game, shared); err == nil {
+		return nil
+	}
+
 	if err := r.readSharedStateFromPayload(AddrOotPayload, OotPayloadSize, saveIndex, shared); err == nil {
 		return nil
 	}
@@ -372,6 +404,59 @@ func (r *Reader) readSharedState(saveIndex uint32, shared *SharedCustomState) er
 		*shared = r.lastKnownShared.Clone()
 	}
 
+	return nil
+}
+
+func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedCustomState) error {
+	var foreignSaveAddr uint32
+	var payloadBase uint32
+	var payloadSize int
+
+	switch game {
+	case GameOot:
+		foreignSaveAddr = r.foreignMmSaveAddr
+		payloadBase = AddrOotPayload
+		payloadSize = OotPayloadSize
+	case GameMm:
+		foreignSaveAddr = r.foreignOotSaveAddr
+		payloadBase = AddrMmPayload
+		payloadSize = MmPayloadSize
+	default:
+		return fmt.Errorf("no active game")
+	}
+
+	if foreignSaveAddr == 0 {
+		return fmt.Errorf("foreign save address unavailable")
+	}
+	if foreignSaveAddr < payloadBase+SharedCustomSaveSize {
+		return fmt.Errorf("foreign save %#x is before shared custom save window", foreignSaveAddr)
+	}
+
+	addr := foreignSaveAddr - SharedCustomSaveSize
+	end := uint64(addr-payloadBase) + uint64(sharedStorage.TrackedSize)
+	if end > uint64(payloadSize) {
+		return fmt.Errorf("shared custom save near %#x exceeds payload bounds", foreignSaveAddr)
+	}
+
+	data, err := r.mem.Read(addr, sharedStorage.TrackedSize)
+	if err != nil {
+		return fmt.Errorf("read shared custom save near %#x: %w", foreignSaveAddr, err)
+	}
+
+	parsed := SharedCustomState{}
+	for _, bitmap := range sharedStorage.Bitmaps {
+		end := bitmap.Offset + bitmap.Size
+		if bitmap.Offset < 0 || end > len(data) {
+			return fmt.Errorf("shared bitmap %s out of bounds near foreign save", bitmap.Name)
+		}
+		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
+	}
+
+	if !isPlausibleSharedState(parsed) {
+		return fmt.Errorf("shared custom save near %#x failed plausibility checks", foreignSaveAddr)
+	}
+
+	*shared = parsed
 	return nil
 }
 
@@ -538,10 +623,6 @@ func isPlausibleOotSave(data []byte) bool {
 func locateForeignMmSave(payload []byte, payloadBase uint32) (uint32, bool) {
 	for offset := 0; offset+MmSaveSize <= len(payload); offset += 16 {
 		candidate := payload[offset : offset+MmSaveSize]
-		expected := binary.BigEndian.Uint16(candidate[MmOffChecksum:])
-		if expected == 0 {
-			continue
-		}
 		if err := validateMmSave(candidate); err != nil {
 			continue
 		}
@@ -549,6 +630,26 @@ func locateForeignMmSave(payload []byte, payloadBase uint32) (uint32, bool) {
 			continue
 		}
 		return payloadBase + uint32(offset), true
+	}
+
+	bestOffset := -1
+	bestDelta := maxForeignMmChecksumDelta + 1
+	for offset := 0; offset+MmSaveSize <= len(payload); offset += 16 {
+		candidate := payload[offset : offset+MmSaveSize]
+		delta, ok := mmChecksumDelta(candidate)
+		if !ok || delta > maxForeignMmChecksumDelta {
+			continue
+		}
+		if !isPlausibleMmSave(candidate) {
+			continue
+		}
+		if delta < bestDelta {
+			bestDelta = delta
+			bestOffset = offset
+		}
+	}
+	if bestOffset >= 0 {
+		return payloadBase + uint32(bestOffset), true
 	}
 
 	return 0, false
@@ -571,18 +672,84 @@ func isPlausibleMmSave(data []byte) bool {
 			emptySlots++
 		}
 	}
+	if emptySlots < 16 {
+		return false
+	}
+	for i := 0; i < 9; i++ {
+		keys := int8(data[MmOffDungeonKeys+i])
+		if keys < -1 || keys > 9 {
+			return false
+		}
+	}
+	for i := 0; i < 10; i++ {
+		fairies := int8(data[MmOffStrayFairies+i])
+		if fairies < 0 || fairies > 15 {
+			return false
+		}
+	}
 
-	return emptySlots >= 16
+	return true
 }
 
 func isPlausibleSharedState(shared SharedCustomState) bool {
 	for name, bitmapInfo := range sharedBitmaps {
-		usedBits := sharedBitmapUsedBits[name]
-		if !sharedBitmapHasNoUnusedBits(shared.Bitmap(name), usedBits, bitmapInfo.Size) {
+		if !sharedBitmapHasNoUnusedBits(shared.Bitmap(name), sharedBitmapUsedBits[name], bitmapInfo.Size) {
 			return false
 		}
 	}
 	return true
+}
+
+func mmChecksumDelta(data []byte) (int, bool) {
+	if len(data) < MmSaveSize {
+		return 0, false
+	}
+
+	expected := binary.BigEndian.Uint16(data[MmOffChecksum:])
+	if expected == 0 {
+		return 0, false
+	}
+
+	checksum := mmChecksum(data)
+	delta := int(checksum) - int(expected)
+	if delta < 0 {
+		delta = -delta
+	}
+	if delta > 0x8000 {
+		delta = 0x10000 - delta
+	}
+	return delta, true
+}
+
+func mmChecksum(data []byte) uint16 {
+	checksum := uint16(0)
+	for i := 0; i < MmSaveSize; i++ {
+		if i == MmOffChecksum || i == MmOffChecksum+1 {
+			continue
+		}
+		checksum += uint16(data[i])
+	}
+	return checksum
+}
+
+func resetEmptyOotState(oot *OotState) {
+	*oot = OotState{}
+	for i := range oot.Items {
+		oot.Items[i] = emptyInventoryItem
+	}
+	for i := range oot.DungeonKeys {
+		oot.DungeonKeys[i] = -1
+	}
+}
+
+func resetEmptyMmState(mm *MmState) {
+	*mm = MmState{}
+	for i := range mm.Items {
+		mm.Items[i] = emptyInventoryItem
+	}
+	for i := range mm.DungeonKeys {
+		mm.DungeonKeys[i] = -1
+	}
 }
 
 func sharedBitmapHasNoUnusedBits(bitmap []uint8, usedBits, expectedSize int) bool {
@@ -638,15 +805,28 @@ func validateMmSave(data []byte) error {
 	}
 
 	expected := binary.BigEndian.Uint16(data[MmOffChecksum:])
-	checksum := uint16(0)
-	for i := 0; i < MmSaveSize; i++ {
-		if i == MmOffChecksum || i == MmOffChecksum+1 {
-			continue
-		}
-		checksum += uint16(data[i])
-	}
+	checksum := mmChecksum(data)
 	if checksum != expected {
 		return fmt.Errorf("invalid MM checksum: got %04x want %04x", expected, checksum)
+	}
+
+	return nil
+}
+
+func validateForeignMmSave(data []byte) error {
+	if err := validateMmSave(data); err == nil {
+		return nil
+	}
+
+	delta, ok := mmChecksumDelta(data)
+	if !ok {
+		return fmt.Errorf("invalid MM checksum")
+	}
+	if delta > maxForeignMmChecksumDelta {
+		return fmt.Errorf("invalid MM checksum delta %d", delta)
+	}
+	if !isPlausibleMmSave(data) {
+		return fmt.Errorf("MM save failed plausibility checks")
 	}
 
 	return nil

@@ -27,6 +27,11 @@ const (
 	// Payload region in MM where the foreign OoT save is kept.
 	AddrMmPayload uint32 = 0x80730000
 	MmPayloadSize int    = 0x50000 // 320KB
+
+	// SharedCustomSave is 0x870 bytes in the current OoTMM build.
+	// It sits immediately before the inactive game's foreign save inside
+	// the payload, matching the layout produced by common/save.c.
+	SharedCustomSaveSize uint32 = 0x870
 )
 
 // ComboContext offsets (32 bytes, PACKED ALIGNED(4))

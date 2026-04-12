@@ -108,6 +108,8 @@ SOUL_SOURCE_SPECS = [
 ]
 
 SPECIAL_ITEM_SOURCES = [
+    {"itemId": "MM_SKELETON_KEY", "source": {"kind": "mm-derived-skeleton-key"}},
+    {"itemId": "MM_TRANSCENDENT_FAIRY", "source": {"kind": "mm-derived-transcendent-fairy"}},
     {"itemId": "MM_HAMMER", "source": {"kind": "oot-extra-bit", "record": 4, "bit": 6}},
     {"itemId": "MM_SPELL_FIRE", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 16}},
     {"itemId": "MM_MOON_TEAR", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 17}},

@@ -216,6 +216,76 @@ func TestExtractItemsIncludesSoulBitmaps(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesSpecificRequestedSouls(t *testing.T) {
+	state := &GameState{}
+	for _, itemID := range []string{"OOT_SOUL_ENEMY_ANUBIS", "OOT_SOUL_NPC_ANJU"} {
+		source := mustCatalogItemSource(itemID)
+		state.Shared.SetBit(source.Block, source.Bit)
+	}
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SOUL_ENEMY_ANUBIS"]; got != 1 {
+		t.Fatalf("OOT_SOUL_ENEMY_ANUBIS = %d, want 1", got)
+	}
+	if got := items["OOT_SOUL_NPC_ANJU"]; got != 1 {
+		t.Fatalf("OOT_SOUL_NPC_ANJU = %d, want 1", got)
+	}
+}
+
+func TestExtractItemsKeepsMmComponentsWhenSpecialItemsPresent(t *testing.T) {
+	state := &GameState{}
+	state.Mm.DungeonItems[0] = 0x08
+	state.Mm.DungeonItems[1] = 0x18
+	state.Mm.DungeonItems[2] = 0x08
+	state.Mm.DungeonItems[3] = 0x20
+	state.Mm.DungeonKeys[0] = 1
+	state.Mm.DungeonKeys[1] = 3
+	state.Mm.DungeonKeys[2] = 1
+	state.Mm.DungeonKeys[3] = 4
+	state.Mm.StrayFairies[0] = 15
+	state.Mm.StrayFairies[1] = 15
+	state.Mm.StrayFairies[2] = 15
+	state.Mm.StrayFairies[3] = 15
+	state.Mm.TownStrayFairy = true
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_SKELETON_KEY"]; got != 1 {
+		t.Fatalf("MM_SKELETON_KEY = %d, want 1", got)
+	}
+	if got := items["MM_TRANSCENDENT_FAIRY"]; got != 1 {
+		t.Fatalf("MM_TRANSCENDENT_FAIRY = %d, want 1", got)
+	}
+	if got := items["MM_SMALL_KEY_WF"]; got != 1 {
+		t.Fatalf("MM_SMALL_KEY_WF = %d, want 1", got)
+	}
+	if got := items["MM_SMALL_KEY_SH"]; got != 3 {
+		t.Fatalf("MM_SMALL_KEY_SH = %d, want 3", got)
+	}
+	if got := items["MM_SMALL_KEY_GB"]; got != 1 {
+		t.Fatalf("MM_SMALL_KEY_GB = %d, want 1", got)
+	}
+	if got := items["MM_SMALL_KEY_ST"]; got != 4 {
+		t.Fatalf("MM_SMALL_KEY_ST = %d, want 4", got)
+	}
+	if got := items["MM_STRAY_FAIRY_WF"]; got != 15 {
+		t.Fatalf("MM_STRAY_FAIRY_WF = %d, want 15", got)
+	}
+	if got := items["MM_STRAY_FAIRY_SH"]; got != 15 {
+		t.Fatalf("MM_STRAY_FAIRY_SH = %d, want 15", got)
+	}
+	if got := items["MM_STRAY_FAIRY_GB"]; got != 15 {
+		t.Fatalf("MM_STRAY_FAIRY_GB = %d, want 15", got)
+	}
+	if got := items["MM_STRAY_FAIRY_ST"]; got != 15 {
+		t.Fatalf("MM_STRAY_FAIRY_ST = %d, want 15", got)
+	}
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1", got)
+	}
+}
+
 func TestExtractItemsReadsOotTradeFromExtraRecords(t *testing.T) {
 	state := &GameState{}
 	// OotExtraTrade: u16 child (upper 16) | u16 adult (lower 16).
@@ -297,6 +367,35 @@ func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
 	}
 	if got := items["MM_PENDANT_OF_MEMORIES"]; got != 0 {
 		t.Fatalf("MM_PENDANT_OF_MEMORIES = %d, want 0", got)
+	}
+}
+
+func TestExtractItemsDerivesRequestedMmSpecialItems(t *testing.T) {
+	state := &GameState{}
+	state.Mm.TownStrayFairy = true
+	for index := 0; index < len(mmSkeletonKeyMaxKeys); index++ {
+		state.Mm.StrayFairies[index] = 15
+		state.Mm.DungeonItems[index] = uint8(mmSkeletonKeyMaxKeys[index] << 3)
+	}
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_SKELETON_KEY"]; got != 1 {
+		t.Fatalf("MM_SKELETON_KEY = %d, want 1", got)
+	}
+	if got := items["MM_TRANSCENDENT_FAIRY"]; got != 1 {
+		t.Fatalf("MM_TRANSCENDENT_FAIRY = %d, want 1", got)
+	}
+
+	state.Mm.DungeonItems[0] = 0
+	state.Mm.StrayFairies[0] = 0
+	items = itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_SKELETON_KEY"]; got != 0 {
+		t.Fatalf("MM_SKELETON_KEY = %d, want 0 after clearing dungeon state", got)
+	}
+	if got := items["MM_TRANSCENDENT_FAIRY"]; got != 0 {
+		t.Fatalf("MM_TRANSCENDENT_FAIRY = %d, want 0 after clearing fairy state", got)
 	}
 }
 

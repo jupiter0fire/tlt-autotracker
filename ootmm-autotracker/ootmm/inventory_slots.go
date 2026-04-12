@@ -172,6 +172,7 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			if source.Bit < 0 || source.Bit >= 32 {
 				panic(fmt.Sprintf("catalog item %s has invalid extra record bit %d", item.ItemID, source.Bit))
 			}
+		case "mm-derived-skeleton-key", "mm-derived-transcendent-fairy":
 		default:
 			panic(fmt.Sprintf("catalog item %s has unsupported source kind %s", item.ItemID, source.Kind))
 		}

@@ -8,6 +8,8 @@ const (
 	dungeonItemBossKeyMask = 0x01
 )
 
+var mmSkeletonKeyMaxKeys = [...]int{1, 3, 1, 4}
+
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
 	ID  string `json:"id"`
@@ -136,7 +138,6 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	// === MM ITEMS ===
 	mm := &state.Mm
-
 	// Boss Remains
 	items = appendQuestBit(items, mm.QuestItems, QuestMmRemainsOdolwa, "MM_REMAINS_ODOLWA")
 	items = appendQuestBit(items, mm.QuestItems, QuestMmRemainsGoht, "MM_REMAINS_GOHT")
@@ -471,10 +472,39 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 			if entry.Source.Record >= 0 && entry.Source.Record < len(state.Oot.ExtraRecords) {
 				qty = boolToInt(state.Oot.ExtraRecords[entry.Source.Record]&(1<<uint(entry.Source.Bit)) != 0)
 			}
+		case "mm-derived-skeleton-key":
+			qty = boolToInt(hasMmSkeletonKey(&state.Mm))
+		case "mm-derived-transcendent-fairy":
+			qty = boolToInt(hasMmTranscendentFairy(&state.Mm))
 		}
 		items = append(items, TrackedItem{ID: entry.ItemID, Qty: qty})
 	}
 	return items
+}
+
+func hasMmSkeletonKey(mm *MmState) bool {
+	for index, want := range mmSkeletonKeyMaxKeys {
+		if dungeonMaxKeys(mm.DungeonItems[index]) < want {
+			return false
+		}
+	}
+	return true
+}
+
+func hasMmTranscendentFairy(mm *MmState) bool {
+	if !mm.TownStrayFairy {
+		return false
+	}
+	for index := 0; index < len(mmSkeletonKeyMaxKeys); index++ {
+		if mm.StrayFairies[index] < 15 {
+			return false
+		}
+	}
+	return true
+}
+
+func dungeonMaxKeys(dungeonItem uint8) int {
+	return int(dungeonItem >> 3)
 }
 
 func bitmapHasBit(bitmap []uint8, bit int) bool {

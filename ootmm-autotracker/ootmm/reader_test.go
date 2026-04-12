@@ -137,17 +137,6 @@ func ootChecksum(data []byte) uint16 {
 	return checksum
 }
 
-func mmChecksum(data []byte) uint16 {
-	checksum := uint16(0)
-	for i := 0; i < MmSaveSize; i++ {
-		if i == MmOffChecksum || i == MmOffChecksum+1 {
-			continue
-		}
-		checksum += uint16(data[i])
-	}
-	return checksum
-}
-
 func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 	data := make([]byte, MmSaveSize)
 	data[MmOffEquipment] = 0x00
@@ -217,5 +206,66 @@ func TestAcceptStableStateResetsOnChangedCandidate(t *testing.T) {
 	}
 	if !r.acceptStableState(GameMm, 1) {
 		t.Fatal("second matching changed observation should be accepted")
+	}
+}
+
+func TestLocateForeignMmSaveFindsNearChecksummedCandidate(t *testing.T) {
+	payload := make([]byte, 0x80000)
+	offset := 0x43970
+	candidate := payload[offset : offset+MmSaveSize]
+	candidate[MmOffPlayerForm] = 4
+	binary.BigEndian.PutUint32(candidate[MmOffDay:], 0)
+	for i := 0; i < 48; i++ {
+		candidate[MmOffInvItems+i] = emptyInventoryItem
+	}
+	for i, keys := range []int8{1, 3, 1, 4, -1, -1, -1, -1, -1} {
+		candidate[MmOffDungeonKeys+i] = byte(keys)
+	}
+	for i, fairies := range []int8{15, 15, 15, 15, 0, 0, 0, 0, 0, 0} {
+		candidate[MmOffStrayFairies+i] = byte(fairies)
+	}
+	candidate[MmOffWeekEventReg+mmWeekEventTownStrayFairyByte] = mmWeekEventTownStrayFairyMask
+	binary.BigEndian.PutUint16(candidate[MmOffChecksum:], mmChecksum(candidate))
+
+	// Simulate live payload mutations after the flash copy was loaded.
+	candidate[MmOffDungeonKeys+1] = 4
+	candidate[MmOffStrayFairies+4] = 1
+
+	addr, ok := locateForeignMmSave(payload, AddrOotPayload)
+	if !ok {
+		t.Fatal("expected foreign MM save candidate with near checksum")
+	}
+	if want := AddrOotPayload + uint32(offset); addr != want {
+		t.Fatalf("unexpected foreign MM addr: got %08x want %08x", addr, want)
+	}
+}
+
+func TestResetEmptyMmStateUsesEmptyInventorySentinels(t *testing.T) {
+	mm := MmState{}
+	resetEmptyMmState(&mm)
+
+	for i, itemID := range mm.Items {
+		if itemID != emptyInventoryItem {
+			t.Fatalf("unexpected empty MM item %d: got %02x want %02x", i, itemID, emptyInventoryItem)
+		}
+	}
+	for i, keys := range mm.DungeonKeys {
+		if keys != -1 {
+			t.Fatalf("unexpected empty MM small key count %d: got %d want -1", i, keys)
+		}
+	}
+}
+
+func TestIsPlausibleSharedStateRejectsUnknownFutureBits(t *testing.T) {
+	shared := SharedCustomState{}
+	for _, bitmap := range sharedStorage.Bitmaps {
+		shared.SetBitmap(bitmap.Name, make([]byte, bitmap.Size))
+	}
+
+	bitmap := sharedBitmaps["soulsEnemyOot"]
+	shared.SetBit(bitmap.Name, bitmap.Size*8-1)
+
+	if isPlausibleSharedState(shared) {
+		t.Fatal("expected shared state with future bits to fail plausibility")
 	}
 }
