@@ -234,6 +234,8 @@ func parseMmSave(mm *MmState, data []byte) error {
 	mm.Upgrades = binary.BigEndian.Uint32(data[MmOffInvUpgrades:])
 	mm.QuestItems = binary.BigEndian.Uint32(data[MmOffInvQuest:])
 	mm.HeartPieces = uint8((mm.QuestItems >> 28) & 0xF)
+	mm.SkullTokensSwamp = binary.BigEndian.Uint16(data[MmOffSkullSwamp:])
+	mm.SkullTokensOcean = binary.BigEndian.Uint16(data[MmOffSkullOcean:])
 
 	// Dungeon items
 	copy(mm.DungeonItems[:], data[MmOffDungeonItems:MmOffDungeonItems+10])

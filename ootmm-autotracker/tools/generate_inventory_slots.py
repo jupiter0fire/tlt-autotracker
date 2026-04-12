@@ -108,6 +108,22 @@ SOUL_SOURCE_SPECS = [
 ]
 
 SPECIAL_ITEM_SOURCES = [
+    {"itemId": "OOT_KEY_RING_FOREST", "source": {"kind": "oot-derived-key-ring", "record": 3}},
+    {"itemId": "OOT_KEY_RING_FIRE", "source": {"kind": "oot-derived-key-ring", "record": 4}},
+    {"itemId": "OOT_KEY_RING_WATER", "source": {"kind": "oot-derived-key-ring", "record": 5}},
+    {"itemId": "OOT_KEY_RING_SPIRIT", "source": {"kind": "oot-derived-key-ring", "record": 6}},
+    {"itemId": "OOT_KEY_RING_SHADOW", "source": {"kind": "oot-derived-key-ring", "record": 7}},
+    {"itemId": "OOT_KEY_RING_BOTW", "source": {"kind": "oot-derived-key-ring", "record": 8}},
+    {"itemId": "OOT_KEY_RING_GANON", "source": {"kind": "oot-derived-key-ring", "record": 10}},
+    {"itemId": "OOT_KEY_RING_GF", "source": {"kind": "oot-derived-key-ring", "record": 17}},
+    {"itemId": "OOT_KEY_RING_GTG", "source": {"kind": "oot-derived-key-ring", "record": 18}},
+    {"itemId": "MM_KEY_RING_WF", "source": {"kind": "mm-derived-key-ring", "record": 0}},
+    {"itemId": "MM_KEY_RING_SH", "source": {"kind": "mm-derived-key-ring", "record": 1}},
+    {"itemId": "MM_KEY_RING_GB", "source": {"kind": "mm-derived-key-ring", "record": 2}},
+    {"itemId": "MM_KEY_RING_ST", "source": {"kind": "mm-derived-key-ring", "record": 3}},
+    {"itemId": "OOT_PLATINUM_TOKEN", "source": {"kind": "oot-derived-platinum-token"}},
+    {"itemId": "MM_PLATINUM_TOKEN", "source": {"kind": "mm-derived-platinum-token"}},
+    {"itemId": "OOT_RUPEE_MAGICAL", "source": {"kind": "oot-derived-magical-rupee"}},
     {"itemId": "MM_SKELETON_KEY", "source": {"kind": "mm-derived-skeleton-key"}},
     {"itemId": "MM_TRANSCENDENT_FAIRY", "source": {"kind": "mm-derived-transcendent-fairy"}},
     {"itemId": "MM_HAMMER", "source": {"kind": "oot-extra-bit", "record": 4, "bit": 6}},

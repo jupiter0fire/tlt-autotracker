@@ -10,6 +10,15 @@ const (
 
 var mmSkeletonKeyMaxKeys = [...]int{1, 3, 1, 4}
 
+var ootKeyRingMaxKeys = [...]int{
+	0, 0, 0,
+	5, 7, 5, 5, 5, 3, 0,
+	2, 0, 0, 0, 0, 0, 0,
+	4, 9, 0,
+}
+
+var ootSilverRupeeMaxCounts = [...]int{0, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}
+
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
 	ID  string `json:"id"`
@@ -466,6 +475,16 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 	for _, entry := range trackedCatalogItems {
 		qty := 0
 		switch entry.Source.Kind {
+		case "oot-derived-key-ring":
+			qty = boolToInt(hasOotKeyRing(&state.Oot, entry.Source.Record))
+		case "mm-derived-key-ring":
+			qty = boolToInt(hasMmKeyRing(&state.Mm, entry.Source.Record))
+		case "oot-derived-platinum-token":
+			qty = boolToInt(hasOotPlatinumToken(&state.Oot))
+		case "mm-derived-platinum-token":
+			qty = boolToInt(hasMmPlatinumToken(&state.Mm))
+		case "oot-derived-magical-rupee":
+			qty = boolToInt(hasOotMagicalRupee(&state.Oot))
 		case "shared-bitmap-bit":
 			qty = boolToInt(bitmapHasBit(state.Shared.Bitmap(entry.Source.Block), entry.Source.Bit))
 		case "oot-extra-bit":
@@ -489,6 +508,56 @@ func hasMmSkeletonKey(mm *MmState) bool {
 		}
 	}
 	return true
+}
+
+func hasOotKeyRing(oot *OotState, dungeonIndex int) bool {
+	if dungeonIndex < 0 || dungeonIndex >= len(ootKeyRingMaxKeys) {
+		return false
+	}
+	want := ootKeyRingMaxKeys[dungeonIndex]
+	if want == 0 {
+		return false
+	}
+	return dungeonMaxKeys(oot.DungeonItems[dungeonIndex]) >= want
+}
+
+func hasMmKeyRing(mm *MmState, dungeonIndex int) bool {
+	if dungeonIndex < 0 || dungeonIndex >= len(mmSkeletonKeyMaxKeys) {
+		return false
+	}
+	return dungeonMaxKeys(mm.DungeonItems[dungeonIndex]) >= mmSkeletonKeyMaxKeys[dungeonIndex]
+}
+
+func hasOotPlatinumToken(oot *OotState) bool {
+	return oot.GoldTokens >= 100
+}
+
+func hasMmPlatinumToken(mm *MmState) bool {
+	return mm.SkullTokensSwamp >= 30 && mm.SkullTokensOcean >= 30
+}
+
+func hasOotMagicalRupee(oot *OotState) bool {
+	for silverRupeeID, want := range ootSilverRupeeMaxCounts {
+		if want == 0 {
+			continue
+		}
+		if ootSilverRupeeCount(oot, silverRupeeID) < want {
+			return false
+		}
+	}
+	return true
+}
+
+func ootSilverRupeeCount(oot *OotState, silverRupeeID int) int {
+	if silverRupeeID < 0 {
+		return 0
+	}
+	recordIndex := ExtraIdxOotSilver1 + silverRupeeID/4
+	if recordIndex < 0 || recordIndex >= len(oot.ExtraRecords) {
+		return 0
+	}
+	shift := uint((silverRupeeID % 4) * 8)
+	return int((oot.ExtraRecords[recordIndex] >> shift) & 0xff)
 }
 
 func hasMmTranscendentFairy(mm *MmState) bool {

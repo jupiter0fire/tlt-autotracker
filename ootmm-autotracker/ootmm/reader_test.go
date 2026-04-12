@@ -148,6 +148,8 @@ func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 	data[MmOffStrayFairies+1] = 7
 	data[MmOffStrayFairies+2] = 6
 	data[MmOffStrayFairies+3] = 15
+	binary.BigEndian.PutUint16(data[MmOffSkullSwamp:], 30)
+	binary.BigEndian.PutUint16(data[MmOffSkullOcean:], 29)
 
 	var mm MmState
 	if err := parseMmSave(&mm, data); err != nil {
@@ -165,6 +167,9 @@ func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 	}
 	if mm.StrayFairies[0] != 3 || mm.StrayFairies[1] != 7 || mm.StrayFairies[2] != 6 || mm.StrayFairies[3] != 15 {
 		t.Fatalf("unexpected MM stray fairies: % x", mm.StrayFairies[:4])
+	}
+	if mm.SkullTokensSwamp != 30 || mm.SkullTokensOcean != 29 {
+		t.Fatalf("unexpected MM skull token counts: swamp=%d ocean=%d", mm.SkullTokensSwamp, mm.SkullTokensOcean)
 	}
 }
 

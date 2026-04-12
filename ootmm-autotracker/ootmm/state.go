@@ -125,6 +125,8 @@ type MmState struct {
 	DungeonKeys  [9]int8
 	StrayFairies [10]int8
 	TownStrayFairy bool
+	SkullTokensSwamp uint16
+	SkullTokensOcean uint16
 
 	SceneFlags [120]SceneFlags
 

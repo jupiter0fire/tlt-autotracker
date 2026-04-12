@@ -399,6 +399,84 @@ func TestExtractItemsDerivesRequestedMmSpecialItems(t *testing.T) {
 	}
 }
 
+func TestExtractItemsDerivesOotCombinedItems(t *testing.T) {
+	state := &GameState{}
+	state.Oot.GoldTokens = 100
+	state.Oot.DungeonItems[3] = uint8(ootKeyRingMaxKeys[3] << 3)
+	state.Oot.DungeonItems[4] = uint8(ootKeyRingMaxKeys[4] << 3)
+	state.Oot.DungeonItems[5] = uint8(ootKeyRingMaxKeys[5] << 3)
+	state.Oot.DungeonItems[6] = uint8(ootKeyRingMaxKeys[6] << 3)
+	state.Oot.DungeonItems[7] = uint8(ootKeyRingMaxKeys[7] << 3)
+	state.Oot.DungeonItems[8] = uint8(ootKeyRingMaxKeys[8] << 3)
+	state.Oot.DungeonItems[10] = uint8(ootKeyRingMaxKeys[10] << 3)
+	state.Oot.DungeonItems[17] = uint8(ootKeyRingMaxKeys[17] << 3)
+	state.Oot.DungeonItems[18] = uint8(ootKeyRingMaxKeys[18] << 3)
+	for silverRupeeID, want := range ootSilverRupeeMaxCounts {
+		if want == 0 {
+			continue
+		}
+		setOotSilverRupeeCount(state, silverRupeeID, want)
+	}
+
+	items := itemQtyMap(ExtractItems(state))
+
+	for _, itemID := range []string{"OOT_KEY_RING_FOREST", "OOT_KEY_RING_FIRE", "OOT_KEY_RING_WATER", "OOT_KEY_RING_SPIRIT", "OOT_KEY_RING_SHADOW", "OOT_KEY_RING_BOTW", "OOT_KEY_RING_GANON", "OOT_KEY_RING_GF", "OOT_KEY_RING_GTG", "OOT_PLATINUM_TOKEN", "OOT_RUPEE_MAGICAL"} {
+		if got := items[itemID]; got != 1 {
+			t.Fatalf("%s = %d, want 1", itemID, got)
+		}
+	}
+
+	state.Oot.GoldTokens = 99
+	setOotSilverRupeeCount(state, 1, ootSilverRupeeMaxCounts[1]-1)
+	state.Oot.DungeonItems[3] = 0
+	items = itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_PLATINUM_TOKEN"]; got != 0 {
+		t.Fatalf("OOT_PLATINUM_TOKEN = %d, want 0 after lowering tokens", got)
+	}
+	if got := items["OOT_RUPEE_MAGICAL"]; got != 0 {
+		t.Fatalf("OOT_RUPEE_MAGICAL = %d, want 0 after lowering silver rupees", got)
+	}
+	if got := items["OOT_KEY_RING_FOREST"]; got != 0 {
+		t.Fatalf("OOT_KEY_RING_FOREST = %d, want 0 after lowering forest keys", got)
+	}
+}
+
+func TestExtractItemsDerivesMmCombinedItems(t *testing.T) {
+	state := &GameState{}
+	for index := 0; index < len(mmSkeletonKeyMaxKeys); index++ {
+		state.Mm.DungeonItems[index] = uint8(mmSkeletonKeyMaxKeys[index] << 3)
+	}
+	state.Mm.SkullTokensSwamp = 30
+	state.Mm.SkullTokensOcean = 30
+
+	items := itemQtyMap(ExtractItems(state))
+
+	for _, itemID := range []string{"MM_KEY_RING_WF", "MM_KEY_RING_SH", "MM_KEY_RING_GB", "MM_KEY_RING_ST", "MM_PLATINUM_TOKEN"} {
+		if got := items[itemID]; got != 1 {
+			t.Fatalf("%s = %d, want 1", itemID, got)
+		}
+	}
+
+	state.Mm.SkullTokensOcean = 29
+	state.Mm.DungeonItems[0] = 0
+	items = itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_PLATINUM_TOKEN"]; got != 0 {
+		t.Fatalf("MM_PLATINUM_TOKEN = %d, want 0 after lowering skull tokens", got)
+	}
+	if got := items["MM_KEY_RING_WF"]; got != 0 {
+		t.Fatalf("MM_KEY_RING_WF = %d, want 0 after lowering woodfall keys", got)
+	}
+}
+
+func setOotSilverRupeeCount(state *GameState, silverRupeeID, count int) {
+	recordIndex := ExtraIdxOotSilver1 + silverRupeeID/4
+	shift := uint((silverRupeeID % 4) * 8)
+	mask := uint32(0xff) << shift
+	state.Oot.ExtraRecords[recordIndex] = (state.Oot.ExtraRecords[recordIndex] &^ mask) | (uint32(count) << shift)
+}
+
 func itemQtyMap(items []TrackedItem) map[string]int {
 	result := make(map[string]int, len(items))
 	for _, item := range items {
