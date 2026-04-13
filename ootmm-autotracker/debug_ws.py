@@ -41,6 +41,16 @@ def format_inventory(items: dict[str, int]) -> str:
 	return ", ".join(entries) if entries else "keine Items"
 
 
+def format_checks(current_checks: set[str], limit: int = 12) -> str:
+	entries = sorted(current_checks)
+	if not entries:
+		return "keine Checks"
+	if len(entries) <= limit:
+		return ", ".join(entries)
+	preview = ", ".join(entries[:limit])
+	return f"{preview} (+{len(entries) - limit} weitere)"
+
+
 def get_item_updates(payload: dict[str, Any], current_items: dict[str, int]) -> list[str]:
 	updates: list[str] = []
 	item_entries = payload.get("items", [])
@@ -84,8 +94,47 @@ def get_item_updates(payload: dict[str, Any], current_items: dict[str, int]) -> 
 	return updates
 
 
+def get_check_updates(payload: dict[str, Any], current_checks: set[str]) -> list[str]:
+	updates: list[str] = []
+	check_entries = payload.get("checks", [])
+	if not isinstance(check_entries, list):
+		return updates
+
+	diff = bool(payload.get("diff"))
+	if diff:
+		for entry in check_entries:
+			if not isinstance(entry, dict):
+				continue
+			name = entry.get("name") or entry.get("id")
+			checked = entry.get("checked")
+			if not isinstance(name, str) or not isinstance(checked, bool):
+				continue
+
+			if checked:
+				if name not in current_checks:
+					updates.append(f"neuer Check: {name}")
+				current_checks.add(name)
+			else:
+				if name in current_checks:
+					updates.append(f"Check entfernt: {name}")
+				current_checks.discard(name)
+	else:
+		current_checks.clear()
+		for entry in check_entries:
+			if not isinstance(entry, dict):
+				continue
+			name = entry.get("name") or entry.get("id")
+			checked = entry.get("checked")
+			if isinstance(name, str) and checked is True:
+				current_checks.add(name)
+		updates.append(f"aktuelle Checks: {format_checks(current_checks)}")
+
+	return updates
+
+
 async def recv_loop(ws: websockets.ClientConnection, raw: bool) -> None:
 	current_items: dict[str, int] = {}
+	current_checks: set[str] = set()
 
 	async for message in ws:
 		now = datetime.now().strftime("%H:%M:%S")
@@ -106,7 +155,11 @@ async def recv_loop(ws: websockets.ClientConnection, raw: bool) -> None:
 				print(f"[{now}] {update}")
 			print(f"[{now}] item diff={payload.get('diff')} refresh={refresh} count={len(payload.get('items', []))}")
 		elif msg_type == "check":
-			print(f"[{now}] check diff={payload.get('diff')} refresh={refresh} count={len(payload.get('checks', []))}")
+			for update in get_check_updates(payload, current_checks):
+				print(f"[{now}] {update}")
+			print(
+				f"[{now}] check diff={payload.get('diff')} refresh={refresh} count={len(payload.get('checks', []))} totalChecked={len(current_checks)}"
+			)
 		elif msg_type == "location":
 			print(
 				f"[{now}] location refresh={refresh} game={payload.get('game')} scene=0x{int(payload.get('sceneId', 0)):02X}"

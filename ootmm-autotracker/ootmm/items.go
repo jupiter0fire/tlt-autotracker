@@ -6,6 +6,8 @@ const (
 	dungeonItemMapMask     = 0x04
 	dungeonItemCompassMask = 0x02
 	dungeonItemBossKeyMask = 0x01
+	mmExtraFlags2Notebook  = 9
+	mmExtraFlags2MaskBlast = 10
 )
 
 var mmSkeletonKeyMaxKeys = [...]int{1, 3, 1, 4}
@@ -22,7 +24,8 @@ type TrackedItem struct {
 
 // TrackedCheck represents a single location check.
 type TrackedCheck struct {
-	ID      string `json:"id"`
+	Key     string `json:"-"`
+	Name    string `json:"name"`
 	Checked bool   `json:"checked"`
 }
 
@@ -250,6 +253,17 @@ func ExtractItems(state *GameState) []TrackedItem {
 // ExtractChecks extracts location checks from scene flags.
 func ExtractChecks(state *GameState) []TrackedCheck {
 	checks := make([]TrackedCheck, 0, 256)
+	seenNames := make(map[string]struct{}, 256)
+	appendCheck := func(key, name string) {
+		if name == "" {
+			return
+		}
+		if _, seen := seenNames[name]; seen {
+			return
+		}
+		seenNames[name] = struct{}{}
+		checks = append(checks, TrackedCheck{Key: key, Name: name, Checked: true})
+	}
 
 	// OoT scene flag-based checks
 	for sceneIdx := 0; sceneIdx < OotPermCount; sceneIdx++ {
@@ -257,14 +271,16 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		// Each set bit in the chests field = one opened chest
 		for bit := 0; bit < 32; bit++ {
 			if sf.Chests&(1<<uint(bit)) != 0 {
-				id := ootSceneCheckID(sceneIdx, "chest", bit)
-				checks = append(checks, TrackedCheck{id, true})
+				if name, ok := lookupSceneCheckName("OOT", sceneIdx, "chest", bit); ok {
+					appendCheck(ootSceneCheckID(sceneIdx, "chest", bit), name)
+				}
 			}
 		}
 		for bit := 0; bit < 32; bit++ {
 			if sf.Collectibles&(1<<uint(bit)) != 0 {
-				id := ootSceneCheckID(sceneIdx, "collect", bit)
-				checks = append(checks, TrackedCheck{id, true})
+				if name, ok := lookupSceneCheckName("OOT", sceneIdx, "collect", bit); ok {
+					appendCheck(ootSceneCheckID(sceneIdx, "collect", bit), name)
+				}
 			}
 		}
 	}
@@ -274,15 +290,48 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		sf := &state.Mm.SceneFlags[sceneIdx]
 		for bit := 0; bit < 32; bit++ {
 			if sf.Chests&(1<<uint(bit)) != 0 {
-				id := mmSceneCheckID(sceneIdx, "chest", bit)
-				checks = append(checks, TrackedCheck{id, true})
+				if name, ok := lookupSceneCheckName("MM", sceneIdx, "chest", bit); ok {
+					appendCheck(mmSceneCheckID(sceneIdx, "chest", bit), name)
+				}
 			}
 		}
 		for bit := 0; bit < 32; bit++ {
 			if sf.Collectibles&(1<<uint(bit)) != 0 {
-				id := mmSceneCheckID(sceneIdx, "collect", bit)
-				checks = append(checks, TrackedCheck{id, true})
+				if name, ok := lookupSceneCheckName("MM", sceneIdx, "collect", bit); ok {
+					appendCheck(mmSceneCheckID(sceneIdx, "collect", bit), name)
+				}
 			}
+		}
+	}
+
+	appendBitmapChecks := func(bitmap []uint8, game string, keyPrefix string, lookup func(string, int) (string, bool)) {
+		for byteIndex, value := range bitmap {
+			for bit := 0; bit < 8; bit++ {
+				if value&(1<<uint(bit)) == 0 {
+					continue
+				}
+				index := byteIndex*8 + bit
+				if name, ok := lookup(game, index); ok {
+					appendCheck(game+"_"+keyPrefix+"_"+itoa(index), name)
+				}
+			}
+		}
+	}
+
+	appendBitmapChecks(state.Shared.Bitmap("npcOot"), "OOT", "npc", npcCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("npcMm"), "MM", "npc", npcCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("xflagsOot"), "OOT", "xflag", xflagCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("xflagsMm"), "MM", "xflag", xflagCheckName)
+
+	mmFlags2 := state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+	if mmFlags2&(1<<mmExtraFlags2Notebook) != 0 {
+		if name, ok := npcSymbolCheckName("MM", "BOMBER_NOTEBOOK"); ok {
+			appendCheck("MM_extra_"+itoa(mmExtraFlags2Notebook), name)
+		}
+	}
+	if mmFlags2&(1<<mmExtraFlags2MaskBlast) != 0 {
+		if name, ok := npcSymbolCheckName("MM", "MASK_BLAST"); ok {
+			appendCheck("MM_extra_"+itoa(mmExtraFlags2MaskBlast), name)
 		}
 	}
 
@@ -304,11 +353,11 @@ func boolToInt(b bool) int {
 }
 
 func ootSceneCheckID(scene int, kind string, bit int) string {
-	return "OOT_" + kind + "_" + itoa(scene) + "_" + itoa(bit)
+	return sceneCheckKey("OOT", scene, kind, bit)
 }
 
 func mmSceneCheckID(scene int, kind string, bit int) string {
-	return "MM_" + kind + "_" + itoa(scene) + "_" + itoa(bit)
+	return sceneCheckKey("MM", scene, kind, bit)
 }
 
 func ootSwordLevel(oot *OotState) int {

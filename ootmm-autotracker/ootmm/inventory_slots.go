@@ -81,6 +81,7 @@ func init() {
 	sharedStorage = slotFile.Catalog.Shared
 	sharedBitmaps = buildSharedBitmapTable(slotFile.Catalog.Shared)
 	trackedCatalogItems, catalogItemSources, sharedBitmapUsedBits = buildCatalogTables(slotFile.Catalog.Items, sharedBitmaps)
+	markSharedCheckBitmapsUsed(sharedBitmapUsedBits, sharedBitmaps)
 }
 
 func buildInventorySlotTable(game string, entries []inventorySlotEntry) ([]inventorySlotEntry, map[string]int) {
@@ -195,6 +196,15 @@ func shouldTrackCatalogItem(source catalogItemSource) bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func markSharedCheckBitmapsUsed(usedBits map[string]int, bitmaps map[string]sharedBitmapInfo) {
+	for name, bitmap := range bitmaps {
+		switch name {
+		case "xflagsOot", "npcOot", "shopsOot", "scrubsOot", "srOot", "xflagsMm", "npcMm", "shopsMm":
+			usedBits[name] = bitmap.Size * 8
+		}
 	}
 }
 

@@ -215,14 +215,12 @@ func (s *Server) FlushFullState(items []tracker.ItemDiff, checks []tracker.Check
 		})
 	}
 
-	if len(checks) > 0 {
-		s.sendToClients(conns, CheckMessage{
-			Type:    "check",
-			Diff:    false,
-			Refresh: false,
-			Checks:  checks,
-		})
-	}
+	s.sendToClients(conns, CheckMessage{
+		Type:    "check",
+		Diff:    false,
+		Refresh: false,
+		Checks:  checks,
+	})
 
 	s.sendToClients(conns, LocationMessage{
 		Type:    "location",

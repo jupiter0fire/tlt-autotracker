@@ -405,6 +405,46 @@
       "trackedSize": 2048,
       "bitmaps": [
         {
+          "name": "xflagsOot",
+          "offset": 0,
+          "size": 744
+        },
+        {
+          "name": "npcOot",
+          "offset": 744,
+          "size": 32
+        },
+        {
+          "name": "shopsOot",
+          "offset": 776,
+          "size": 8
+        },
+        {
+          "name": "scrubsOot",
+          "offset": 784,
+          "size": 8
+        },
+        {
+          "name": "srOot",
+          "offset": 792,
+          "size": 16
+        },
+        {
+          "name": "xflagsMm",
+          "offset": 880,
+          "size": 842
+        },
+        {
+          "name": "npcMm",
+          "offset": 1722,
+          "size": 32
+        },
+        {
+          "name": "shopsMm",
+          "offset": 1754,
+          "size": 4
+        },
+        {
           "name": "soulsEnemyOot",
           "offset": 1996,
           "size": 8

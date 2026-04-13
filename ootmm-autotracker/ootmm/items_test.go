@@ -524,3 +524,118 @@ func itemQtyMap(items []TrackedItem) map[string]int {
 	}
 	return result
 }
+
+func TestExtractChecksUsesResolvedNamesWhenAvailable(t *testing.T) {
+	original := checkNameTable
+	checkNameTable = map[string]string{
+		"OOT_chest_40_0": "Mido's House Top Left",
+		"OOT_chest_40_1": "Mido's House Top Right",
+		"OOT_chest_40_2": "Mido's House Bottom Left",
+		"OOT_chest_40_3": "Mido's House Bottom Right",
+	}
+	t.Cleanup(func() {
+		checkNameTable = original
+	})
+
+	state := &GameState{}
+	state.Oot.SceneFlags[0x28].Chests = 0x0F
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Mido's House Top Left",
+		"Mido's House Top Right",
+		"Mido's House Bottom Left",
+		"Mido's House Bottom Right",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing named check %q", name)
+		}
+	}
+}
+
+func TestExtractChecksFallsBackToStableKey(t *testing.T) {
+	original := checkNameTable
+	checkNameTable = map[string]string{}
+	t.Cleanup(func() {
+		checkNameTable = original
+	})
+
+	state := &GameState{}
+	state.Oot.SceneFlags[1].Chests = 1 << 7
+
+	checks := ExtractChecks(state)
+	if len(checks) != 0 {
+		t.Fatalf("len(checks) = %d, want 0 for unmapped scene flags", len(checks))
+	}
+}
+
+func TestExtractChecksIncludesNpcBitmapChecks(t *testing.T) {
+	originalNpc := npcCheckTables
+	npcCheckTables = map[string]map[int]string{
+		"OOT": {},
+		"MM":  {0x4a: "Clock Town Blast Mask"},
+	}
+	t.Cleanup(func() {
+		npcCheckTables = originalNpc
+	})
+
+	state := &GameState{}
+	state.Shared.SetBit("npcMm", 0x4a)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Clock Town Blast Mask"]; !ok {
+		t.Fatal("missing MM npc check from shared bitmap")
+	}
+}
+
+func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
+	originalXflags := xflagCheckTables
+	xflagCheckTables = map[string]map[int]string{
+		"OOT": {17: "Kokiri Forest Grass Adult Near Crawl 1"},
+		"MM":  {},
+	}
+	t.Cleanup(func() {
+		xflagCheckTables = originalXflags
+	})
+
+	state := &GameState{}
+	state.Shared.SetBit("xflagsOot", 17)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Kokiri Forest Grass Adult Near Crawl 1"]; !ok {
+		t.Fatal("missing OoT xflag check from shared bitmap")
+	}
+}
+
+func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {},
+		"MM": {
+			"MASK_BLAST":      "Clock Town Blast Mask",
+			"BOMBER_NOTEBOOK": "Clock Town Bomber Notebook",
+		},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Clock Town Blast Mask"]; !ok {
+		t.Fatal("missing MM extra-flag check for Blast Mask")
+	}
+	if _, ok := checks["Clock Town Bomber Notebook"]; !ok {
+		t.Fatal("missing MM extra-flag check for Bomber Notebook")
+	}
+}
+
+func checkNameSet(checks []TrackedCheck) map[string]struct{} {
+	result := make(map[string]struct{}, len(checks))
+	for _, check := range checks {
+		result[check.Name] = struct{}{}
+	}
+	return result
+}

@@ -7,14 +7,19 @@ import (
 // State tracks the current and previous game state, computing deltas.
 type State struct {
 	prevItems  map[string]int
-	prevChecks map[string]bool
+	prevChecks map[string]checkState
 	prevGame   ootmm.ActiveGame
+}
+
+type checkState struct {
+	Name    string
+	Checked bool
 }
 
 func NewState() *State {
 	return &State{
 		prevItems:  make(map[string]int),
-		prevChecks: make(map[string]bool),
+		prevChecks: make(map[string]checkState),
 	}
 }
 
@@ -26,7 +31,7 @@ type ItemDiff struct {
 
 // CheckDiff represents a changed check.
 type CheckDiff struct {
-	ID      string `json:"id"`
+	Name    string `json:"name"`
 	Checked bool   `json:"checked"`
 }
 
@@ -58,18 +63,18 @@ func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChe
 	s.prevItems = currentItems
 
 	// Checks diff
-	currentChecks := make(map[string]bool, len(checks))
+	currentChecks := make(map[string]checkState, len(checks))
 	for _, ch := range checks {
-		currentChecks[ch.ID] = ch.Checked
-		prev, existed := s.prevChecks[ch.ID]
-		if !existed || prev != ch.Checked {
-			changedChecks = append(changedChecks, CheckDiff{ID: ch.ID, Checked: ch.Checked})
+		currentChecks[ch.Key] = checkState{Name: ch.Name, Checked: ch.Checked}
+		prev, existed := s.prevChecks[ch.Key]
+		if !existed || prev.Checked != ch.Checked {
+			changedChecks = append(changedChecks, CheckDiff{Name: ch.Name, Checked: ch.Checked})
 		}
 	}
 	// Emit unchecked for checks that disappeared
-	for id, prevChecked := range s.prevChecks {
-		if _, exists := currentChecks[id]; !exists && prevChecked {
-			changedChecks = append(changedChecks, CheckDiff{ID: id, Checked: false})
+	for key, prev := range s.prevChecks {
+		if _, exists := currentChecks[key]; !exists && prev.Checked {
+			changedChecks = append(changedChecks, CheckDiff{Name: prev.Name, Checked: false})
 		}
 	}
 	s.prevChecks = currentChecks
@@ -93,7 +98,7 @@ func (s *State) FullState(gs *ootmm.GameState) ([]ItemDiff, []CheckDiff) {
 
 	allChecks := make([]CheckDiff, len(checks))
 	for i, ch := range checks {
-		allChecks[i] = CheckDiff{ID: ch.ID, Checked: ch.Checked}
+		allChecks[i] = CheckDiff{Name: ch.Name, Checked: ch.Checked}
 	}
 
 	return allItems, allChecks
