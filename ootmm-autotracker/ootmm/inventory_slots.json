@@ -2324,7 +2324,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 16
+          "bit": 10
         }
       },
       {
@@ -2332,7 +2332,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 17
+          "bit": 11
         }
       },
       {
@@ -2340,7 +2340,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 18
+          "bit": 12
         }
       },
       {
@@ -2348,7 +2348,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 19
+          "bit": 13
         }
       },
       {
@@ -2356,7 +2356,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 20
+          "bit": 14
         }
       },
       {
@@ -2364,7 +2364,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 21
+          "bit": 15
         }
       },
       {
@@ -2372,7 +2372,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 22
+          "bit": 5
         }
       },
       {
@@ -2380,7 +2380,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 23
+          "bit": 6
         }
       },
       {
@@ -2388,7 +2388,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 24
+          "bit": 7
         }
       },
       {
@@ -2396,7 +2396,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 25
+          "bit": 8
         }
       },
       {
@@ -2404,7 +2404,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 26
+          "bit": 9
         }
       },
       {
@@ -2412,7 +2412,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 27
+          "bit": 0
         }
       },
       {
@@ -2420,7 +2420,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 28
+          "bit": 1
         }
       },
       {
@@ -2428,7 +2428,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 29
+          "bit": 2
         }
       },
       {
@@ -2436,7 +2436,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 30
+          "bit": 3
         }
       },
       {
@@ -2444,7 +2444,7 @@
         "source": {
           "kind": "oot-extra-bit",
           "record": 5,
-          "bit": 31
+          "bit": 4
         }
       },
       {

@@ -370,6 +370,24 @@ func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIgnoresActiveMmTradeBitsForSpecialItems(t *testing.T) {
+	state := &GameState{}
+	// The upper 16 bits of MmExtraTrade store active slot contents, not obtained items.
+	state.Oot.ExtraRecords[ExtraIdxMmTrade] = 1 << 27
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_SPELL_LOVE"]; got != 0 {
+		t.Fatalf("MM_SPELL_LOVE = %d, want 0 when only active MM trade bits are set", got)
+	}
+	if got := items["MM_BOOTS_IRON"]; got != 0 {
+		t.Fatalf("MM_BOOTS_IRON = %d, want 0 when only active MM trade bits are set", got)
+	}
+	if got := items["MM_TRADE_1"]; got != 0 {
+		t.Fatalf("MM_TRADE_1 = %#x, want 0 when only active MM trade bits are set", got)
+	}
+}
+
 func TestExtractItemsDerivesRequestedMmSpecialItems(t *testing.T) {
 	state := &GameState{}
 	state.Mm.TownStrayFairy = true
