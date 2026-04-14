@@ -565,11 +565,31 @@ func TestExtractChecksIncludesLiveOotChestFlags(t *testing.T) {
 	state := &GameState{}
 	state.Oot.LiveSceneID = 0x28
 	state.Oot.LiveChestFlags = 1 << 2
-	state.Oot.HasLiveChestFlags = true
+	state.Oot.HasLiveSceneFlags = true
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Mido's House Bottom Left"]; !ok {
 		t.Fatal("missing live OoT chest check")
+	}
+}
+
+func TestExtractChecksIncludesLiveOotCollectibleFlags(t *testing.T) {
+	original := checkNameTable
+	checkNameTable = map[string]string{
+		"OOT_collect_55_1": "Kokiri Forest GS House of Twins",
+	}
+	t.Cleanup(func() {
+		checkNameTable = original
+	})
+
+	state := &GameState{}
+	state.Oot.LiveSceneID = 0x37
+	state.Oot.LiveTempCollectFlag = 1 << 1
+	state.Oot.HasLiveSceneFlags = true
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Kokiri Forest GS House of Twins"]; !ok {
+		t.Fatal("missing live OoT collectible check")
 	}
 }
 

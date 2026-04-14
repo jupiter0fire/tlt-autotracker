@@ -78,8 +78,10 @@ type OotState struct {
 	GameMode        uint32
 	IsBiggoronSword bool
 
-	LiveChestFlags    uint32
-	HasLiveChestFlags bool
+	LiveChestFlags      uint32
+	LiveCollectFlags    uint32
+	LiveTempCollectFlag uint32
+	HasLiveSceneFlags   bool
 
 	// Inventory
 	Items [24]uint8

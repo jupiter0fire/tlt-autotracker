@@ -282,18 +282,20 @@ func TestIsPlausibleOotPlayStateSample(t *testing.T) {
 func TestRememberOotStateDropsLiveFlags(t *testing.T) {
 	r := &Reader{}
 	oot := OotState{
-		LiveSceneID:       0x28,
-		LiveChestFlags:    1 << 2,
-		HasLiveChestFlags: true,
+		LiveSceneID:         0x28,
+		LiveChestFlags:      1 << 2,
+		LiveCollectFlags:    1 << 3,
+		LiveTempCollectFlag: 1 << 4,
+		HasLiveSceneFlags:   true,
 	}
 
 	r.rememberOotState(oot)
 
-	if r.lastKnownOot.HasLiveChestFlags {
-		t.Fatal("expected remembered OoT state to drop live chest flags")
+	if r.lastKnownOot.HasLiveSceneFlags {
+		t.Fatal("expected remembered OoT state to drop live scene flags")
 	}
-	if r.lastKnownOot.LiveSceneID != 0 || r.lastKnownOot.LiveChestFlags != 0 {
-		t.Fatalf("remembered live fields = scene %d chest %#x, want zero", r.lastKnownOot.LiveSceneID, r.lastKnownOot.LiveChestFlags)
+	if r.lastKnownOot.LiveSceneID != 0 || r.lastKnownOot.LiveChestFlags != 0 || r.lastKnownOot.LiveCollectFlags != 0 || r.lastKnownOot.LiveTempCollectFlag != 0 {
+		t.Fatalf("remembered live fields = scene %d chest %#x collect %#x tempCollect %#x, want zero", r.lastKnownOot.LiveSceneID, r.lastKnownOot.LiveChestFlags, r.lastKnownOot.LiveCollectFlags, r.lastKnownOot.LiveTempCollectFlag)
 	}
 }
 

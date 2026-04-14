@@ -376,6 +376,8 @@ type ootPlayStateSample struct {
 	linkAgeOnLoad  uint8
 	gameplayFrames uint32
 	chestFlags     uint32
+	collectFlags   uint32
+	tempCollect    uint32
 }
 
 var ootPlayStateCandidateAddrs = [...]uint32{
@@ -402,7 +404,9 @@ func (r *Reader) readOotLiveState(oot *OotState) {
 
 	oot.LiveSceneID = sample.sceneID
 	oot.LiveChestFlags = sample.chestFlags
-	oot.HasLiveChestFlags = true
+	oot.LiveCollectFlags = sample.collectFlags
+	oot.LiveTempCollectFlag = sample.tempCollect
+	oot.HasLiveSceneFlags = true
 }
 
 func (r *Reader) readOotPlayStateSampleCached() (ootPlayStateSample, bool) {
@@ -451,6 +455,14 @@ func (r *Reader) readOotPlayStateSample(addr uint32) (ootPlayStateSample, error)
 	if err != nil {
 		return ootPlayStateSample{}, err
 	}
+	collectFlags, err := r.mem.ReadU32BE(addr + uint32(OotPlayOffCollectFlags))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+	tempCollect, err := r.mem.ReadU32BE(addr + uint32(OotPlayOffTempCollect))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
 
 	return ootPlayStateSample{
 		sceneID:        sceneID,
@@ -459,6 +471,8 @@ func (r *Reader) readOotPlayStateSample(addr uint32) (ootPlayStateSample, error)
 		linkAgeOnLoad:  linkAgeOnLoad,
 		gameplayFrames: gameplayFrames,
 		chestFlags:     chestFlags,
+		collectFlags:   collectFlags,
+		tempCollect:    tempCollect,
 	}, nil
 }
 
@@ -962,7 +976,9 @@ func parseSharedState(data []byte) (SharedCustomState, error) {
 func (r *Reader) rememberOotState(oot OotState) {
 	oot.LiveSceneID = 0
 	oot.LiveChestFlags = 0
-	oot.HasLiveChestFlags = false
+	oot.LiveCollectFlags = 0
+	oot.LiveTempCollectFlag = 0
+	oot.HasLiveSceneFlags = false
 	r.lastKnownOot = oot
 	r.hasLastKnownOot = true
 }

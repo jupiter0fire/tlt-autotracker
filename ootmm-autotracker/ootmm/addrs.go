@@ -124,6 +124,8 @@ const (
 	OotPlayOffSceneID        = 0x00A4
 	OotPlayOffActorTotal     = 0x1C2C
 	OotPlayOffChestFlags     = 0x1D38
+	OotPlayOffCollectFlags   = 0x1D44
+	OotPlayOffTempCollect    = 0x1D48
 	OotPlayOffCurrentRoom    = 0x11CBC
 	OotPlayOffGameplayFrames = 0x11DE4
 	OotPlayOffLinkAgeOnLoad  = 0x11DE8
