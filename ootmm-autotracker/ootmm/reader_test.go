@@ -1,9 +1,72 @@
 package ootmm
 
 import (
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+type testDebugSnapshot struct {
+	Summary struct {
+		SaveIndex uint32 `json:"saveIndex"`
+	} `json:"summary"`
+	Regions []struct {
+		Name string `json:"name"`
+		Data string `json:"data"`
+	} `json:"regions"`
+}
+
+func loadTestDebugSnapshot(t *testing.T, name string) testDebugSnapshot {
+	t.Helper()
+
+	path := filepath.Join("..", "memory-dumps", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read debug snapshot %s: %v", name, err)
+	}
+
+	var snapshot testDebugSnapshot
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		t.Fatalf("parse debug snapshot %s: %v", name, err)
+	}
+	return snapshot
+}
+
+func decodeTestSnapshotRegion(t *testing.T, snapshot testDebugSnapshot, name string) []byte {
+	t.Helper()
+
+	for _, region := range snapshot.Regions {
+		if region.Name != name {
+			continue
+		}
+		data, err := base64.StdEncoding.DecodeString(region.Data)
+		if err != nil {
+			t.Fatalf("decode region %s: %v", name, err)
+		}
+		return data
+	}
+
+	t.Fatalf("missing region %s", name)
+	return nil
+}
+
+func failingSharedBitmaps(data []byte) []string {
+	failing := make([]string, 0)
+	for _, bitmap := range sharedStorage.Bitmaps {
+		end := bitmap.Offset + bitmap.Size
+		if end > len(data) {
+			failing = append(failing, bitmap.Name+":out-of-bounds")
+			continue
+		}
+		if !sharedBitmapHasNoUnusedBits(data[bitmap.Offset:end], sharedBitmapUsedBits[bitmap.Name], bitmap.Size) {
+			failing = append(failing, bitmap.Name)
+		}
+	}
+	return failing
+}
 
 func TestForeignOotSaveAddrUsesSaveIndex(t *testing.T) {
 	addr, err := foreignOotSaveAddr(0)
@@ -352,6 +415,112 @@ func TestSelectSharedStateCandidatePrefersRicherCheckState(t *testing.T) {
 	}
 	if bitmap := got.state.Bitmap("npcOot"); len(bitmap) == 0 || bitmap[0]&(1<<3) == 0 {
 		t.Fatal("selected candidate is missing expected OoT NPC bit")
+	}
+}
+
+func TestOverlaySharedCheckBitmapsAddsNearForeignScrubProgress(t *testing.T) {
+	payload := SharedCustomState{}
+	payload.SetBit("npcMm", 1)
+	payload.SetBit("npcOot", 3)
+	payload.SetBit("xflagsOot", 9)
+
+	near := SharedCustomState{}
+	near.SetBit("scrubsOot", 0)
+
+	overlaySharedCheckBitmaps(&payload, &near)
+
+	if bitmap := payload.Bitmap("scrubsOot"); len(bitmap) == 0 || bitmap[0]&1 == 0 {
+		t.Fatal("overlay is missing expected OoT scrub bit")
+	}
+	if bitmap := payload.Bitmap("npcOot"); len(bitmap) == 0 || bitmap[0]&(1<<3) == 0 {
+		t.Fatal("overlay dropped expected OoT NPC bit")
+	}
+	if bitmap := payload.Bitmap("xflagsOot"); len(bitmap) < 2 || bitmap[1]&(1<<1) == 0 {
+		t.Fatal("overlay dropped expected OoT XFlag bit")
+	}
+}
+
+func TestDebugDumpNearForeignSharedStateShowsScrubImmediately(t *testing.T) {
+	before := loadTestDebugSnapshot(t, "before-scrub-2-20260414-203500.json")
+	after := loadTestDebugSnapshot(t, "after-scrub-2-20260414-203645.json")
+
+	beforePayload := decodeTestSnapshotRegion(t, before, "ootPayload")
+	afterPayload := decodeTestSnapshotRegion(t, after, "ootPayload")
+
+	addr, ok := locateForeignMmSave(afterPayload, AddrOotPayload)
+	if !ok {
+		t.Fatal("expected foreign MM save to be locatable in after dump")
+	}
+	nearOffset := int(addr-AddrOotPayload-SharedCustomSaveSize) + sharedBitmaps["scrubsOot"].Offset
+	if nearOffset < 0 || nearOffset+sharedBitmaps["scrubsOot"].Size > len(afterPayload) {
+		t.Fatal("near-foreign scrubs bitmap is out of bounds")
+	}
+
+	beforeWindow := beforePayload[int(addr-AddrOotPayload-SharedCustomSaveSize):][:sharedStateReadSize()]
+	if _, err := parseSharedState(beforeWindow); err == nil {
+		t.Fatal("expected strict shared-state parsing to reject the before dump")
+	}
+	beforeShared, err := parseSharedCheckState(beforeWindow)
+	if err != nil {
+		t.Fatalf("parse before near-foreign shared check state at foreign addr %#x: %v", addr, err)
+	}
+	afterWindow := afterPayload[int(addr-AddrOotPayload-SharedCustomSaveSize):][:sharedStateReadSize()]
+	if _, err := parseSharedState(afterWindow); err == nil {
+		t.Fatal("expected strict shared-state parsing to reject the after dump")
+	}
+	afterShared, err := parseSharedCheckState(afterWindow)
+	if err != nil {
+		t.Fatalf("parse after near-foreign shared check state at foreign addr %#x: %v", addr, err)
+	}
+
+	if bitmap := beforeShared.Bitmap("scrubsOot"); len(bitmap) == 0 || bitmap[0]&1 != 0 {
+		t.Fatal("expected before dump to have scrub bit 0 cleared in near-foreign shared state")
+	}
+	if bitmap := afterShared.Bitmap("scrubsOot"); len(bitmap) == 0 || bitmap[0]&1 == 0 {
+		t.Fatal("expected after dump to have scrub bit 0 set in near-foreign shared state")
+	}
+}
+
+func TestDebugDumpOverlayMakesScrubCheckVisible(t *testing.T) {
+	after := loadTestDebugSnapshot(t, "after-scrub-2-20260414-203645.json")
+	payload := decodeTestSnapshotRegion(t, after, "ootPayload")
+
+	foreignAddr, ok := locateForeignMmSave(payload, AddrOotPayload)
+	if !ok {
+		t.Fatal("expected foreign MM save to be locatable in after dump")
+	}
+
+	slotAddr, err := sharedSaveAddr(AddrOotPayload, OotPayloadSize, after.Summary.SaveIndex)
+	if err != nil {
+		t.Fatalf("sharedSaveAddr: %v", err)
+	}
+	slotOffset := int(slotAddr - AddrOotPayload)
+	nearOffset := int(foreignAddr - AddrOotPayload - SharedCustomSaveSize)
+
+	slotWindow := payload[slotOffset : slotOffset+sharedStateReadSize()]
+	if _, err := parseSharedState(slotWindow); err == nil {
+		t.Fatal("expected strict shared-state parsing to reject the payload slot copy")
+	}
+	nearWindow := payload[nearOffset : nearOffset+sharedStateReadSize()]
+	nearShared, err := parseSharedCheckState(nearWindow)
+	if err != nil {
+		t.Fatalf("parse near-foreign shared check state at foreign addr %#x: %v", foreignAddr, err)
+	}
+
+	state := &GameState{}
+	if checks := checkNameSet(ExtractChecks(state)); func() bool {
+		_, ok := checks["Lost Woods Scrub Sticks Upgrade"]
+		return ok
+	}() {
+		t.Fatal("slot shared state unexpectedly already contains the scrub check")
+	}
+
+	overlaySharedCheckBitmaps(&state.Shared, &nearShared)
+	if checks := checkNameSet(ExtractChecks(state)); func() bool {
+		_, ok := checks["Lost Woods Scrub Sticks Upgrade"]
+		return ok
+	}() == false {
+		t.Fatal("overlayed shared state is missing Lost Woods Scrub Sticks Upgrade")
 	}
 }
 

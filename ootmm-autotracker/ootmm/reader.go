@@ -747,6 +747,11 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 
 func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *SharedCustomState) error {
 	candidates := make([]sharedStateCandidate, 0, 3)
+	var nearForeignChecks *SharedCustomState
+	if liveChecks, err := r.readSharedCheckStateNearForeign(game); err == nil {
+		liveChecksCopy := liveChecks.Clone()
+		nearForeignChecks = &liveChecksCopy
+	}
 	if candidate, err := r.readSharedStateNearForeignSaveCandidate(game); err == nil {
 		candidates = append(candidates, candidate)
 	}
@@ -759,17 +764,43 @@ func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *Shar
 
 	if candidate, ok := r.selectSharedStateCandidate(candidates); ok {
 		*shared = candidate.state
+		overlaySharedCheckBitmaps(shared, nearForeignChecks)
 		return nil
 	}
 
 	if r.hasLastKnownShared {
 		*shared = r.lastKnownShared.Clone()
 	}
+	overlaySharedCheckBitmaps(shared, nearForeignChecks)
 
 	return nil
 }
 
-func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedCustomState) error {
+func overlaySharedCheckBitmaps(dst *SharedCustomState, src *SharedCustomState) {
+	if dst == nil || src == nil {
+		return
+	}
+
+	for _, name := range sharedCheckBitmapNames {
+		srcBitmap := src.Bitmap(name)
+		if len(srcBitmap) == 0 {
+			continue
+		}
+
+		dstBitmap := append([]uint8(nil), dst.Bitmap(name)...)
+		if len(dstBitmap) < len(srcBitmap) {
+			grown := make([]uint8, len(srcBitmap))
+			copy(grown, dstBitmap)
+			dstBitmap = grown
+		}
+		for index, value := range srcBitmap {
+			dstBitmap[index] |= value
+		}
+		dst.SetBitmap(name, dstBitmap)
+	}
+}
+
+func (r *Reader) readSharedStateNearForeignRaw(game ActiveGame) ([]byte, uint32, error) {
 	var foreignSaveAddr uint32
 	var payloadBase uint32
 	var payloadSize int
@@ -784,26 +815,35 @@ func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedC
 		payloadBase = AddrMmPayload
 		payloadSize = MmPayloadSize
 	default:
-		return fmt.Errorf("no active game")
+		return nil, 0, fmt.Errorf("no active game")
 	}
 
 	if foreignSaveAddr == 0 {
-		return fmt.Errorf("foreign save address unavailable")
+		return nil, 0, fmt.Errorf("foreign save address unavailable")
 	}
 	if foreignSaveAddr < payloadBase+SharedCustomSaveSize {
-		return fmt.Errorf("foreign save %#x is before shared custom save window", foreignSaveAddr)
+		return nil, 0, fmt.Errorf("foreign save %#x is before shared custom save window", foreignSaveAddr)
 	}
 
 	addr := foreignSaveAddr - SharedCustomSaveSize
 	readSize := sharedStateReadSize()
 	end := uint64(addr-payloadBase) + uint64(readSize)
 	if end > uint64(payloadSize) {
-		return fmt.Errorf("shared custom save near %#x exceeds payload bounds", foreignSaveAddr)
+		return nil, 0, fmt.Errorf("shared custom save near %#x exceeds payload bounds", foreignSaveAddr)
 	}
 
 	data, err := r.mem.Read(addr, readSize)
 	if err != nil {
-		return fmt.Errorf("read shared custom save near %#x: %w", foreignSaveAddr, err)
+		return nil, 0, fmt.Errorf("read shared custom save near %#x: %w", foreignSaveAddr, err)
+	}
+
+	return data, foreignSaveAddr, nil
+}
+
+func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedCustomState) error {
+	data, foreignSaveAddr, err := r.readSharedStateNearForeignRaw(game)
+	if err != nil {
+		return err
 	}
 
 	parsed, err := parseSharedState(data)
@@ -821,6 +861,18 @@ func (r *Reader) readSharedStateNearForeignSaveCandidate(game ActiveGame) (share
 		return sharedStateCandidate{}, err
 	}
 	return sharedStateCandidate{source: "near-foreign", state: shared}, nil
+}
+
+func (r *Reader) readSharedCheckStateNearForeign(game ActiveGame) (SharedCustomState, error) {
+	data, foreignSaveAddr, err := r.readSharedStateNearForeignRaw(game)
+	if err != nil {
+		return SharedCustomState{}, err
+	}
+	shared, err := parseSharedCheckState(data)
+	if err != nil {
+		return SharedCustomState{}, fmt.Errorf("parse shared custom save near %#x for checks: %w", foreignSaveAddr, err)
+	}
+	return shared, nil
 }
 
 func (r *Reader) readSharedStateFromPayload(payloadBase uint32, payloadSize int, saveIndex uint32, shared *SharedCustomState) error {
@@ -954,6 +1006,17 @@ func sharedStateReadSize() int {
 }
 
 func parseSharedState(data []byte) (SharedCustomState, error) {
+	parsed, err := parseSharedStateUnchecked(data)
+	if err != nil {
+		return SharedCustomState{}, err
+	}
+	if !isPlausibleSharedState(parsed) {
+		return SharedCustomState{}, fmt.Errorf("shared custom save failed plausibility checks")
+	}
+	return parsed, nil
+}
+
+func parseSharedStateUnchecked(data []byte) (SharedCustomState, error) {
 	parsed := SharedCustomState{}
 	for _, bitmap := range sharedStorage.Bitmaps {
 		end := bitmap.Offset + bitmap.Size
@@ -967,10 +1030,24 @@ func parseSharedState(data []byte) (SharedCustomState, error) {
 		parsed.BombchuBagOot = uint8((flags >> sharedBombchuBagOotShift) & sharedBombchuBagMask)
 		parsed.BombchuBagMm = uint8((flags >> sharedBombchuBagMmShift) & sharedBombchuBagMask)
 	}
-	if !isPlausibleSharedState(parsed) {
-		return SharedCustomState{}, fmt.Errorf("shared custom save failed plausibility checks")
-	}
 	return parsed, nil
+}
+
+func parseSharedCheckState(data []byte) (SharedCustomState, error) {
+	parsed, err := parseSharedStateUnchecked(data)
+	if err != nil {
+		return SharedCustomState{}, err
+	}
+
+	filtered := SharedCustomState{}
+	for _, name := range sharedCheckBitmapNames {
+		bitmap := parsed.Bitmap(name)
+		if len(bitmap) == 0 {
+			continue
+		}
+		filtered.SetBitmap(name, bitmap)
+	}
+	return filtered, nil
 }
 
 func (r *Reader) rememberOotState(oot OotState) {
