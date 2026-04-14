@@ -3,6 +3,7 @@ package ootmm
 import (
 	"encoding/binary"
 	"fmt"
+	"math/bits"
 
 	"github.com/ootmm-autotracker/n64"
 )
@@ -17,6 +18,22 @@ const (
 	sharedBombchuBagMmShift     = 6
 	sharedBombchuBagMask        = 0x3
 )
+
+var sharedCheckBitmapNames = [...]string{
+	"xflagsOot",
+	"npcOot",
+	"shopsOot",
+	"scrubsOot",
+	"srOot",
+	"xflagsMm",
+	"npcMm",
+	"shopsMm",
+}
+
+type sharedStateCandidate struct {
+	source string
+	state  SharedCustomState
+}
 
 // Reader reads OoTMM game state from N64 RDRAM.
 type Reader struct {
@@ -605,15 +622,19 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 }
 
 func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *SharedCustomState) error {
-	if err := r.readSharedStateNearForeignSave(game, shared); err == nil {
-		return nil
+	candidates := make([]sharedStateCandidate, 0, 3)
+	if candidate, err := r.readSharedStateNearForeignSaveCandidate(game); err == nil {
+		candidates = append(candidates, candidate)
+	}
+	if candidate, err := r.readSharedStateFromPayloadCandidate(AddrOotPayload, OotPayloadSize, saveIndex); err == nil {
+		candidates = append(candidates, candidate)
+	}
+	if candidate, err := r.readSharedStateFromPayloadCandidate(AddrMmPayload, MmPayloadSize, saveIndex); err == nil {
+		candidates = append(candidates, candidate)
 	}
 
-	if err := r.readSharedStateFromPayload(AddrOotPayload, OotPayloadSize, saveIndex, shared); err == nil {
-		return nil
-	}
-
-	if err := r.readSharedStateFromPayload(AddrMmPayload, MmPayloadSize, saveIndex, shared); err == nil {
+	if candidate, ok := r.selectSharedStateCandidate(candidates); ok {
+		*shared = candidate.state
 		return nil
 	}
 
@@ -670,6 +691,14 @@ func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedC
 	return nil
 }
 
+func (r *Reader) readSharedStateNearForeignSaveCandidate(game ActiveGame) (sharedStateCandidate, error) {
+	var shared SharedCustomState
+	if err := r.readSharedStateNearForeignSave(game, &shared); err != nil {
+		return sharedStateCandidate{}, err
+	}
+	return sharedStateCandidate{source: "near-foreign", state: shared}, nil
+}
+
 func (r *Reader) readSharedStateFromPayload(payloadBase uint32, payloadSize int, saveIndex uint32, shared *SharedCustomState) error {
 	addr, err := sharedSaveAddr(payloadBase, payloadSize, saveIndex)
 	if err != nil {
@@ -688,6 +717,105 @@ func (r *Reader) readSharedStateFromPayload(payloadBase uint32, payloadSize int,
 
 	*shared = parsed
 	return nil
+}
+
+func (r *Reader) readSharedStateFromPayloadCandidate(payloadBase uint32, payloadSize int, saveIndex uint32) (sharedStateCandidate, error) {
+	var shared SharedCustomState
+	if err := r.readSharedStateFromPayload(payloadBase, payloadSize, saveIndex, &shared); err != nil {
+		return sharedStateCandidate{}, err
+	}
+	return sharedStateCandidate{source: fmt.Sprintf("payload-%08x", payloadBase), state: shared}, nil
+}
+
+func (r *Reader) selectSharedStateCandidate(candidates []sharedStateCandidate) (sharedStateCandidate, bool) {
+	if len(candidates) == 0 {
+		return sharedStateCandidate{}, false
+	}
+
+	best := candidates[0]
+	bestScore := r.scoreSharedStateCandidate(best)
+	for _, candidate := range candidates[1:] {
+		score := r.scoreSharedStateCandidate(candidate)
+		if score > bestScore || (score == bestScore && sharedCandidateSourceRank(candidate.source) < sharedCandidateSourceRank(best.source)) {
+			best = candidate
+			bestScore = score
+		}
+	}
+
+	return best, true
+}
+
+func (r *Reader) scoreSharedStateCandidate(candidate sharedStateCandidate) int {
+	score := sharedCheckBitmapScore(candidate.state)
+	if r.hasLastKnownShared {
+		score += sharedStateContinuityScore(candidate.state, r.lastKnownShared)
+	}
+	return score + sharedCandidateSourceBonus(candidate.source)
+}
+
+func sharedCheckBitmapScore(shared SharedCustomState) int {
+	score := 0
+	for _, name := range sharedCheckBitmapNames {
+		for _, value := range shared.Bitmap(name) {
+			score += bits.OnesCount8(value)
+		}
+	}
+	return score * 8
+}
+
+func sharedStateContinuityScore(current SharedCustomState, last SharedCustomState) int {
+	score := 0
+	for _, name := range sharedCheckBitmapNames {
+		currentBitmap := current.Bitmap(name)
+		lastBitmap := last.Bitmap(name)
+		limit := len(currentBitmap)
+		if len(lastBitmap) > limit {
+			limit = len(lastBitmap)
+		}
+		for i := 0; i < limit; i++ {
+			var currentByte uint8
+			if i < len(currentBitmap) {
+				currentByte = currentBitmap[i]
+			}
+			var lastByte uint8
+			if i < len(lastBitmap) {
+				lastByte = lastBitmap[i]
+			}
+
+			overlap := currentByte & lastByte
+			newBits := currentByte &^ lastByte
+			missingBits := lastByte &^ currentByte
+
+			score += bits.OnesCount8(overlap) * 32
+			score += bits.OnesCount8(newBits) * 4
+			score -= bits.OnesCount8(missingBits) * 256
+		}
+	}
+	return score
+}
+
+func sharedCandidateSourceBonus(source string) int {
+	switch source {
+	case "payload-80400000", "payload-80730000":
+		return 2
+	case "near-foreign":
+		return 0
+	default:
+		return 1
+	}
+}
+
+func sharedCandidateSourceRank(source string) int {
+	switch source {
+	case "payload-80400000":
+		return 0
+	case "payload-80730000":
+		return 1
+	case "near-foreign":
+		return 2
+	default:
+		return 3
+	}
 }
 
 func sharedStateReadSize() int {

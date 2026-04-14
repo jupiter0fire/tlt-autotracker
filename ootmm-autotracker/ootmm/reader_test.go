@@ -291,6 +291,57 @@ func TestParseSharedStateReadsBombchuBagBits(t *testing.T) {
 	}
 }
 
+func TestSelectSharedStateCandidatePrefersRicherCheckState(t *testing.T) {
+	r := &Reader{}
+
+	near := SharedCustomState{}
+	near.SetBit("npcMm", 1)
+
+	payload := SharedCustomState{}
+	payload.SetBit("npcMm", 1)
+	payload.SetBit("npcOot", 3)
+	payload.SetBit("xflagsOot", 9)
+
+	got, ok := r.selectSharedStateCandidate([]sharedStateCandidate{
+		{source: "near-foreign", state: near},
+		{source: "payload-80400000", state: payload},
+	})
+	if !ok {
+		t.Fatal("expected shared-state candidate selection to succeed")
+	}
+	if got.source != "payload-80400000" {
+		t.Fatalf("selected source = %q, want payload-80400000", got.source)
+	}
+	if bitmap := got.state.Bitmap("npcOot"); len(bitmap) == 0 || bitmap[0]&(1<<3) == 0 {
+		t.Fatal("selected candidate is missing expected OoT NPC bit")
+	}
+}
+
+func TestSelectSharedStateCandidatePrefersContinuityOverSparseRegression(t *testing.T) {
+	r := &Reader{}
+	r.lastKnownShared.SetBit("npcOot", 4)
+	r.lastKnownShared.SetBit("xflagsMm", 17)
+	r.hasLastKnownShared = true
+
+	regressed := SharedCustomState{}
+	regressed.SetBit("npcMm", 1)
+
+	continued := SharedCustomState{}
+	continued.SetBit("npcOot", 4)
+	continued.SetBit("xflagsMm", 17)
+
+	got, ok := r.selectSharedStateCandidate([]sharedStateCandidate{
+		{source: "near-foreign", state: regressed},
+		{source: "payload-80730000", state: continued},
+	})
+	if !ok {
+		t.Fatal("expected shared-state candidate selection to succeed")
+	}
+	if got.source != "payload-80730000" {
+		t.Fatalf("selected source = %q, want payload-80730000", got.source)
+	}
+}
+
 func TestValidateSilverRupeeDataAcceptsLiveLikeMqConfig(t *testing.T) {
 	data := []byte{
 		0x00, 0x01, 0x25, 0x05,
