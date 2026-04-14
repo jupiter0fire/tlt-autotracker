@@ -8,6 +8,10 @@ const (
 	dungeonItemBossKeyMask = 0x01
 	mmExtraFlags2Notebook  = 9
 	mmExtraFlags2MaskBlast = 10
+	ootEventSongSariaVanilla = 0x38
+	ootEventSongSunVanilla   = 0x39
+	ootEventSongSariaCustom  = 0x58
+	ootEventSongSunCustom    = 0x5a
 )
 
 var mmSkeletonKeyMaxKeys = [...]int{1, 3, 1, 4}
@@ -332,6 +336,25 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	if mmFlags2&(1<<mmExtraFlags2MaskBlast) != 0 {
 		if name, ok := npcSymbolCheckName("MM", "MASK_BLAST"); ok {
 			appendCheck("MM_extra_"+itoa(mmExtraFlags2MaskBlast), name)
+		}
+	}
+
+	hasOotEventCheck := func(flag int) bool {
+		word := flag >> 4
+		if word < 0 || word >= len(state.Oot.EventsChk) {
+			return false
+		}
+		return state.Oot.EventsChk[word]&(1<<uint(flag&0xF)) != 0
+	}
+
+	if hasOotEventCheck(ootEventSongSariaVanilla) || hasOotEventCheck(ootEventSongSariaCustom) {
+		if name, ok := npcSymbolCheckName("OOT", "SARIA_SONG"); ok {
+			appendCheck("OOT_event_song_saria", name)
+		}
+	}
+	if hasOotEventCheck(ootEventSongSunVanilla) || hasOotEventCheck(ootEventSongSunCustom) {
+		if name, ok := npcSymbolCheckName("OOT", "ROYAL_TOMB_SONG"); ok {
+			appendCheck("OOT_event_song_sun", name)
 		}
 	}
 

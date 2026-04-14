@@ -632,6 +632,33 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"SARIA_SONG":      "Saria's Song",
+			"ROYAL_TOMB_SONG": "Graveyard Royal Tomb Song",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[ootEventSongSariaVanilla>>4] =
+		(1 << (ootEventSongSariaVanilla & 0xF)) |
+		(1 << (ootEventSongSunVanilla & 0xF))
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Saria's Song"]; !ok {
+		t.Fatal("missing OoT Saria song check from event fallback")
+	}
+	if _, ok := checks["Graveyard Royal Tomb Song"]; !ok {
+		t.Fatal("missing OoT Royal Tomb Song check from event fallback")
+	}
+}
+
 func checkNameSet(checks []TrackedCheck) map[string]struct{} {
 	result := make(map[string]struct{}, len(checks))
 	for _, check := range checks {
