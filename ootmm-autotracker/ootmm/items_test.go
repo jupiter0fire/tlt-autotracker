@@ -607,6 +607,58 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesShopBitmapChecks(t *testing.T) {
+	originalShops := shopCheckTables
+	shopCheckTables = map[string]map[int]string{
+		"OOT": {3: "Kokiri Shop Item 4"},
+		"MM":  {4: "Curiosity Shop All-Night Mask"},
+	}
+	t.Cleanup(func() {
+		shopCheckTables = originalShops
+	})
+
+	state := &GameState{}
+	state.Shared.SetBit("shopsOot", 3)
+	state.Shared.SetBit("shopsMm", 4)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Kokiri Shop Item 4"]; !ok {
+		t.Fatal("missing OoT shop check from shared bitmap")
+	}
+	if _, ok := checks["Curiosity Shop All-Night Mask"]; !ok {
+		t.Fatal("missing MM shop check from shared bitmap")
+	}
+}
+
+func TestExtractChecksIncludesScrubAndSilverRupeeBitmapChecks(t *testing.T) {
+	originalScrubs := scrubCheckTables
+	originalSilver := silverRupeeCheckTables
+	scrubCheckTables = map[string]map[int]string{
+		"OOT": {0x1F: "Dodongo Cavern Lobby Scrub"},
+		"MM":  {},
+	}
+	silverRupeeCheckTables = map[string]map[int]string{
+		"OOT": {0x37: "Ice Cavern SR Scythe Left"},
+		"MM":  {},
+	}
+	t.Cleanup(func() {
+		scrubCheckTables = originalScrubs
+		silverRupeeCheckTables = originalSilver
+	})
+
+	state := &GameState{}
+	state.Shared.SetBit("scrubsOot", 0x1F)
+	state.Shared.SetBit("srOot", 0x37)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Dodongo Cavern Lobby Scrub"]; !ok {
+		t.Fatal("missing OoT scrub check from shared bitmap")
+	}
+	if _, ok := checks["Ice Cavern SR Scythe Left"]; !ok {
+		t.Fatal("missing OoT silver rupee check from shared bitmap")
+	}
+}
+
 func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

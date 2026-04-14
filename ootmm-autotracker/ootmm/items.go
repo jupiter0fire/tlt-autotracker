@@ -3,11 +3,11 @@ package ootmm
 import "math/bits"
 
 const (
-	dungeonItemMapMask     = 0x04
-	dungeonItemCompassMask = 0x02
-	dungeonItemBossKeyMask = 0x01
-	mmExtraFlags2Notebook  = 9
-	mmExtraFlags2MaskBlast = 10
+	dungeonItemMapMask       = 0x04
+	dungeonItemCompassMask   = 0x02
+	dungeonItemBossKeyMask   = 0x01
+	mmExtraFlags2Notebook    = 9
+	mmExtraFlags2MaskBlast   = 10
 	ootEventSongSariaVanilla = 0x38
 	ootEventSongSariaCustom  = 0x58
 	ootEventSongSunCustom    = 0x5a
@@ -325,6 +325,10 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("npcMm"), "MM", "npc", npcCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsOot"), "OOT", "xflag", xflagCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsMm"), "MM", "xflag", xflagCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("shopsOot"), "OOT", "shop", shopCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
 
 	mmFlags2 := state.Oot.ExtraRecords[ExtraIdxMmFlags2]
 	if mmFlags2&(1<<mmExtraFlags2Notebook) != 0 {

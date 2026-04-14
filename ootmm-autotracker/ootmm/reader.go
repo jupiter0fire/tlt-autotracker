@@ -121,7 +121,6 @@ func (r *Reader) ReadState() (*GameState, error) {
 	if err := r.readSharedState(game, activeSaveIndex, &state.Shared); err != nil {
 		return nil, fmt.Errorf("read shared custom save: %w", err)
 	}
-	ensureRuntimeCheckTables(r.mem)
 	r.readOotRuntimeConfig(&state.Oot)
 
 	// Step 3: Re-verify the active game hasn't changed during the read
