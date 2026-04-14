@@ -261,6 +261,42 @@ func TestResetEmptyMmStateUsesEmptyInventorySentinels(t *testing.T) {
 	}
 }
 
+func TestIsPlausibleOotPlayStateSample(t *testing.T) {
+	sample := ootPlayStateSample{
+		sceneID:        0x28,
+		actorTotal:     94,
+		currentRoom:    0,
+		linkAgeOnLoad:  1,
+		gameplayFrames: 1234,
+	}
+	if !isPlausibleOotPlayStateSample(sample) {
+		t.Fatal("expected plausible OoT PlayState sample to validate")
+	}
+
+	sample.actorTotal = 0
+	if isPlausibleOotPlayStateSample(sample) {
+		t.Fatal("expected sample with zero actors to fail plausibility")
+	}
+}
+
+func TestRememberOotStateDropsLiveFlags(t *testing.T) {
+	r := &Reader{}
+	oot := OotState{
+		LiveSceneID:       0x28,
+		LiveChestFlags:    1 << 2,
+		HasLiveChestFlags: true,
+	}
+
+	r.rememberOotState(oot)
+
+	if r.lastKnownOot.HasLiveChestFlags {
+		t.Fatal("expected remembered OoT state to drop live chest flags")
+	}
+	if r.lastKnownOot.LiveSceneID != 0 || r.lastKnownOot.LiveChestFlags != 0 {
+		t.Fatalf("remembered live fields = scene %d chest %#x, want zero", r.lastKnownOot.LiveSceneID, r.lastKnownOot.LiveChestFlags)
+	}
+}
+
 func TestIsPlausibleSharedStateRejectsUnknownFutureBits(t *testing.T) {
 	shared := SharedCustomState{}
 	for _, bitmap := range sharedStorage.Bitmaps {

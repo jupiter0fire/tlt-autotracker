@@ -101,6 +101,7 @@ func main() {
 		// Step 4: Compute deltas
 		changedItems, changedChecks, gameChanged := state.Update(gs)
 		currentScene := getActiveScene(gs)
+		locationChanged := gameChanged || currentScene != lastScene || gs.ActiveGame != lastGame
 
 		// Step 5: Broadcast to trackers
 		if server.ClientCount() > 0 {
@@ -108,13 +109,7 @@ func main() {
 				log.Printf("Active game: %s", gs.ActiveGame)
 			}
 
-			server.BroadcastItems(changedItems, true)
-			server.BroadcastChecks(changedChecks, true)
-
-			// Send location on game or scene change
-			if gameChanged || currentScene != lastScene || gs.ActiveGame != lastGame {
-				server.BroadcastLocation(gs.ActiveGame, currentScene)
-			}
+			server.BroadcastDelta(gs.ActiveGame, currentScene, locationChanged, changedItems, changedChecks)
 
 			if server.HasPendingFullSync() {
 				fullItems, fullChecks := state.FullState(gs)

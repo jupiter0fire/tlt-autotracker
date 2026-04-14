@@ -553,6 +553,26 @@ func TestExtractChecksUsesResolvedNamesWhenAvailable(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesLiveOotChestFlags(t *testing.T) {
+	original := checkNameTable
+	checkNameTable = map[string]string{
+		"OOT_chest_40_2": "Mido's House Bottom Left",
+	}
+	t.Cleanup(func() {
+		checkNameTable = original
+	})
+
+	state := &GameState{}
+	state.Oot.LiveSceneID = 0x28
+	state.Oot.LiveChestFlags = 1 << 2
+	state.Oot.HasLiveChestFlags = true
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Mido's House Bottom Left"]; !ok {
+		t.Fatal("missing live OoT chest check")
+	}
+}
+
 func TestExtractChecksFallsBackToStableKey(t *testing.T) {
 	original := checkNameTable
 	checkNameTable = map[string]string{}

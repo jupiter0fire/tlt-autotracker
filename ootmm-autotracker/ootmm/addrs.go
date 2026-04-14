@@ -10,6 +10,16 @@ const (
 	AddrComboCtxMm  uint32 = 0x80098280
 	ComboCtxSize    int    = 0x20 // 32 bytes
 
+	// OoT PlayState / GamePlay context. OoTMM currently runs on the NTSC 1.0
+	// gameplay state layout, but we probe a small set of known retail/debug
+	// addresses before caching the live PlayState base.
+	AddrOotPlayStateNtsc10 uint32 = 0x801C84A0
+	AddrOotPlayStateNtsc11 uint32 = 0x801C8660
+	AddrOotPlayStateNtsc12 uint32 = 0x801C8D60
+	AddrOotPlayStatePal10  uint32 = 0x801C64E0
+	AddrOotPlayStatePal11  uint32 = 0x801C6520
+	AddrOotPlayStateDebug  uint32 = 0x80212020
+
 	// OoT gSaveContext
 	AddrOotSaveCtx uint32 = 0x8011A5D0
 	OotSaveCtxSize int    = 0x1450 // 5200 bytes
@@ -109,6 +119,14 @@ const (
 	// OotSaveContext fields beyond OotSave
 	OotCtxOffFileNum  = 0x1354 // u32 active save slot
 	OotCtxOffGameMode = 0x135C // s32 (0 = GAMEMODE_NORMAL)
+
+	// Live OoT PlayState fields.
+	OotPlayOffSceneID        = 0x00A4
+	OotPlayOffActorTotal     = 0x1C2C
+	OotPlayOffChestFlags     = 0x1D38
+	OotPlayOffCurrentRoom    = 0x11CBC
+	OotPlayOffGameplayFrames = 0x11DE4
+	OotPlayOffLinkAgeOnLoad  = 0x11DE8
 )
 
 // MmSave offsets

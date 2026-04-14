@@ -271,9 +271,13 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	// OoT scene flag-based checks
 	for sceneIdx := 0; sceneIdx < OotPermCount; sceneIdx++ {
 		sf := &state.Oot.SceneFlags[sceneIdx]
+		chests := sf.Chests
+		if state.Oot.HasLiveChestFlags && sceneIdx == int(state.Oot.LiveSceneID) {
+			chests |= state.Oot.LiveChestFlags
+		}
 		// Each set bit in the chests field = one opened chest
 		for bit := 0; bit < 32; bit++ {
-			if sf.Chests&(1<<uint(bit)) != 0 {
+			if chests&(1<<uint(bit)) != 0 {
 				if name, ok := lookupSceneCheckName("OOT", sceneIdx, "chest", bit); ok {
 					appendCheck(ootSceneCheckID(sceneIdx, "chest", bit), name)
 				}

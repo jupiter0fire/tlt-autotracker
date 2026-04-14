@@ -42,6 +42,7 @@ type Reader struct {
 
 	foreignOotSaveAddr uint32
 	foreignMmSaveAddr  uint32
+	ootPlayStateAddr   uint32
 	ootMaxKeysAddr     uint32
 	ootSilverDataAddr  uint32
 	lastKnownOot       OotState
@@ -107,6 +108,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readOotSave(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read OoT save: %w", err)
 		}
+		r.readOotLiveState(&state.Oot)
 		if err := r.readForeignMmState(&state.Mm); err != nil {
 			return nil, fmt.Errorf("read foreign MM save: %w", err)
 		}
@@ -365,6 +367,115 @@ func (r *Reader) readOotRuntimeConfig(oot *OotState) {
 			oot.HasRuntimeMaxKeys = true
 		}
 	}
+}
+
+type ootPlayStateSample struct {
+	sceneID        uint16
+	actorTotal     uint8
+	currentRoom    uint8
+	linkAgeOnLoad  uint8
+	gameplayFrames uint32
+	chestFlags     uint32
+}
+
+var ootPlayStateCandidateAddrs = [...]uint32{
+	AddrOotPlayStateNtsc10,
+	AddrOotPlayStateNtsc11,
+	AddrOotPlayStateNtsc12,
+	AddrOotPlayStatePal10,
+	AddrOotPlayStatePal11,
+	AddrOotPlayStateDebug,
+}
+
+func (r *Reader) readOotLiveState(oot *OotState) {
+	if oot == nil {
+		return
+	}
+
+	sample, ok := r.readOotPlayStateSampleCached()
+	if !ok {
+		return
+	}
+	if sample.sceneID >= OotPermCount {
+		return
+	}
+
+	oot.LiveSceneID = sample.sceneID
+	oot.LiveChestFlags = sample.chestFlags
+	oot.HasLiveChestFlags = true
+}
+
+func (r *Reader) readOotPlayStateSampleCached() (ootPlayStateSample, bool) {
+	if r.ootPlayStateAddr != 0 {
+		sample, err := r.readOotPlayStateSample(r.ootPlayStateAddr)
+		if err == nil && isPlausibleOotPlayStateSample(sample) {
+			return sample, true
+		}
+		r.ootPlayStateAddr = 0
+	}
+
+	for _, addr := range ootPlayStateCandidateAddrs {
+		sample, err := r.readOotPlayStateSample(addr)
+		if err != nil || !isPlausibleOotPlayStateSample(sample) {
+			continue
+		}
+		r.ootPlayStateAddr = addr
+		return sample, true
+	}
+
+	return ootPlayStateSample{}, false
+}
+
+func (r *Reader) readOotPlayStateSample(addr uint32) (ootPlayStateSample, error) {
+	sceneID, err := r.mem.ReadU16BE(addr + uint32(OotPlayOffSceneID))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+	actorTotal, err := r.mem.ReadU8(addr + uint32(OotPlayOffActorTotal))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+	currentRoom, err := r.mem.ReadU8(addr + uint32(OotPlayOffCurrentRoom))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+	linkAgeOnLoad, err := r.mem.ReadU8(addr + uint32(OotPlayOffLinkAgeOnLoad))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+	gameplayFrames, err := r.mem.ReadU32BE(addr + uint32(OotPlayOffGameplayFrames))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+	chestFlags, err := r.mem.ReadU32BE(addr + uint32(OotPlayOffChestFlags))
+	if err != nil {
+		return ootPlayStateSample{}, err
+	}
+
+	return ootPlayStateSample{
+		sceneID:        sceneID,
+		actorTotal:     actorTotal,
+		currentRoom:    currentRoom,
+		linkAgeOnLoad:  linkAgeOnLoad,
+		gameplayFrames: gameplayFrames,
+		chestFlags:     chestFlags,
+	}, nil
+}
+
+func isPlausibleOotPlayStateSample(sample ootPlayStateSample) bool {
+	if sample.sceneID >= OotPermCount {
+		return false
+	}
+	if sample.actorTotal == 0 || sample.actorTotal > 200 {
+		return false
+	}
+	if sample.currentRoom >= 0x40 {
+		return false
+	}
+	if sample.linkAgeOnLoad > 1 {
+		return false
+	}
+	return sample.gameplayFrames > 0
 }
 
 type silverRupeeFlagCount struct {
@@ -849,6 +960,9 @@ func parseSharedState(data []byte) (SharedCustomState, error) {
 }
 
 func (r *Reader) rememberOotState(oot OotState) {
+	oot.LiveSceneID = 0
+	oot.LiveChestFlags = 0
+	oot.HasLiveChestFlags = false
 	r.lastKnownOot = oot
 	r.hasLastKnownOot = true
 }

@@ -156,6 +156,16 @@ func (s *Server) BroadcastChecks(checks []tracker.CheckDiff, diff bool) {
 	s.broadcast(msg)
 }
 
+// BroadcastDelta sends location updates before item/check diffs when they changed in the same poll.
+func (s *Server) BroadcastDelta(game ootmm.ActiveGame, sceneID uint16, locationChanged bool, items []tracker.ItemDiff, checks []tracker.CheckDiff) {
+	if locationChanged {
+		s.BroadcastLocation(game, sceneID)
+	}
+
+	s.BroadcastItems(items, true)
+	s.BroadcastChecks(checks, true)
+}
+
 // BroadcastLocation sends the current location to all clients.
 func (s *Server) BroadcastLocation(game ootmm.ActiveGame, sceneID uint16) {
 	msg := LocationMessage{
@@ -206,6 +216,13 @@ func (s *Server) FlushFullState(items []tracker.ItemDiff, checks []tracker.Check
 		return
 	}
 
+	s.sendToClients(conns, LocationMessage{
+		Type:    "location",
+		Refresh: false,
+		Game:    game.String(),
+		SceneID: sceneID,
+	})
+
 	if len(items) > 0 {
 		s.sendToClients(conns, ItemMessage{
 			Type:    "item",
@@ -220,13 +237,6 @@ func (s *Server) FlushFullState(items []tracker.ItemDiff, checks []tracker.Check
 		Diff:    false,
 		Refresh: false,
 		Checks:  checks,
-	})
-
-	s.sendToClients(conns, LocationMessage{
-		Type:    "location",
-		Refresh: false,
-		Game:    game.String(),
-		SceneID: sceneID,
 	})
 
 	s.sendToClients(conns, map[string]interface{}{
