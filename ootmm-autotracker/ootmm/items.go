@@ -9,7 +9,6 @@ const (
 	mmExtraFlags2Notebook  = 9
 	mmExtraFlags2MaskBlast = 10
 	ootEventSongSariaVanilla = 0x38
-	ootEventSongSunVanilla   = 0x39
 	ootEventSongSariaCustom  = 0x58
 	ootEventSongSunCustom    = 0x5a
 )
@@ -352,7 +351,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			appendCheck("OOT_event_song_saria", name)
 		}
 	}
-	if hasOotEventCheck(ootEventSongSunVanilla) || hasOotEventCheck(ootEventSongSunCustom) {
+	if hasOotEventCheck(ootEventSongSunCustom) {
 		if name, ok := npcSymbolCheckName("OOT", "ROYAL_TOMB_SONG"); ok {
 			appendCheck("OOT_event_song_sun", name)
 		}

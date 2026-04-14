@@ -646,9 +646,8 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.EventsChk[ootEventSongSariaVanilla>>4] =
-		(1 << (ootEventSongSariaVanilla & 0xF)) |
-		(1 << (ootEventSongSunVanilla & 0xF))
+	state.Oot.EventsChk[ootEventSongSariaVanilla>>4] = 1 << (ootEventSongSariaVanilla & 0xF)
+	state.Oot.EventsChk[ootEventSongSunCustom>>4] = 1 << (ootEventSongSunCustom & 0xF)
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Saria's Song"]; !ok {
