@@ -23,10 +23,12 @@ func main() {
 	raPort := flag.Int("ra-port", retroarch.DefaultPort, "RetroArch network command port")
 	wsAddr := flag.String("ws-addr", ":17026", "WebSocket listen address")
 	flag.Parse()
+	consoleCommands := startConsoleCommands()
 
 	fmt.Println("=== OoTMM Autotracker ===")
 	fmt.Printf("RetroArch: %s:%d\n", *raHost, *raPort)
 	fmt.Printf("WebSocket: %s\n", *wsAddr)
+	fmt.Println("Console: dump [label|path] schreibt einen JSON-Snapshot, help zeigt Befehle")
 	fmt.Println()
 
 	// Start WebSocket server
@@ -50,6 +52,7 @@ func main() {
 
 	for {
 		time.Sleep(pollInterval)
+		drainConsoleCommands(consoleCommands, connected, probed, mem)
 
 		// Step 1: Ensure connected to RetroArch
 		if !connected {
@@ -71,6 +74,8 @@ func main() {
 			probed = true
 			log.Println("OoTMM detected!")
 		}
+
+		drainConsoleCommands(consoleCommands, connected, probed, mem)
 
 		// Step 3: Read game state
 		gs, err := reader.ReadState()
