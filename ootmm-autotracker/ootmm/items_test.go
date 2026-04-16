@@ -528,8 +528,11 @@ func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
 	if got := items["MM_OWL_IKANA_CANYON"]; got != 1 {
 		t.Fatalf("MM_OWL_IKANA_CANYON = %d, want 1", got)
 	}
-	if got := items["SHARED_BUTTON_C_RIGHT"]; got != 1 {
-		t.Fatalf("SHARED_BUTTON_C_RIGHT = %d, want 1", got)
+	if got := items["OOT_BUTTON_C_RIGHT"]; got != 0 {
+		t.Fatalf("OOT_BUTTON_C_RIGHT = %d, want 0", got)
+	}
+	if got := items["MM_BUTTON_C_RIGHT"]; got != 1 {
+		t.Fatalf("MM_BUTTON_C_RIGHT = %d, want 1", got)
 	}
 }
 
@@ -540,8 +543,11 @@ func TestExtractItemsIgnoresDisabledSharedOcarinaButtons(t *testing.T) {
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["SHARED_BUTTON_C_RIGHT"]; got != 0 {
-		t.Fatalf("SHARED_BUTTON_C_RIGHT = %d, want 0 when buttons are disabled by config", got)
+	if got := items["OOT_BUTTON_C_RIGHT"]; got != 0 {
+		t.Fatalf("OOT_BUTTON_C_RIGHT = %d, want 0 when buttons are disabled by config", got)
+	}
+	if got := items["MM_BUTTON_C_RIGHT"]; got != 0 {
+		t.Fatalf("MM_BUTTON_C_RIGHT = %d, want 0 when buttons are disabled by config", got)
 	}
 }
 
@@ -590,8 +596,11 @@ func TestExtractItemsOnlyChangesRequestedMissingItems(t *testing.T) {
 	if diff := changed["MM_OWL_IKANA_CANYON"]; diff != [2]int{0, 1} {
 		t.Fatalf("MM_OWL_IKANA_CANYON diff = %#v, want [0 1]", diff)
 	}
-	if diff := changed["SHARED_BUTTON_C_RIGHT"]; diff != [2]int{0, 1} {
-		t.Fatalf("SHARED_BUTTON_C_RIGHT diff = %#v, want [0 1]", diff)
+	if _, ok := changed["OOT_BUTTON_C_RIGHT"]; ok {
+		t.Fatalf("OOT_BUTTON_C_RIGHT should not change: %#v", changed["OOT_BUTTON_C_RIGHT"])
+	}
+	if diff := changed["MM_BUTTON_C_RIGHT"]; diff != [2]int{0, 1} {
+		t.Fatalf("MM_BUTTON_C_RIGHT diff = %#v, want [0 1]", diff)
 	}
 }
 

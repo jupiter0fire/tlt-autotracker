@@ -276,7 +276,8 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"MM_GS_TOKEN_SWAMP", int(mm.SkullTokensSwamp)})
 	items = append(items, TrackedItem{"MM_GS_TOKEN_OCEAN", int(mm.SkullTokensOcean)})
 	items = append(items, TrackedItem{"MM_OWL_IKANA_CANYON", boolToInt(oot.ExtraRecords[ExtraIdxMmOwlFlags]&(1<<mmOwlIkanaCanyonBit) != 0)})
-	items = append(items, TrackedItem{"SHARED_BUTTON_C_RIGHT", boolToInt(hasSharedOcarinaButton(state.Shared, sharedOcarinaButtonCRightMask))})
+	items = append(items, TrackedItem{"OOT_BUTTON_C_RIGHT", boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskOot, sharedOcarinaButtonCRightMask))})
+	items = append(items, TrackedItem{"MM_BUTTON_C_RIGHT", boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskMm, sharedOcarinaButtonCRightMask))})
 	items = appendCatalogItems(items, state)
 
 	return items
@@ -740,10 +741,6 @@ func hasMmTranscendentFairy(mm *MmState) bool {
 		}
 	}
 	return true
-}
-
-func hasSharedOcarinaButton(shared SharedCustomState, mask uint16) bool {
-	return sharedOcarinaButtonOwned(shared.OcarinaButtonMaskOot, mask) || sharedOcarinaButtonOwned(shared.OcarinaButtonMaskMm, mask)
 }
 
 func sharedOcarinaButtonOwned(buttonMask uint16, mask uint16) bool {
