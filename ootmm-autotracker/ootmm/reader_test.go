@@ -392,6 +392,23 @@ func TestParseSharedStateReadsBombchuBagBits(t *testing.T) {
 	}
 }
 
+func TestParseSharedStateReadsOcarinaButtonMasks(t *testing.T) {
+	data := make([]byte, SharedCustomSaveSize)
+	binary.BigEndian.PutUint16(data[sharedOcarinaButtonMaskOotOffset:], sharedOcarinaButtonMaskDisabled)
+	binary.BigEndian.PutUint16(data[sharedOcarinaButtonMaskMmOffset:], sharedOcarinaButtonCRightMask)
+
+	shared, err := parseSharedState(data)
+	if err != nil {
+		t.Fatalf("parseSharedState: %v", err)
+	}
+	if shared.OcarinaButtonMaskOot != sharedOcarinaButtonMaskDisabled {
+		t.Fatalf("OcarinaButtonMaskOot = %#x, want %#x", shared.OcarinaButtonMaskOot, sharedOcarinaButtonMaskDisabled)
+	}
+	if shared.OcarinaButtonMaskMm != sharedOcarinaButtonCRightMask {
+		t.Fatalf("OcarinaButtonMaskMm = %#x, want %#x", shared.OcarinaButtonMaskMm, sharedOcarinaButtonCRightMask)
+	}
+}
+
 func TestSelectSharedStateCandidatePrefersRicherCheckState(t *testing.T) {
 	r := &Reader{}
 

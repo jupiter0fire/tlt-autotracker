@@ -10,6 +10,8 @@ import (
 
 const (
 	maxForeignMmChecksumDelta = 0x400
+	sharedOcarinaButtonMaskOotOffset = 0x7c8
+	sharedOcarinaButtonMaskMmOffset  = 0x7ca
 
 	// SharedCustomSave stores bombchu bag progression in the flag byte after
 	// the souls, fish, and respawn blocks.
@@ -1024,6 +1026,10 @@ func parseSharedStateUnchecked(data []byte) (SharedCustomState, error) {
 			return SharedCustomState{}, fmt.Errorf("shared bitmap %s out of bounds", bitmap.Name)
 		}
 		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
+	}
+	if len(data) >= sharedOcarinaButtonMaskMmOffset+2 {
+		parsed.OcarinaButtonMaskOot = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskOotOffset:])
+		parsed.OcarinaButtonMaskMm = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskMmOffset:])
 	}
 	if len(data) > sharedBombchuBagFlagsOffset {
 		flags := data[sharedBombchuBagFlagsOffset]

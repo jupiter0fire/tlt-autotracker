@@ -162,9 +162,9 @@ const (
 	MmPermEntrySize = 0x1C
 	MmPermCount     = 120
 
-	// Skull counts in MmSaveInfo
-	MmOffSkullSwamp = 0x24 + 0xEA2
-	MmOffSkullOcean = 0x24 + 0xEA4
+	// Skull counts in MmSave
+	MmOffSkullSwamp = 0xEC0
+	MmOffSkullOcean = 0xEC2
 
 	// MmSaveContext fields beyond MmSave
 	MmCtxOffFileNum    = 0x3CA0 // u32 active save slot

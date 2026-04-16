@@ -6,8 +6,11 @@ const (
 	dungeonItemMapMask       = 0x04
 	dungeonItemCompassMask   = 0x02
 	dungeonItemBossKeyMask   = 0x01
+	sharedOcarinaButtonMaskDisabled = 0xffff
+	sharedOcarinaButtonCRightMask   = 0x0001
 	mmExtraFlags2Notebook    = 9
 	mmExtraFlags2MaskBlast   = 10
+	mmOwlIkanaCanyonBit      = 8
 	ootEventSongSariaVanilla = 0x38
 	ootEventSongSariaCustom  = 0x58
 	ootEventSongSunCustom    = 0x5a
@@ -270,6 +273,10 @@ func ExtractItems(state *GameState) []TrackedItem {
 		items = append(items, TrackedItem{fairyID, int(mm.StrayFairies[i])})
 	}
 	items = append(items, TrackedItem{"MM_STRAY_FAIRY_TOWN", boolToInt(mm.TownStrayFairy)})
+	items = append(items, TrackedItem{"MM_GS_TOKEN_SWAMP", int(mm.SkullTokensSwamp)})
+	items = append(items, TrackedItem{"MM_GS_TOKEN_OCEAN", int(mm.SkullTokensOcean)})
+	items = append(items, TrackedItem{"MM_OWL_IKANA_CANYON", boolToInt(oot.ExtraRecords[ExtraIdxMmOwlFlags]&(1<<mmOwlIkanaCanyonBit) != 0)})
+	items = append(items, TrackedItem{"SHARED_BUTTON_C_RIGHT", boolToInt(hasSharedOcarinaButton(state.Shared, sharedOcarinaButtonCRightMask))})
 	items = appendCatalogItems(items, state)
 
 	return items
@@ -733,6 +740,17 @@ func hasMmTranscendentFairy(mm *MmState) bool {
 		}
 	}
 	return true
+}
+
+func hasSharedOcarinaButton(shared SharedCustomState, mask uint16) bool {
+	return sharedOcarinaButtonOwned(shared.OcarinaButtonMaskOot, mask) || sharedOcarinaButtonOwned(shared.OcarinaButtonMaskMm, mask)
+}
+
+func sharedOcarinaButtonOwned(buttonMask uint16, mask uint16) bool {
+	if buttonMask == sharedOcarinaButtonMaskDisabled {
+		return false
+	}
+	return buttonMask&mask != 0
 }
 
 func ootMaxKeyLimit(oot *OotState, sceneID int) int {

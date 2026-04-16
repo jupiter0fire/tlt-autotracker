@@ -510,6 +510,91 @@ func TestExtractItemsTreatsSharedBombchuBagAsOwnedBombchu(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
+	state := &GameState{}
+	state.Mm.SkullTokensSwamp = 17
+	state.Mm.SkullTokensOcean = 11
+	state.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = 1 << mmOwlIkanaCanyonBit
+	state.Shared.OcarinaButtonMaskMm = sharedOcarinaButtonCRightMask
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_GS_TOKEN_SWAMP"]; got != 17 {
+		t.Fatalf("MM_GS_TOKEN_SWAMP = %d, want 17", got)
+	}
+	if got := items["MM_GS_TOKEN_OCEAN"]; got != 11 {
+		t.Fatalf("MM_GS_TOKEN_OCEAN = %d, want 11", got)
+	}
+	if got := items["MM_OWL_IKANA_CANYON"]; got != 1 {
+		t.Fatalf("MM_OWL_IKANA_CANYON = %d, want 1", got)
+	}
+	if got := items["SHARED_BUTTON_C_RIGHT"]; got != 1 {
+		t.Fatalf("SHARED_BUTTON_C_RIGHT = %d, want 1", got)
+	}
+}
+
+func TestExtractItemsIgnoresDisabledSharedOcarinaButtons(t *testing.T) {
+	state := &GameState{}
+	state.Shared.OcarinaButtonMaskOot = sharedOcarinaButtonMaskDisabled
+	state.Shared.OcarinaButtonMaskMm = sharedOcarinaButtonMaskDisabled
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["SHARED_BUTTON_C_RIGHT"]; got != 0 {
+		t.Fatalf("SHARED_BUTTON_C_RIGHT = %d, want 0 when buttons are disabled by config", got)
+	}
+}
+
+func TestExtractItemsOnlyChangesRequestedMissingItems(t *testing.T) {
+	base := &GameState{}
+	base.Oot.QuestItems = 1 << QuestOotMedallionForest
+	base.Mm.TownStrayFairy = true
+	base.Mm.StrayFairies[0] = 7
+	base.Oot.Equipment = 0x0031
+	base.Shared.BombchuBagOot = 1
+	base.Shared.OcarinaButtonMaskOot = sharedOcarinaButtonMaskDisabled
+	base.Shared.OcarinaButtonMaskMm = sharedOcarinaButtonMaskDisabled
+
+	updated := *base
+	updated.Mm.SkullTokensSwamp = 9
+	updated.Mm.SkullTokensOcean = 13
+	updated.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = 1 << mmOwlIkanaCanyonBit
+	updated.Shared.OcarinaButtonMaskMm = sharedOcarinaButtonCRightMask
+
+	before := itemQtyMap(ExtractItems(base))
+	after := itemQtyMap(ExtractItems(&updated))
+
+	changed := make(map[string][2]int)
+	for itemID, beforeQty := range before {
+		afterQty := after[itemID]
+		if beforeQty != afterQty {
+			changed[itemID] = [2]int{beforeQty, afterQty}
+		}
+		delete(after, itemID)
+	}
+	for itemID, afterQty := range after {
+		if afterQty != 0 {
+			changed[itemID] = [2]int{0, afterQty}
+		}
+	}
+
+	if len(changed) != 4 {
+		t.Fatalf("changed item count = %d, want 4: %#v", len(changed), changed)
+	}
+	if diff := changed["MM_GS_TOKEN_SWAMP"]; diff != [2]int{0, 9} {
+		t.Fatalf("MM_GS_TOKEN_SWAMP diff = %#v, want [0 9]", diff)
+	}
+	if diff := changed["MM_GS_TOKEN_OCEAN"]; diff != [2]int{0, 13} {
+		t.Fatalf("MM_GS_TOKEN_OCEAN diff = %#v, want [0 13]", diff)
+	}
+	if diff := changed["MM_OWL_IKANA_CANYON"]; diff != [2]int{0, 1} {
+		t.Fatalf("MM_OWL_IKANA_CANYON diff = %#v, want [0 1]", diff)
+	}
+	if diff := changed["SHARED_BUTTON_C_RIGHT"]; diff != [2]int{0, 1} {
+		t.Fatalf("SHARED_BUTTON_C_RIGHT diff = %#v, want [0 1]", diff)
+	}
+}
+
 func TestExtractItemsIncludesOotSilverRupeeAnywhereItem(t *testing.T) {
 	state := &GameState{}
 	state.Oot.Equipment = 0x0030
