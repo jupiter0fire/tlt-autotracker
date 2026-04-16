@@ -19,6 +19,27 @@ var ootFallbackMaxKeys = [...]int{0, 0, 0, 5, 7, 5, 5, 5, 3, 0, 0, 9, 4, 2, 0, 0
 
 var ootFallbackSilverRupeeMaxCounts = [...]int{0, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}
 
+var ootSilverRupeeItemIDs = [...][2]string{
+	{"OOT_RUPEE_SILVER_DC", "OOT_RUPEE_SILVER_DC"},
+	{"OOT_RUPEE_SILVER_BOTW", "OOT_RUPEE_SILVER_BOTW"},
+	{"OOT_RUPEE_SILVER_SPIRIT_CHILD", "OOT_RUPEE_SILVER_SPIRIT_LOBBY"},
+	{"OOT_RUPEE_SILVER_SPIRIT_SUN", "OOT_RUPEE_SILVER_SPIRIT_ADULT"},
+	{"OOT_RUPEE_SILVER_SPIRIT_BOULDERS", "OOT_RUPEE_SILVER_SPIRIT_BOULDERS"},
+	{"OOT_RUPEE_SILVER_SHADOW_SCYTHE", "OOT_RUPEE_SILVER_SHADOW_SCYTHE"},
+	{"OOT_RUPEE_SILVER_SHADOW_BLADES", "OOT_RUPEE_SILVER_SHADOW_BLADES"},
+	{"OOT_RUPEE_SILVER_SHADOW_PIT", "OOT_RUPEE_SILVER_SHADOW_PIT"},
+	{"OOT_RUPEE_SILVER_SHADOW_SPIKES", "OOT_RUPEE_SILVER_SHADOW_SPIKES"},
+	{"OOT_RUPEE_SILVER_IC_SCYTHE", "OOT_RUPEE_SILVER_IC_SCYTHE"},
+	{"OOT_RUPEE_SILVER_IC_BLOCK", "OOT_RUPEE_SILVER_IC_BLOCK"},
+	{"OOT_RUPEE_SILVER_GTG_SLOPES", "OOT_RUPEE_SILVER_GTG_SLOPES"},
+	{"OOT_RUPEE_SILVER_GTG_LAVA", "OOT_RUPEE_SILVER_GTG_LAVA"},
+	{"OOT_RUPEE_SILVER_GTG_WATER", "OOT_RUPEE_SILVER_GTG_WATER"},
+	{"OOT_RUPEE_SILVER_GANON_SPIRIT", "OOT_RUPEE_SILVER_GANON_SHADOW"},
+	{"OOT_RUPEE_SILVER_GANON_LIGHT", "OOT_RUPEE_SILVER_GANON_WATER"},
+	{"OOT_RUPEE_SILVER_GANON_FIRE", "OOT_RUPEE_SILVER_GANON_FIRE"},
+	{"OOT_RUPEE_SILVER_GANON_FOREST", "OOT_RUPEE_SILVER_GANON_FOREST"},
+}
+
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
 	ID  string `json:"id"`
@@ -144,6 +165,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		}
 		items = append(items, TrackedItem{keyID, int(keys)})
 	}
+	items = appendOotSilverRupeeItems(items, oot)
 
 	// Extra records
 	ootExtraFlags := oot.ExtraRecords[ExtraIdxOotFlags]
@@ -633,6 +655,47 @@ func hasOotPlatinumToken(oot *OotState) bool {
 
 func hasMmPlatinumToken(mm *MmState) bool {
 	return mm.SkullTokensSwamp >= 30 && mm.SkullTokensOcean >= 30
+}
+
+func appendOotSilverRupeeItems(items []TrackedItem, oot *OotState) []TrackedItem {
+	for silverRupeeID := 0; silverRupeeID < OotSilverRupeeSetCount; silverRupeeID++ {
+		qty := ootSilverRupeeCount(oot, silverRupeeID)
+		if qty <= 0 {
+			continue
+		}
+		itemID := ootSilverRupeeItemID(oot, silverRupeeID)
+		if itemID == "" {
+			continue
+		}
+		items = append(items, TrackedItem{itemID, qty})
+	}
+	return items
+}
+
+func ootSilverRupeeItemID(oot *OotState, silverRupeeID int) string {
+	if silverRupeeID < 0 || silverRupeeID >= len(ootSilverRupeeItemIDs) {
+		return ""
+	}
+	variant := 0
+	switch silverRupeeID {
+	case 2, 3:
+		if ootIsMqSpirit(oot) {
+			variant = 1
+		}
+	case 14, 15:
+		if ootIsMqGanonCastle(oot) {
+			variant = 1
+		}
+	}
+	return ootSilverRupeeItemIDs[silverRupeeID][variant]
+}
+
+func ootIsMqSpirit(oot *OotState) bool {
+	return ootSilverRupeeLimit(oot, 2) > 0 && ootSilverRupeeLimit(oot, 3) > 0 && ootSilverRupeeLimit(oot, 4) == 0
+}
+
+func ootIsMqGanonCastle(oot *OotState) bool {
+	return ootSilverRupeeLimit(oot, 14) > 0 && ootSilverRupeeLimit(oot, 15) > 0 && ootSilverRupeeLimit(oot, 16) > 0 && ootSilverRupeeLimit(oot, 17) == 0
 }
 
 func hasOotMagicalRupee(oot *OotState) bool {

@@ -510,6 +510,55 @@ func TestExtractItemsTreatsSharedBombchuBagAsOwnedBombchu(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesOotSilverRupeeAnywhereItem(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Equipment = 0x0030
+	setOotSilverRupeeCount(state, 13, 1)
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_RUPEE_SILVER_GTG_WATER"]; got != 1 {
+		t.Fatalf("OOT_RUPEE_SILVER_GTG_WATER = %d, want 1", got)
+	}
+	if got := items["OOT_SHIELD"]; got != 3 {
+		t.Fatalf("OOT_SHIELD = %d, want 3", got)
+	}
+	if _, ok := items["OOT_POUCH_SILVER_GTG_WATER"]; ok {
+		t.Fatal("OOT_POUCH_SILVER_GTG_WATER should not be exported for silver-rupee counts")
+	}
+}
+
+func TestExtractItemsResolvesMqSilverRupeeIDsFromRuntimeCounts(t *testing.T) {
+	state := &GameState{}
+	state.Oot.RuntimeSilverRupeeCounts = [OotSilverRupeeSetCount]uint8{0, 5, 5, 5, 0, 5, 10, 5, 10, 0, 0, 5, 6, 3, 5, 5, 5, 0}
+	state.Oot.HasRuntimeSilverRupeeCounts = true
+	setOotSilverRupeeCount(state, 2, 2)
+	setOotSilverRupeeCount(state, 3, 1)
+	setOotSilverRupeeCount(state, 14, 1)
+	setOotSilverRupeeCount(state, 15, 3)
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_RUPEE_SILVER_SPIRIT_LOBBY"]; got != 2 {
+		t.Fatalf("OOT_RUPEE_SILVER_SPIRIT_LOBBY = %d, want 2", got)
+	}
+	if got := items["OOT_RUPEE_SILVER_SPIRIT_ADULT"]; got != 1 {
+		t.Fatalf("OOT_RUPEE_SILVER_SPIRIT_ADULT = %d, want 1", got)
+	}
+	if got := items["OOT_RUPEE_SILVER_GANON_SHADOW"]; got != 1 {
+		t.Fatalf("OOT_RUPEE_SILVER_GANON_SHADOW = %d, want 1", got)
+	}
+	if got := items["OOT_RUPEE_SILVER_GANON_WATER"]; got != 3 {
+		t.Fatalf("OOT_RUPEE_SILVER_GANON_WATER = %d, want 3", got)
+	}
+	if _, ok := items["OOT_RUPEE_SILVER_GANON_SPIRIT"]; ok {
+		t.Fatal("OOT_RUPEE_SILVER_GANON_SPIRIT should not be exported for MQ Ganon Castle")
+	}
+	if _, ok := items["OOT_RUPEE_SILVER_GANON_LIGHT"]; ok {
+		t.Fatal("OOT_RUPEE_SILVER_GANON_LIGHT should not be exported for MQ Ganon Castle")
+	}
+}
+
 func setOotSilverRupeeCount(state *GameState, silverRupeeID, count int) {
 	recordIndex := ExtraIdxOotSilver1 + silverRupeeID/4
 	shift := uint((silverRupeeID % 4) * 8)
