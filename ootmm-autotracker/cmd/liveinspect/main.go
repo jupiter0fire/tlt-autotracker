@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/ootmm-autotracker/n64"
 	"github.com/ootmm-autotracker/ootmm"
@@ -42,12 +43,16 @@ func main() {
 		fatalf("reader returned nil state")
 	}
 
-	fmt.Printf("state valid=%v active=%s save=%d ootScene=%#x liveXflag170=%v\n",
+	fmt.Printf("state valid=%v active=%s save=%d ootScene=%#x liveXflag170=%v liveXflag173=%v liveXflag174=%v liveXflag175=%v liveXflag176=%v\n",
 		state.Valid,
 		state.ActiveGame,
 		state.SaveIndex,
 		state.Oot.SceneID,
 		isBitSet(state.Shared.Bitmap("xflagsOot"), inspectBit),
+		isBitSet(state.Shared.Bitmap("xflagsOot"), 173),
+		isBitSet(state.Shared.Bitmap("xflagsOot"), 174),
+		isBitSet(state.Shared.Bitmap("xflagsOot"), 175),
+		isBitSet(state.Shared.Bitmap("xflagsOot"), 176),
 	)
 	fmt.Printf("live scene=%#x chest=%#08x collect=%#08x tempCollect=%#08x hasLive=%v\n",
 		state.Oot.LiveSceneID,
@@ -56,15 +61,20 @@ func main() {
 		state.Oot.LiveTempCollectFlag,
 		state.Oot.HasLiveSceneFlags,
 	)
-	target := "Dodongo Cavern Heart Miniboss Lava"
-	hasTarget := false
-	for _, check := range ootmm.ExtractChecks(state) {
-		if check.Name == target {
-			hasTarget = true
-			break
-		}
+	targets := []string{
+		"Dodongo Cavern Pot Miniboss 1",
+		"Dodongo Cavern Pot Miniboss 2",
+		"Dodongo Cavern Pot Miniboss 3",
+		"Dodongo Cavern Pot Miniboss 4",
 	}
-	fmt.Printf("target=%q present=%v\n", target, hasTarget)
+	present := map[string]bool{}
+	for _, check := range ootmm.ExtractChecks(state) {
+		present[check.Name] = true
+	}
+	sort.Strings(targets)
+	for _, target := range targets {
+		fmt.Printf("target=%q present=%v\n", target, present[target])
+	}
 }
 
 func isBitSet(bitmap []byte, bit int) bool {

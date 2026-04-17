@@ -422,6 +422,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("npcOot"), "OOT", "npc", npcCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("npcMm"), "MM", "npc", npcCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsOot"), "OOT", "xflag", xflagCheckName)
+	appendDodongoCavernMinibossPotFallbackChecks(state.Shared.Bitmap("xflagsOot"), appendCheck)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsMm"), "MM", "xflag", xflagCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("shopsOot"), "OOT", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
@@ -460,6 +461,28 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	}
 
 	return checks
+}
+
+func appendDodongoCavernMinibossPotFallbackChecks(bitmap []uint8, appendCheck func(string, string)) {
+	// Bits 173-175 collide with MQ Dodongo Cavern pots in the generated xflag map.
+	// Bit 176 exists only for the vanilla fourth pot, so when it is set we can
+	// safely resolve the preceding three bits to the vanilla room checks.
+	if !bitmapHasBit(bitmap, 176) {
+		return
+	}
+
+	for _, entry := range []struct {
+		bit  int
+		name string
+	}{
+		{173, "Dodongo Cavern Pot Miniboss 1"},
+		{174, "Dodongo Cavern Pot Miniboss 2"},
+		{175, "Dodongo Cavern Pot Miniboss 3"},
+	} {
+		if bitmapHasBit(bitmap, entry.bit) {
+			appendCheck("OOT_xflag_"+itoa(entry.bit), entry.name)
+		}
+	}
 }
 
 func appendQuestBit(items []TrackedItem, questItems uint32, bit int, id string) []TrackedItem {

@@ -867,6 +867,25 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesDodongoCavernMinibossPotFallbackChecks(t *testing.T) {
+	state := &GameState{}
+	for _, bit := range []int{173, 174, 175, 176} {
+		state.Shared.SetBit("xflagsOot", bit)
+	}
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Dodongo Cavern Pot Miniboss 1",
+		"Dodongo Cavern Pot Miniboss 2",
+		"Dodongo Cavern Pot Miniboss 3",
+		"Dodongo Cavern Pot Miniboss 4",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing Dodongo Cavern miniboss pot check %q", name)
+		}
+	}
+}
+
 func TestExtractChecksIncludesShopBitmapChecks(t *testing.T) {
 	originalShops := shopCheckTables
 	shopCheckTables = map[string]map[int]string{
