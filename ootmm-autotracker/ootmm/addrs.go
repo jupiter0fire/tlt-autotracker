@@ -48,7 +48,27 @@ const (
 	OotSilverRupeeSetCount    = 18
 	OotSilverRupeeDataSize    = OotSilverRupeeSetCount * 4
 	OotMaxKeysBlockSize       = OotRuntimeSceneCount + 4
+	OotComboConfigSize        = 0x2dc
 	ootMaxKeysFromSilverDelta = 0x13068
+
+	OotComboConfigMqOffset                    = 0x09c
+	OotComboConfigTriforcePiecesOffset        = 0x276
+	OotComboConfigTriforceGoalOffset          = 0x278
+	OotComboConfigSpecialOffset               = 0x12c
+	OotComboConfigSpecialCount                = 5
+	OotComboConfigSpecialSize                 = 8
+	OotComboConfigPricesOffset                = 0x15c
+	OotComboConfigPriceCount                  = 141
+	OotComboConfigPriceMax                    = 4995
+	OotComboConfigStaticHintsOffset           = 0x2a4
+	OotComboConfigStaticHintCount             = 20
+	OotComboConfigBossOffset                  = 0x2ba
+	OotComboConfigBossCount                   = 12
+	OotComboConfigStrayFairyRewardCountOffset = 0x2c6
+	OotComboConfigBombchuBehaviorOotOffset    = 0x2c7
+	OotComboConfigBombchuBehaviorMmOffset     = 0x2c8
+	OotComboConfigSongEventsOffset            = 0x2c9
+	OotComboConfigSongEventCount              = 18
 )
 
 // OoT scene IDs used by OoTMM's runtime key and silver-rupee metadata.
@@ -70,6 +90,23 @@ const (
 	OotSceneUnused14
 	OotSceneUnused15
 	OotSceneTreasureShop
+)
+
+// OoT MQ dungeon IDs from OoTMM's combo/dungeon.h.
+const (
+	OotMqDekuTree = iota
+	OotMqDodongosCavern
+	OotMqJabuJabu
+	OotMqTempleForest
+	OotMqTempleFire
+	OotMqTempleWater
+	OotMqTempleSpirit
+	OotMqTempleShadow
+	OotMqBottomOfTheWell
+	OotMqIceCavern
+	OotMqGerudoTrainingGrounds
+	OotMqGanonCastle
+	OotMqDungeonCount
 )
 
 // ComboContext offsets (32 bytes, PACKED ALIGNED(4))

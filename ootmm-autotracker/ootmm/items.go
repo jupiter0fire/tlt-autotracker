@@ -421,8 +421,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 
 	appendBitmapChecks(state.Shared.Bitmap("npcOot"), "OOT", "npc", npcCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("npcMm"), "MM", "npc", npcCheckName)
-	appendBitmapChecks(state.Shared.Bitmap("xflagsOot"), "OOT", "xflag", xflagCheckName)
-	appendDodongoCavernMinibossPotFallbackChecks(state.Shared.Bitmap("xflagsOot"), appendCheck)
+	appendOotXflagChecks(state.Shared.Bitmap("xflagsOot"), &state.Oot, appendCheck)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsMm"), "MM", "xflag", xflagCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("shopsOot"), "OOT", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
@@ -463,24 +462,20 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	return checks
 }
 
-func appendDodongoCavernMinibossPotFallbackChecks(bitmap []uint8, appendCheck func(string, string)) {
-	// Bits 173-175 collide with MQ Dodongo Cavern pots in the generated xflag map.
-	// Bit 176 exists only for the vanilla fourth pot, so when it is set we can
-	// safely resolve the preceding three bits to the vanilla room checks.
-	if !bitmapHasBit(bitmap, 176) {
-		return
-	}
-
-	for _, entry := range []struct {
-		bit  int
-		name string
-	}{
-		{173, "Dodongo Cavern Pot Miniboss 1"},
-		{174, "Dodongo Cavern Pot Miniboss 2"},
-		{175, "Dodongo Cavern Pot Miniboss 3"},
-	} {
-		if bitmapHasBit(bitmap, entry.bit) {
-			appendCheck("OOT_xflag_"+itoa(entry.bit), entry.name)
+func appendOotXflagChecks(bitmap []uint8, oot *OotState, appendCheck func(string, string)) {
+	for byteIndex, value := range bitmap {
+		for bit := 0; bit < 8; bit++ {
+			if value&(1<<uint(bit)) == 0 {
+				continue
+			}
+			index := byteIndex*8 + bit
+			name, ok := xflagCheckName("OOT", index)
+			if !ok {
+				name, ok = ootConflictingXflagCheckName(oot, index)
+			}
+			if ok {
+				appendCheck("OOT_xflag_"+itoa(index), name)
+			}
 		}
 	}
 }
@@ -867,12 +862,89 @@ func ootSilverRupeeItemID(oot *OotState, silverRupeeID int) string {
 	return ootSilverRupeeItemIDs[silverRupeeID][variant]
 }
 
+func ootMqDungeonState(oot *OotState, dungeonID int) (bool, bool) {
+	if oot == nil {
+		return false, false
+	}
+	if oot.HasRuntimeMqBits {
+		return oot.RuntimeMqBits&(1<<uint(dungeonID)) != 0, true
+	}
+
+	switch dungeonID {
+	case OotMqDodongosCavern:
+		return ootRuntimeSilverLimitMqState(oot, 0, 5, 0)
+	case OotMqTempleForest:
+		return ootRuntimeMaxKeyMqState(oot, OotSceneTempleForest, 6, 5)
+	case OotMqTempleFire:
+		return ootRuntimeMaxKeyMqState(oot, OotSceneTempleFire, 5, 7, 8)
+	case OotMqTempleWater:
+		return ootRuntimeMaxKeyMqState(oot, OotSceneTempleWater, 2, 5)
+	case OotMqTempleSpirit:
+		if mq, ok := ootRuntimeSilverLimitMqState(oot, 4, 0, 5); ok {
+			return mq, true
+		}
+		return ootRuntimeMaxKeyMqState(oot, OotSceneTempleSpirit, 7, 5)
+	case OotMqTempleShadow:
+		return ootRuntimeMaxKeyMqState(oot, OotSceneTempleShadow, 6, 5)
+	case OotMqBottomOfTheWell:
+		return ootRuntimeMaxKeyMqState(oot, OotSceneBottomOfTheWell, 2, 3)
+	case OotMqIceCavern:
+		return ootRuntimeSilverLimitMqState(oot, 9, 0, 5)
+	case OotMqGerudoTrainingGrounds:
+		if mq, ok := ootRuntimeMaxKeyMqState(oot, OotSceneGerudoTrainingGround, 3, 9); ok {
+			return mq, true
+		}
+		return ootRuntimeSilverLimitMqState(oot, 12, 6, 5)
+	case OotMqGanonCastle:
+		if mq, ok := ootRuntimeSilverLimitMqState(oot, 17, 0, 5); ok {
+			return mq, true
+		}
+		return ootRuntimeMaxKeyMqState(oot, OotSceneInsideGanonCastle, 3, 2)
+	default:
+		return false, false
+	}
+}
+
+func ootRuntimeMaxKeyMqState(oot *OotState, sceneID int, mqValue int, vanillaValues ...int) (bool, bool) {
+	if oot == nil || !oot.HasRuntimeMaxKeys || sceneID < 0 || sceneID >= len(oot.RuntimeMaxKeys) {
+		return false, false
+	}
+	value := int(oot.RuntimeMaxKeys[sceneID])
+	if value == mqValue {
+		return true, true
+	}
+	for _, vanillaValue := range vanillaValues {
+		if value == vanillaValue {
+			return false, true
+		}
+	}
+	return false, false
+}
+
+func ootRuntimeSilverLimitMqState(oot *OotState, silverRupeeID int, mqValue int, vanillaValues ...int) (bool, bool) {
+	if oot == nil || !oot.HasRuntimeSilverRupeeCounts || silverRupeeID < 0 || silverRupeeID >= len(oot.RuntimeSilverRupeeCounts) {
+		return false, false
+	}
+	value := int(oot.RuntimeSilverRupeeCounts[silverRupeeID])
+	if value == mqValue {
+		return true, true
+	}
+	for _, vanillaValue := range vanillaValues {
+		if value == vanillaValue {
+			return false, true
+		}
+	}
+	return false, false
+}
+
 func ootIsMqSpirit(oot *OotState) bool {
-	return ootSilverRupeeLimit(oot, 2) > 0 && ootSilverRupeeLimit(oot, 3) > 0 && ootSilverRupeeLimit(oot, 4) == 0
+	mq, _ := ootMqDungeonState(oot, OotMqTempleSpirit)
+	return mq
 }
 
 func ootIsMqGanonCastle(oot *OotState) bool {
-	return ootSilverRupeeLimit(oot, 14) > 0 && ootSilverRupeeLimit(oot, 15) > 0 && ootSilverRupeeLimit(oot, 16) > 0 && ootSilverRupeeLimit(oot, 17) == 0
+	mq, _ := ootMqDungeonState(oot, OotMqGanonCastle)
+	return mq
 }
 
 func hasOotMagicalRupee(oot *OotState) bool {

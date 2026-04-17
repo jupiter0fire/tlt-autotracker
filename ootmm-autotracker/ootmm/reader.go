@@ -48,6 +48,8 @@ type Reader struct {
 	foreignOotSaveAddr uint32
 	foreignMmSaveAddr  uint32
 	ootPlayStateAddr   uint32
+	comboConfigOotAddr uint32
+	comboConfigMmAddr  uint32
 	ootMaxKeysAddr     uint32
 	ootSilverDataAddr  uint32
 	lastKnownOot       OotState
@@ -128,7 +130,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 	if err := r.readSharedState(game, activeSaveIndex, &state.Shared); err != nil {
 		return nil, fmt.Errorf("read shared custom save: %w", err)
 	}
-	r.readOotRuntimeConfig(&state.Oot)
+	r.readOotRuntimeConfig(game, &state.Oot)
 
 	// Step 3: Re-verify the active game hasn't changed during the read
 	gameAfter, err := r.detector.DetectActiveGame()
@@ -328,8 +330,13 @@ func parseMmSave(mm *MmState, data []byte) error {
 	return nil
 }
 
-func (r *Reader) readOotRuntimeConfig(oot *OotState) {
+func (r *Reader) readOotRuntimeConfig(activeGame ActiveGame, oot *OotState) {
 	if oot == nil {
+		return
+	}
+
+	r.readOotComboConfig(activeGame, oot)
+	if activeGame != GameOot {
 		return
 	}
 
@@ -372,6 +379,50 @@ func (r *Reader) readOotRuntimeConfig(oot *OotState) {
 			oot.HasRuntimeMaxKeys = true
 		}
 	}
+}
+
+func (r *Reader) readOotComboConfig(activeGame ActiveGame, oot *OotState) {
+	if oot == nil {
+		return
+	}
+
+	payloadAddr := uint32(0)
+	payloadSize := 0
+	cachedAddr := (*uint32)(nil)
+	switch activeGame {
+	case GameOot:
+		payloadAddr = AddrOotPayload
+		payloadSize = OotPayloadSize
+		cachedAddr = &r.comboConfigOotAddr
+	case GameMm:
+		payloadAddr = AddrMmPayload
+		payloadSize = MmPayloadSize
+		cachedAddr = &r.comboConfigMmAddr
+	default:
+		return
+	}
+
+	if *cachedAddr != 0 {
+		if data, err := r.mem.Read(*cachedAddr, OotComboConfigSize); err == nil && validateOotComboConfig(data) {
+			oot.RuntimeMqBits = binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
+			oot.HasRuntimeMqBits = true
+			return
+		}
+		*cachedAddr = 0
+	}
+
+	payload, err := r.mem.Read(payloadAddr, payloadSize)
+	if err != nil || len(payload) < OotComboConfigSize {
+		return
+	}
+
+	off, ok := locateOotComboConfig(payload)
+	if !ok {
+		return
+	}
+	*cachedAddr = payloadAddr + uint32(off)
+	oot.RuntimeMqBits = binary.BigEndian.Uint32(payload[off+OotComboConfigMqOffset:])
+	oot.HasRuntimeMqBits = true
 }
 
 type ootPlayStateSample struct {
@@ -609,6 +660,106 @@ func validateOotMaxKeyBlock(data []byte) bool {
 		mmMaxKeyValueAllowed(1, data[18]) &&
 		mmMaxKeyValueAllowed(2, data[19]) &&
 		mmMaxKeyValueAllowed(3, data[20])
+}
+
+func locateOotComboConfig(payload []byte) (int, bool) {
+	bestOff := -1
+	bestScore := -1
+	for off := 0; off+OotComboConfigSize <= len(payload); off += 4 {
+		block := payload[off : off+OotComboConfigSize]
+		if !validateOotComboConfig(block) {
+			continue
+		}
+		score := ootComboConfigScore(block)
+		if score > bestScore {
+			bestScore = score
+			bestOff = off
+		}
+	}
+	return bestOff, bestOff >= 0
+}
+
+func validateOotComboConfig(data []byte) bool {
+	if len(data) < OotComboConfigSize {
+		return false
+	}
+	if data[0] == 0 || data[1] != 0 || data[2] != 0 || data[3] != 0 {
+		return false
+	}
+
+	mqBits := binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
+	if mqBits&^uint32((1<<OotMqDungeonCount)-1) != 0 {
+		return false
+	}
+
+	triforcePieces := binary.BigEndian.Uint16(data[OotComboConfigTriforcePiecesOffset:])
+	triforceGoal := binary.BigEndian.Uint16(data[OotComboConfigTriforceGoalOffset:])
+	if triforcePieces != 0 && triforceGoal > triforcePieces {
+		return false
+	}
+
+	for index := 0; index < OotComboConfigSpecialCount; index++ {
+		off := OotComboConfigSpecialOffset + index*OotComboConfigSpecialSize
+		flags := binary.BigEndian.Uint32(data[off:])
+		count := binary.BigEndian.Uint16(data[off+4:])
+		zero := binary.BigEndian.Uint16(data[off+6:])
+		if zero != 0 || flags>>19 != 0 || count > 0x400 {
+			return false
+		}
+	}
+
+	for index := 0; index < OotComboConfigPriceCount; index++ {
+		off := OotComboConfigPricesOffset + index*2
+		price := binary.BigEndian.Uint16(data[off:])
+		if price > OotComboConfigPriceMax || price%5 != 0 {
+			return false
+		}
+	}
+
+	for index := 0; index < OotComboConfigStaticHintCount; index++ {
+		value := int8(data[OotComboConfigStaticHintsOffset+index])
+		if value < -1 || value > 3 {
+			return false
+		}
+	}
+
+	var seenBosses [OotComboConfigBossCount]bool
+	for index := 0; index < OotComboConfigBossCount; index++ {
+		bossID := int(data[OotComboConfigBossOffset+index])
+		if bossID < 0 || bossID >= OotComboConfigBossCount || seenBosses[bossID] {
+			return false
+		}
+		seenBosses[bossID] = true
+	}
+
+	if data[OotComboConfigStrayFairyRewardCountOffset] > 15 {
+		return false
+	}
+	if data[OotComboConfigBombchuBehaviorOotOffset] > 3 || data[OotComboConfigBombchuBehaviorMmOffset] > 3 {
+		return false
+	}
+	for index := 0; index < OotComboConfigSongEventCount; index++ {
+		if data[OotComboConfigSongEventsOffset+index] > 5 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func ootComboConfigScore(data []byte) int {
+	score := int(data[0])
+	for off := 4; off < OotComboConfigPricesOffset; off += 4 {
+		if binary.BigEndian.Uint32(data[off:]) != 0 {
+			score++
+		}
+	}
+	for index := 0; index < OotComboConfigPriceCount; index++ {
+		if binary.BigEndian.Uint16(data[OotComboConfigPricesOffset+index*2:]) != 0 {
+			score++
+		}
+	}
+	return score
 }
 
 func ootMaxKeyValueAllowed(sceneID int, value byte) bool {

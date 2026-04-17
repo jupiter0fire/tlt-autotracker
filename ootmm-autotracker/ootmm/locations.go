@@ -7,9 +7,10 @@ import (
 )
 
 type locationFile struct {
-	Scene   []sceneLocationEntry  `json:"scene"`
-	Bitmap  []bitmapLocationEntry `json:"bitmap"`
-	Symbols []symbolLocationEntry `json:"symbols"`
+	Scene           []sceneLocationEntry    `json:"scene"`
+	Bitmap          []bitmapLocationEntry   `json:"bitmap"`
+	BitmapConflicts []bitmapConflictEntry   `json:"bitmap_conflicts"`
+	Symbols         []symbolLocationEntry   `json:"symbols"`
 }
 
 type sceneLocationEntry struct {
@@ -23,6 +24,14 @@ type bitmapLocationEntry struct {
 	Name  string `json:"name"`
 }
 
+type bitmapConflictEntry struct {
+	Block     string `json:"block"`
+	Bit       int    `json:"bit"`
+	DungeonMq int    `json:"dungeonMq"`
+	Vanilla   string `json:"vanilla"`
+	Mq        string `json:"mq"`
+}
+
 type symbolLocationEntry struct {
 	Game   string `json:"game"`
 	Symbol string `json:"symbol"`
@@ -33,6 +42,7 @@ var (
 	checkNameTable         map[string]string
 	npcCheckTables         map[string]map[int]string
 	xflagCheckTables       map[string]map[int]string
+	ootXflagConflictTable  map[int]bitmapConflictEntry
 	shopCheckTables        map[string]map[int]string
 	scrubCheckTables       map[string]map[int]string
 	silverRupeeCheckTables map[string]map[int]string
@@ -47,6 +57,7 @@ func init() {
 	checkNameTable = map[string]string{}
 	npcCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	xflagCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
+	ootXflagConflictTable = map[int]bitmapConflictEntry{}
 	shopCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	scrubCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	silverRupeeCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
@@ -82,6 +93,25 @@ func init() {
 			panic(fmt.Sprintf("duplicate bitmap location for %s bit %d", entry.Block, entry.Bit))
 		}
 		table[entry.Bit] = entry.Name
+	}
+
+	for _, entry := range locations.BitmapConflicts {
+		if entry.Block != "xflagsOot" {
+			panic(fmt.Sprintf("unsupported bitmap conflict block %s", entry.Block))
+		}
+		if entry.Bit < 0 {
+			panic(fmt.Sprintf("bitmap conflict entry %s has invalid bit %d", entry.Block, entry.Bit))
+		}
+		if entry.DungeonMq < 0 || entry.DungeonMq >= OotMqDungeonCount {
+			panic(fmt.Sprintf("bitmap conflict entry %s bit %d has invalid dungeon MQ id %d", entry.Block, entry.Bit, entry.DungeonMq))
+		}
+		if entry.Vanilla == "" || entry.Mq == "" {
+			panic(fmt.Sprintf("bitmap conflict entry %s bit %d is missing variant names", entry.Block, entry.Bit))
+		}
+		if _, exists := ootXflagConflictTable[entry.Bit]; exists {
+			panic(fmt.Sprintf("duplicate bitmap conflict entry for %s bit %d", entry.Block, entry.Bit))
+		}
+		ootXflagConflictTable[entry.Bit] = entry
 	}
 
 	for _, entry := range locations.Symbols {
@@ -164,6 +194,21 @@ func xflagCheckName(game string, bitPos int) (string, bool) {
 		return name, ok
 	}
 	return "", false
+}
+
+func ootConflictingXflagCheckName(oot *OotState, bitPos int) (string, bool) {
+	entry, ok := ootXflagConflictTable[bitPos]
+	if !ok {
+		return "", false
+	}
+	mq, known := ootMqDungeonState(oot, entry.DungeonMq)
+	if !known {
+		return "", false
+	}
+	if mq {
+		return entry.Mq, true
+	}
+	return entry.Vanilla, true
 }
 
 func shopCheckName(game string, bitPos int) (string, bool) {

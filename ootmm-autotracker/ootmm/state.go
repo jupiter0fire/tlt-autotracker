@@ -114,8 +114,10 @@ type OotState struct {
 	DungeonKeys  [19]int8
 
 	GoldTokens                  uint16
+	RuntimeMqBits               uint32
 	RuntimeMaxKeys              [OotRuntimeSceneCount]uint8
 	RuntimeSilverRupeeCounts    [OotSilverRupeeSetCount]uint8
+	HasRuntimeMqBits            bool
 	HasRuntimeMaxKeys           bool
 	HasRuntimeSilverRupeeCounts bool
 

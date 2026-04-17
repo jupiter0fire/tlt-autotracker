@@ -43,11 +43,13 @@ func main() {
 		fatalf("reader returned nil state")
 	}
 
-	fmt.Printf("state valid=%v active=%s save=%d ootScene=%#x liveXflag170=%v liveXflag173=%v liveXflag174=%v liveXflag175=%v liveXflag176=%v\n",
+	fmt.Printf("state valid=%v active=%s save=%d ootScene=%#x hasRuntimeMq=%v runtimeMqBits=%#x liveXflag170=%v liveXflag173=%v liveXflag174=%v liveXflag175=%v liveXflag176=%v\n",
 		state.Valid,
 		state.ActiveGame,
 		state.SaveIndex,
 		state.Oot.SceneID,
+		state.Oot.HasRuntimeMqBits,
+		state.Oot.RuntimeMqBits,
 		isBitSet(state.Shared.Bitmap("xflagsOot"), inspectBit),
 		isBitSet(state.Shared.Bitmap("xflagsOot"), 173),
 		isBitSet(state.Shared.Bitmap("xflagsOot"), 174),
@@ -62,6 +64,7 @@ func main() {
 		state.Oot.HasLiveSceneFlags,
 	)
 	targets := []string{
+		"Dodongo Cavern Heart Miniboss Lava",
 		"Dodongo Cavern Pot Miniboss 1",
 		"Dodongo Cavern Pot Miniboss 2",
 		"Dodongo Cavern Pot Miniboss 3",

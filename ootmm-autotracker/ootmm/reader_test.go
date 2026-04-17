@@ -674,3 +674,73 @@ func TestLocateOotMaxKeysFindsStructuredCandidate(t *testing.T) {
 		t.Fatalf("unexpected OoT max-key offset: got %#x want %#x", got, off)
 	}
 }
+
+func TestValidateOotComboConfigAcceptsLiveLikeConfig(t *testing.T) {
+	data := validOotComboConfigBytes(0x04a, 1)
+	if !validateOotComboConfig(data) {
+		t.Fatal("expected live-like OoT combo config to validate")
+	}
+}
+
+func TestLocateOotComboConfigFindsStructuredCandidate(t *testing.T) {
+	payload := make([]byte, OotPayloadSize)
+	off := 0x2d840
+	copy(payload[off:], validOotComboConfigBytes(0x04a, 2))
+
+	got, ok := locateOotComboConfig(payload)
+	if !ok {
+		t.Fatal("expected OoT combo config candidate")
+	}
+	if got != off {
+		t.Fatalf("unexpected OoT combo config offset: got %#x want %#x", got, off)
+	}
+}
+
+func validOotComboConfigBytes(mqBits uint32, playerID byte) []byte {
+	data := make([]byte, OotComboConfigSize)
+	data[0] = playerID
+
+	for index := 0; index < 12; index++ {
+		binary.BigEndian.PutUint32(data[4+index*4:], uint32(0x100+index))
+	}
+	for index := 0; index < 26; index++ {
+		binary.BigEndian.PutUint32(data[52+index*4:], uint32(index))
+	}
+	binary.BigEndian.PutUint32(data[OotComboConfigMqOffset:], mqBits)
+
+	for index := 0; index < 18; index++ {
+		binary.BigEndian.PutUint32(data[164+index*4:], uint32(index+1))
+	}
+	for index := 0; index < OotComboConfigSpecialCount; index++ {
+		off := OotComboConfigSpecialOffset + index*OotComboConfigSpecialSize
+		binary.BigEndian.PutUint32(data[off:], uint32(1<<uint(index)))
+		binary.BigEndian.PutUint16(data[off+4:], uint16(index+1))
+	}
+	for index := 0; index < 4; index++ {
+		binary.BigEndian.PutUint16(data[340+index*2:], uint16((index+1)*100))
+	}
+	for index := 0; index < OotComboConfigPriceCount; index++ {
+		binary.BigEndian.PutUint16(data[OotComboConfigPricesOffset+index*2:], uint16((index%9)*5))
+	}
+	binary.BigEndian.PutUint16(data[OotComboConfigTriforcePiecesOffset:], 20)
+	binary.BigEndian.PutUint16(data[OotComboConfigTriforceGoalOffset:], 10)
+	for index := 0; index < 21; index++ {
+		data[634+index*2] = byte(index)
+		data[634+index*2+1] = playerID
+	}
+	for index := 0; index < OotComboConfigStaticHintCount; index++ {
+		data[OotComboConfigStaticHintsOffset+index] = byte(int8(index%5 - 1))
+	}
+	binary.BigEndian.PutUint16(data[696:], 0x12)
+	for index := 0; index < OotComboConfigBossCount; index++ {
+		data[OotComboConfigBossOffset+index] = byte(index)
+	}
+	data[OotComboConfigStrayFairyRewardCountOffset] = 15
+	data[OotComboConfigBombchuBehaviorOotOffset] = 2
+	data[OotComboConfigBombchuBehaviorMmOffset] = 3
+	for index := 0; index < OotComboConfigSongEventCount; index++ {
+		data[OotComboConfigSongEventsOffset+index] = byte(index % 6)
+	}
+
+	return data
+}

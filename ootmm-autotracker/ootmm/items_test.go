@@ -867,8 +867,26 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 	}
 }
 
-func TestExtractChecksIncludesDodongoCavernMinibossPotFallbackChecks(t *testing.T) {
+
+func TestExtractChecksResolvesOotXflagConflictsFromRuntimeMqBits(t *testing.T) {
+	originalXflags := xflagCheckTables
+	originalConflicts := ootXflagConflictTable
+	xflagCheckTables = map[string]map[int]string{
+		"OOT": {176: "Dodongo Cavern Pot Miniboss 4"},
+		"MM":  {},
+	}
+	ootXflagConflictTable = map[int]bitmapConflictEntry{
+		173: {Block: "xflagsOot", Bit: 173, DungeonMq: OotMqDodongosCavern, Vanilla: "Dodongo Cavern Pot Miniboss 1", Mq: "MQ Dodongo Cavern Pot Miniboss 2"},
+		174: {Block: "xflagsOot", Bit: 174, DungeonMq: OotMqDodongosCavern, Vanilla: "Dodongo Cavern Pot Miniboss 2", Mq: "MQ Dodongo Cavern Pot Miniboss 3"},
+		175: {Block: "xflagsOot", Bit: 175, DungeonMq: OotMqDodongosCavern, Vanilla: "Dodongo Cavern Pot Miniboss 3", Mq: "MQ Dodongo Cavern Pot Miniboss 4"},
+	}
+	defer func() {
+		xflagCheckTables = originalXflags
+		ootXflagConflictTable = originalConflicts
+	}()
+
 	state := &GameState{}
+	state.Oot.HasRuntimeMqBits = true
 	for _, bit := range []int{173, 174, 175, 176} {
 		state.Shared.SetBit("xflagsOot", bit)
 	}
@@ -883,6 +901,12 @@ func TestExtractChecksIncludesDodongoCavernMinibossPotFallbackChecks(t *testing.
 		if _, ok := checks[name]; !ok {
 			t.Fatalf("missing Dodongo Cavern miniboss pot check %q", name)
 		}
+	}
+
+	state.Oot.RuntimeMqBits = 1 << OotMqDodongosCavern
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["MQ Dodongo Cavern Pot Miniboss 2"]; !ok {
+		t.Fatal("missing MQ Dodongo xflag conflict resolution")
 	}
 }
 

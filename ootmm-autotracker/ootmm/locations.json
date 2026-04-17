@@ -24882,6 +24882,1037 @@
       "name": "Ganon Castle Exterior Red Boulder 3"
     }
   ],
+  "bitmap_conflicts": [
+    {
+      "block": "xflagsOot",
+      "bit": 1,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Lobby 1",
+      "mq": "MQ Deku Tree Grass Entrance Lower 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 2,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Lobby 2",
+      "mq": "MQ Deku Tree Grass Entrance Lower 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 3,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Lobby 3",
+      "mq": "MQ Deku Tree Grass Entrance Upper 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 4,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Lobby 4",
+      "mq": "MQ Deku Tree Grass Entrance Upper 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 36,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Slingshot Room 4",
+      "mq": "MQ Deku Tree Grass Compass Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 45,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Basement Main 1",
+      "mq": "MQ Deku Tree Grass Basement Lower 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 46,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Basement Main 2",
+      "mq": "MQ Deku Tree Grass Basement Lower 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 57,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Eye Switch Room 1",
+      "mq": "MQ Deku Tree Grass Room Before Spike 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 58,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Eye Switch Room 2",
+      "mq": "MQ Deku Tree Grass Room Before Spike 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 59,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Eye Switch Room 3",
+      "mq": "MQ Deku Tree Grass Room Before Spike 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 60,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Eye Switch Room 4",
+      "mq": "MQ Deku Tree Grass Room Before Spike 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 62,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Water Room 2",
+      "mq": "MQ Deku Tree Grass Spike Room Back 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 68,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Torch Room 1",
+      "mq": "MQ Deku Tree Grass Larvae Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 92,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Pre-Boss Room 1",
+      "mq": "MQ Deku Tree Grass Room Before Boss 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 93,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Pre-Boss Room 2",
+      "mq": "MQ Deku Tree Grass Room Before Boss 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 94,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Pre-Boss Room 3",
+      "mq": "MQ Deku Tree Grass Room Before Boss 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 98,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Heart Pre-Boss 1",
+      "mq": "MQ Deku Tree Heart Before Boss 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 99,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Heart Pre-Boss 2",
+      "mq": "MQ Deku Tree Heart Before Boss 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 100,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Heart Pre-Boss 3",
+      "mq": "MQ Deku Tree Heart Before Boss 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 103,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Compass Room 1",
+      "mq": "MQ Deku Tree Grass Slingshot Room Front 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 104,
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Grass Compass Room 2",
+      "mq": "MQ Deku Tree Grass Slingshot Room Front 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 170,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Heart Miniboss Lava",
+      "mq": "MQ Dodongo Cavern Heart Lizalfos Room"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 172,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Heart Miniboss Upper 2",
+      "mq": "MQ Dodongo Cavern Pot Miniboss 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 173,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Miniboss 1",
+      "mq": "MQ Dodongo Cavern Pot Miniboss 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 174,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Miniboss 2",
+      "mq": "MQ Dodongo Cavern Pot Miniboss 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 175,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Miniboss 3",
+      "mq": "MQ Dodongo Cavern Pot Miniboss 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 220,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Skull 1",
+      "mq": "MQ Dodongo Cavern Pot Before Boss 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 221,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Skull 2",
+      "mq": "MQ Dodongo Cavern Pot Before Boss 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 239,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Grass Bomb Bag Room",
+      "mq": "MQ Dodongo Cavern Grass Vanilla Bomb Bag Room"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 261,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Room Before Miniboss 1",
+      "mq": "MQ Dodongo Cavern Grass Room Before Miniboss"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 274,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Room After Miniboss 1",
+      "mq": "MQ Dodongo Cavern Pot After Miniboss 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 275,
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Pot Room After Miniboss 2",
+      "mq": "MQ Dodongo Cavern Pot After Miniboss 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 384,
+      "dungeonMq": 2,
+      "vanilla": "Jabu-Jabu Pot Big Octo Room 2",
+      "mq": "MQ Jabu-Jabu Wonder Item After Big Octo"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 435,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Main Room 1",
+      "mq": "MQ Forest Temple Pot Main Room 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 436,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Main Room 2",
+      "mq": "MQ Forest Temple Pot Main Room 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 437,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Main Room 3",
+      "mq": "MQ Forest Temple Pot Main Room 5"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 438,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Main Room 4",
+      "mq": "MQ Forest Temple Pot Main Room 6"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 442,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Miniboss Lower 2",
+      "mq": "MQ Forest Temple Pot Bow Room Lower 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 443,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Miniboss Upper 1",
+      "mq": "MQ Forest Temple Pot Bow Room Lower 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 444,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Miniboss Upper 2",
+      "mq": "MQ Forest Temple Pot Bow Room Upper 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 445,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Miniboss Upper 3",
+      "mq": "MQ Forest Temple Pot Bow Room Upper 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 446,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Miniboss Upper 4",
+      "mq": "MQ Forest Temple Pot Bow Room Upper 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 449,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Heart Garden 2",
+      "mq": "MQ Forest Temple Heart Garden 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 457,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Blue Poe 1",
+      "mq": "MQ Forest Temple Pot Blue Poe 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 458,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Blue Poe 2",
+      "mq": "MQ Forest Temple Pot Blue Poe 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 459,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Blue Poe 3",
+      "mq": "MQ Forest Temple Pot Blue Poe 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 465,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Green Poe Pot 1",
+      "mq": "MQ Forest Temple Pot Green Poe 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 466,
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Pot Green Poe Pot 2",
+      "mq": "MQ Forest Temple Pot Green Poe 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 485,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Pot Pre-Boss Room 1",
+      "mq": "MQ Fire Temple Pot Pre-Boss 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 486,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Pot Pre-Boss Room 2",
+      "mq": "MQ Fire Temple Pot Pre-Boss 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 487,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Pot Pre-Boss Room 3",
+      "mq": "MQ Fire Temple Pre-Boss Room Tall Ledge Low Large Crate 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 488,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Pot Pre-Boss Room 4",
+      "mq": "MQ Fire Temple Pre-Boss Room Tall Ledge Low Large Crate 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 519,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Heart Ledge Above Main 2",
+      "mq": "MQ Fire Temple Pot Bridge Above Lava Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 520,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Heart Ledge Above Main 3",
+      "mq": "MQ Fire Temple Pot Bridge Above Lava Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 535,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Pot Before Miniboss 1",
+      "mq": "MQ Fire Temple Pot Fire Maze Room Left 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 536,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Pot Before Miniboss 2",
+      "mq": "MQ Fire Temple Pot Fire Maze Room Left 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 556,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Heart Map Room 2",
+      "mq": "MQ Fire Temple 3F Lava Room Near Cage Large Crate"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 557,
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Heart Map Room 3",
+      "mq": "MQ Fire Temple 3F Lava Room Lower Large Crate 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 617,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Skull Cage 1",
+      "mq": "MQ Water Temple Three Torch Room Large Crate 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 618,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Skull Cage 2",
+      "mq": "MQ Water Temple Three Torch Room Large Crate 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 621,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Skull Cage 3",
+      "mq": "MQ Water Temple Three Torch Room Behind Gate Large Crate 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 622,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Skull Cage 4",
+      "mq": "MQ Water Temple Three Torch Room Behind Gate Large Crate 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 641,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Compass Room 1",
+      "mq": "MQ Water Temple Storage Room Large Crate 7"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 642,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Compass Room 2",
+      "mq": "MQ Water Temple Storage Room Small Crate 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 643,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Compass Room 3",
+      "mq": "MQ Water Temple Storage Room Small Crate 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 664,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Before Dark Link 1",
+      "mq": "MQ Water Temple Big Fairy Before Dark Link Near Door 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 665,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Before Dark Link 2",
+      "mq": "MQ Water Temple Pot Before Dark Link Near Door 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 740,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Blocks Room 1",
+      "mq": "MQ Water Temple Dodongo Room Large Crate 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 741,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Blocks Room 2",
+      "mq": "MQ Water Temple Dodongo Room Large Crate 5"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 749,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Boss Key Room 2",
+      "mq": "MQ Water Temple Side Loop Stalfos Room Large Crate 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 757,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Ruto Room 1",
+      "mq": "MQ Water Temple Wonder Item Longshot Room"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 769,
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Pot Corridor 2",
+      "mq": "MQ Water Temple Lizalfos Hallway Behind Gate Large Crate 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 888,
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Flying Pot Topmost 1",
+      "mq": "MQ Spirit Temple Top Near Lowering Platform Large Crate 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 893,
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Flying Pot Topmost 6",
+      "mq": "MQ Spirit Temple Pot Top Near Lowering Platform 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 910,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Early Maze 5",
+      "mq": "MQ Shadow Temple Pot Entrance Maze 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 911,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Early Maze 6",
+      "mq": "MQ Shadow Temple Pot Entrance Maze 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 912,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Flying Pot Early Maze",
+      "mq": "MQ Shadow Temple Flying Pot Entrance Maze 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 917,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Map Room 2",
+      "mq": "MQ Shadow Temple Pot Compass Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 923,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Beamos Big Fairy",
+      "mq": "MQ Shadow Temple Beamos Big Fairy"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 933,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Falling Spikes Bottom 1",
+      "mq": "MQ Shadow Temple Pot Guillotines Room Lower 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 934,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Falling Spikes Bottom 2",
+      "mq": "MQ Shadow Temple Pot Guillotines Room Lower 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 935,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Falling Spikes Top 1",
+      "mq": "MQ Shadow Temple Pot Guillotines Room Upper 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 936,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Falling Spikes Top 2",
+      "mq": "MQ Shadow Temple Pot Guillotines Room Upper 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 938,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Wonder Item",
+      "mq": "MQ Shadow Temple Wonder Item"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 946,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Heart Scythe 1",
+      "mq": "MQ Shadow Temple Heart Invisible Blades 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 947,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Heart Scythe 2",
+      "mq": "MQ Shadow Temple Heart Invisible Blades 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 948,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Invisible Floormaster Room 1",
+      "mq": "MQ Shadow Temple Pot Bomb Flowers Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 949,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Invisible Floormaster Room 2",
+      "mq": "MQ Shadow Temple Pot Bomb Flowers Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 955,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot After Wind 2",
+      "mq": "MQ Shadow Temple Pot Room Before Boat 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 956,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Flying Pot After Wind 1",
+      "mq": "MQ Shadow Temple Pot Room Before Boat 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 957,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Flying Pot After Wind 2",
+      "mq": "MQ Shadow Temple Flying Pot Room Before Boat 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 962,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Heart Pre-Boss 2",
+      "mq": "MQ Shadow Temple Heart Shortcut 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 963,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Heart Pre-Boss 3",
+      "mq": "MQ Shadow Temple Heart Shortcut 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 972,
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Pot Boat After Bridge 2",
+      "mq": "MQ Shadow Temple Pot After Boat Before Bridge 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1044,
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Rupee 2",
+      "mq": "MQ Bottom of the Well Heart Basement 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1045,
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Rupee 3",
+      "mq": "MQ Bottom of the Well Heart Basement 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1046,
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Rupee 4",
+      "mq": "MQ Bottom of the Well Heart Basement 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1109,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Before Entrance 1",
+      "mq": "MQ Ice Cavern Icicle Entrance 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1110,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Before Entrance 2",
+      "mq": "MQ Ice Cavern Icicle Entrance 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1120,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Entrance 3",
+      "mq": "MQ Ice Cavern Pot First Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1129,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Pot First Corridor 1",
+      "mq": "MQ Ice Cavern Icicle Before Main Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1130,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Pot First Corridor 2",
+      "mq": "MQ Ice Cavern Icicle Before Main Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1131,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Before Scythe 1",
+      "mq": "MQ Ice Cavern Icicle Before Main Room 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1132,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Before Scythe 2",
+      "mq": "MQ Ice Cavern Icicle Before Main Room 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1134,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Before Scythe 4",
+      "mq": "MQ Ice Cavern Icicle Before Main Room 5"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1145,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Pot Scythe Room 2",
+      "mq": "MQ Ice Cavern Red Ice Main Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1146,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Pot Scythe Room 3",
+      "mq": "MQ Ice Cavern Red Ice Main Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1147,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Flying Pot Scythe Room",
+      "mq": "MQ Ice Cavern Red Ice Main Room 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1148,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Scythe 1",
+      "mq": "MQ Ice Cavern Pot Main Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1149,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Scythe 2",
+      "mq": "MQ Ice Cavern Pot Main Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1150,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Scythe 3",
+      "mq": "MQ Ice Cavern Red Ice Main Room 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1155,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Before Block 1",
+      "mq": "MQ Ice Cavern Icicle Before Map Room"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1188,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle After Block 4",
+      "mq": "MQ Ice Cavern Pot Final Corridor 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1189,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle After Block 5",
+      "mq": "MQ Ice Cavern Pot Final Corridor 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1208,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Heart 1",
+      "mq": "MQ Ice Cavern Icicle Compass Room 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1209,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Heart 2",
+      "mq": "MQ Ice Cavern Icicle Compass Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1210,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Heart 3",
+      "mq": "MQ Ice Cavern Icicle Compass Room 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1211,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Pot Map Room",
+      "mq": "MQ Ice Cavern Icicle Compass Room 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1213,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Red Ice Map 1",
+      "mq": "MQ Ice Cavern Pot Compass Room 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1226,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Compass 01",
+      "mq": "MQ Ice Cavern Icicle Map Room 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1227,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Compass 02",
+      "mq": "MQ Ice Cavern Icicle Map Room 5"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1228,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Compass 03",
+      "mq": "MQ Ice Cavern Icicle Map Room 6"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1229,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Compass 04",
+      "mq": "MQ Ice Cavern Icicle Map Room 7"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1230,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Compass 05",
+      "mq": "MQ Ice Cavern Icicle Map Room 8"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1231,
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Icicle Compass 06",
+      "mq": "MQ Ice Cavern Icicle Map Room 9"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1270,
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Entrance Big Fairy",
+      "mq": "MQ Gerudo Training Grounds Pot 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1375,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 03",
+      "mq": "MQ Ganon Castle Icicle Water 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1376,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 04",
+      "mq": "MQ Ganon Castle Icicle Water 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1377,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 05",
+      "mq": "MQ Ganon Castle Icicle Water 3"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1378,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 06",
+      "mq": "MQ Ganon Castle Icicle Water 4"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1379,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 07",
+      "mq": "MQ Ganon Castle Icicle Water 5"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1380,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 08",
+      "mq": "MQ Ganon Castle Icicle Water 6"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1381,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 09",
+      "mq": "MQ Ganon Castle Icicle Water 7"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1382,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Icicle Water 10",
+      "mq": "MQ Ganon Castle Icicle Water 8"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1416,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Water End 1",
+      "mq": "MQ Ganon Pot Water End 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1417,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Water End 2",
+      "mq": "MQ Ganon Pot Water End 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1419,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Forest End 1",
+      "mq": "MQ Ganon Pot Forest End 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1420,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Forest End 2",
+      "mq": "MQ Ganon Pot Forest End 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1428,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Light End 1",
+      "mq": "MQ Ganon Pot Light End 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1429,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Light End 2",
+      "mq": "MQ Ganon Pot Light End 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1434,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Heart Shadow 3",
+      "mq": "MQ Ganon Castle Wonder Item"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1438,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Shadow End 1",
+      "mq": "MQ Ganon Pot Shadow End 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1439,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Shadow End 2",
+      "mq": "MQ Ganon Pot Shadow End 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1441,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Fire End 1",
+      "mq": "MQ Ganon Pot Fire End 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1442,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Fire End 2",
+      "mq": "MQ Ganon Pot Fire End 2"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1477,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Spirit End 1",
+      "mq": "MQ Ganon Pot Spirit End 1"
+    },
+    {
+      "block": "xflagsOot",
+      "bit": 1478,
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Pot Spirit End 2",
+      "mq": "MQ Ganon Pot Spirit End 2"
+    }
+  ],
   "symbols": [
     {
       "game": "MM",

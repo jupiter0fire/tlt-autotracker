@@ -7,6 +7,7 @@ import pathlib
 import re
 import struct
 import sys
+from collections import defaultdict
 
 
 SCENE_TYPES = {
@@ -59,6 +60,21 @@ XFLAG_TABLE_FILES = {
 }
 
 XFLAG_COUNT_RE = re.compile(r"^#define\s+XFLAGS_COUNT_(OOT|MM)\s+0x([0-9a-fA-F]+)\s*$")
+
+OOT_MQ_DUNGEON_IDS = {
+    "DEKU_TREE": 0,
+    "DODONGO_CAVERN": 1,
+    "INSIDE_JABU_JABU": 2,
+    "TEMPLE_FOREST": 3,
+    "TEMPLE_FIRE": 4,
+    "TEMPLE_WATER": 5,
+    "TEMPLE_SPIRIT": 6,
+    "TEMPLE_SHADOW": 7,
+    "BOTTOM_OF_THE_WELL": 8,
+    "ICE_CAVERN": 9,
+    "GERUDO_TRAINING_GROUND": 10,
+    "INSIDE_GANON_CASTLE": 11,
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -193,6 +209,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
     scene_conflicts: set[str] = set()
     bitmap_checks_raw: dict[tuple[str, int], str] = {}
     bitmap_conflicts: set[tuple[str, int]] = set()
+    bitmap_variant_candidates: dict[tuple[str, int], list[tuple[str, str]]] = defaultdict(list)
     symbol_checks_raw: dict[tuple[str, str], str] = {}
 
     for game, pool_name in (("OOT", "pool_oot.csv"), ("MM", "pool_mm.csv")):
@@ -264,6 +281,8 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                 if bit_pos is None:
                     continue
                 block = "xflagsOot" if game == "OOT" else "xflagsMm"
+                if game == "OOT":
+                    bitmap_variant_candidates[(block, bit_pos)].append((scene_name, location))
                 add_unique_mapping(bitmap_checks_raw, bitmap_conflicts, (block, bit_pos), location)
 
     scene_checks = [
@@ -274,6 +293,40 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
         {"block": block, "bit": bit, "name": name}
         for (block, bit), name in sorted(finalize_mapping(bitmap_checks_raw, bitmap_conflicts).items())
     ]
+    bitmap_conflict_entries = []
+    for (block, bit), entries in sorted(bitmap_variant_candidates.items()):
+        unique_entries: list[tuple[str, str]] = []
+        seen_names: set[str] = set()
+        for scene_name, location in entries:
+            if location in seen_names:
+                continue
+            seen_names.add(location)
+            unique_entries.append((scene_name, location))
+        if len(unique_entries) <= 1:
+            continue
+
+        scene_names = {scene_name for scene_name, _ in unique_entries}
+        if len(scene_names) != 1:
+            continue
+        scene_name = next(iter(scene_names))
+        dungeon_mq = OOT_MQ_DUNGEON_IDS.get(scene_name)
+        if dungeon_mq is None:
+            continue
+
+        vanilla_names = [location for _, location in unique_entries if not location.startswith("MQ ")]
+        mq_names = [location for _, location in unique_entries if location.startswith("MQ ")]
+        if len(vanilla_names) != 1 or len(mq_names) != 1:
+            continue
+
+        bitmap_conflict_entries.append(
+            {
+                "block": block,
+                "bit": bit,
+                "dungeonMq": dungeon_mq,
+                "vanilla": vanilla_names[0],
+                "mq": mq_names[0],
+            }
+        )
     symbol_checks = [
         {"game": game, "symbol": symbol, "name": name}
         for (game, symbol), name in sorted(symbol_checks_raw.items())
@@ -282,6 +335,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
     return {
         "scene": scene_checks,
         "bitmap": bitmap_checks,
+        "bitmap_conflicts": bitmap_conflict_entries,
         "symbols": symbol_checks,
     }
 
