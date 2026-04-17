@@ -9,9 +9,12 @@ import (
 )
 
 const (
-	maxForeignMmChecksumDelta = 0x400
-	sharedOcarinaButtonMaskOotOffset = 0x7c8
-	sharedOcarinaButtonMaskMmOffset  = 0x7ca
+	maxForeignMmChecksumDelta         = 0x400
+	sharedOcarinaButtonMaskOotOffset  = 0x7c8
+	sharedOcarinaButtonMaskMmOffset   = 0x7ca
+	sharedCaughtChildFishWeightOffset = 2037
+	sharedCaughtAdultFishWeightOffset = 2057
+	sharedCaughtFishWeightCount       = 20
 
 	// SharedCustomSave stores bombchu bag progression in the flag byte after
 	// the souls, fish, and respawn blocks.
@@ -1030,6 +1033,12 @@ func parseSharedStateUnchecked(data []byte) (SharedCustomState, error) {
 	if len(data) >= sharedOcarinaButtonMaskMmOffset+2 {
 		parsed.OcarinaButtonMaskOot = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskOotOffset:])
 		parsed.OcarinaButtonMaskMm = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskMmOffset:])
+	}
+	if len(data) >= sharedCaughtChildFishWeightOffset+sharedCaughtFishWeightCount {
+		copy(parsed.CaughtChildFishWeights[:], data[sharedCaughtChildFishWeightOffset:sharedCaughtChildFishWeightOffset+sharedCaughtFishWeightCount])
+	}
+	if len(data) >= sharedCaughtAdultFishWeightOffset+sharedCaughtFishWeightCount {
+		copy(parsed.CaughtAdultFishWeights[:], data[sharedCaughtAdultFishWeightOffset:sharedCaughtAdultFishWeightOffset+sharedCaughtFishWeightCount])
 	}
 	if len(data) > sharedBombchuBagFlagsOffset {
 		flags := data[sharedBombchuBagFlagsOffset]

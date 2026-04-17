@@ -409,6 +409,33 @@ func TestParseSharedStateReadsOcarinaButtonMasks(t *testing.T) {
 	}
 }
 
+func TestParseSharedStateReadsCaughtFishWeights(t *testing.T) {
+	data := make([]byte, SharedCustomSaveSize)
+	data[sharedCaughtChildFishWeightOffset] = 2
+	data[sharedCaughtChildFishWeightOffset+1] = 7
+	data[sharedCaughtChildFishWeightOffset+2] = fishingPondLoachWeightMask | 19
+	data[sharedCaughtAdultFishWeightOffset] = 2
+	data[sharedCaughtAdultFishWeightOffset+1] = 25
+	data[sharedCaughtAdultFishWeightOffset+2] = fishingPondLoachWeightMask | 36
+
+	shared, err := parseSharedState(data)
+	if err != nil {
+		t.Fatalf("parseSharedState: %v", err)
+	}
+	if got := shared.CaughtChildFishWeights[0]; got != 2 {
+		t.Fatalf("CaughtChildFishWeights[0] = %d, want 2", got)
+	}
+	if got := shared.CaughtChildFishWeights[2]; got != fishingPondLoachWeightMask|19 {
+		t.Fatalf("CaughtChildFishWeights[2] = %#x, want %#x", got, fishingPondLoachWeightMask|19)
+	}
+	if got := shared.CaughtAdultFishWeights[1]; got != 25 {
+		t.Fatalf("CaughtAdultFishWeights[1] = %d, want 25", got)
+	}
+	if got := shared.CaughtAdultFishWeights[2]; got != fishingPondLoachWeightMask|36 {
+		t.Fatalf("CaughtAdultFishWeights[2] = %#x, want %#x", got, fishingPondLoachWeightMask|36)
+	}
+}
+
 func TestSelectSharedStateCandidatePrefersRicherCheckState(t *testing.T) {
 	r := &Reader{}
 

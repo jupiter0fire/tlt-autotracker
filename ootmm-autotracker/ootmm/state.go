@@ -14,29 +14,35 @@ type GameState struct {
 // SharedCustomState holds the subset of OoTMM's shared custom save that is
 // relevant for item tracking across both games.
 type SharedCustomState struct {
-	Bitmaps       map[string][]uint8
-	OcarinaButtonMaskOot uint16
-	OcarinaButtonMaskMm  uint16
-	BombchuBagOot uint8
-	BombchuBagMm  uint8
+	Bitmaps                map[string][]uint8
+	OcarinaButtonMaskOot   uint16
+	OcarinaButtonMaskMm    uint16
+	BombchuBagOot          uint8
+	BombchuBagMm           uint8
+	CaughtChildFishWeights [20]uint8
+	CaughtAdultFishWeights [20]uint8
 }
 
 func (s SharedCustomState) Clone() SharedCustomState {
 	if len(s.Bitmaps) == 0 {
 		return SharedCustomState{
-			OcarinaButtonMaskOot: s.OcarinaButtonMaskOot,
-			OcarinaButtonMaskMm:  s.OcarinaButtonMaskMm,
-			BombchuBagOot: s.BombchuBagOot,
-			BombchuBagMm:  s.BombchuBagMm,
+			OcarinaButtonMaskOot:   s.OcarinaButtonMaskOot,
+			OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
+			BombchuBagOot:          s.BombchuBagOot,
+			BombchuBagMm:           s.BombchuBagMm,
+			CaughtChildFishWeights: s.CaughtChildFishWeights,
+			CaughtAdultFishWeights: s.CaughtAdultFishWeights,
 		}
 	}
 
 	clone := SharedCustomState{
-		Bitmaps:       make(map[string][]uint8, len(s.Bitmaps)),
-		OcarinaButtonMaskOot: s.OcarinaButtonMaskOot,
-		OcarinaButtonMaskMm:  s.OcarinaButtonMaskMm,
-		BombchuBagOot: s.BombchuBagOot,
-		BombchuBagMm:  s.BombchuBagMm,
+		Bitmaps:                make(map[string][]uint8, len(s.Bitmaps)),
+		OcarinaButtonMaskOot:   s.OcarinaButtonMaskOot,
+		OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
+		BombchuBagOot:          s.BombchuBagOot,
+		BombchuBagMm:           s.BombchuBagMm,
+		CaughtChildFishWeights: s.CaughtChildFishWeights,
+		CaughtAdultFishWeights: s.CaughtAdultFishWeights,
 	}
 	for name, bitmap := range s.Bitmaps {
 		clone.Bitmaps[name] = append([]uint8(nil), bitmap...)

@@ -3,31 +3,40 @@ package ootmm
 import "math/bits"
 
 const (
-	dungeonItemMapMask       = 0x04
-	dungeonItemCompassMask   = 0x02
-	dungeonItemBossKeyMask   = 0x01
+	dungeonItemMapMask              = 0x04
+	dungeonItemCompassMask          = 0x02
+	dungeonItemBossKeyMask          = 0x01
+	fishingPondLoachWeightMask      = 0x80
+	fishingPondChildFishMinWeight   = 2
+	fishingPondChildFishMaxWeight   = 14
+	fishingPondAdultFishMinWeight   = 4
+	fishingPondAdultFishMaxWeight   = 25
+	fishingPondChildLoachMinWeight  = 14
+	fishingPondChildLoachMaxWeight  = 19
+	fishingPondAdultLoachMinWeight  = 29
+	fishingPondAdultLoachMaxWeight  = 36
 	sharedOcarinaButtonMaskDisabled = 0xffff
 	sharedOcarinaButtonAMask        = 0x0010
 	sharedOcarinaButtonCRightMask   = 0x0001
 	sharedOcarinaButtonCLeftMask    = 0x0002
 	sharedOcarinaButtonCUpMask      = 0x0004
 	sharedOcarinaButtonCDownMask    = 0x0008
-	mmExtraFlags2Notebook    = 9
-	mmExtraFlags2MaskBlast   = 10
-	mmOwlGreatBayBit         = 0
-	mmOwlZoraCapeBit         = 1
-	mmOwlSnowheadBit         = 2
-	mmOwlMountainVillageBit  = 3
-	mmOwlClockTownBit        = 4
-	mmOwlMilkRoadBit         = 5
-	mmOwlWoodfallBit         = 6
-	mmOwlSouthernSwampBit    = 7
-	mmOwlIkanaCanyonBit      = 8
-	mmOwlStoneTowerBit       = 9
-	mmOwlHiddenBit           = 15
-	ootEventSongSariaVanilla = 0x38
-	ootEventSongSariaCustom  = 0x58
-	ootEventSongSunCustom    = 0x5a
+	mmExtraFlags2Notebook           = 9
+	mmExtraFlags2MaskBlast          = 10
+	mmOwlGreatBayBit                = 0
+	mmOwlZoraCapeBit                = 1
+	mmOwlSnowheadBit                = 2
+	mmOwlMountainVillageBit         = 3
+	mmOwlClockTownBit               = 4
+	mmOwlMilkRoadBit                = 5
+	mmOwlWoodfallBit                = 6
+	mmOwlSouthernSwampBit           = 7
+	mmOwlIkanaCanyonBit             = 8
+	mmOwlStoneTowerBit              = 9
+	mmOwlHiddenBit                  = 15
+	ootEventSongSariaVanilla        = 0x38
+	ootEventSongSariaCustom         = 0x58
+	ootEventSongSunCustom           = 0x5a
 )
 
 var mmOwlItems = [...]struct {
@@ -325,6 +334,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		items = append(items, TrackedItem{button.ootItemID, boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskOot, button.mask))})
 		items = append(items, TrackedItem{button.mmItemID, boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskMm, button.mask))})
 	}
+	items = appendOotFishingPondItems(items, &state.Shared)
 	items = appendCatalogItems(items, state)
 
 	return items
@@ -660,6 +670,91 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 		items = append(items, TrackedItem{ID: entry.ItemID, Qty: qty})
 	}
 	return items
+}
+
+func appendOotFishingPondItems(items []TrackedItem, shared *SharedCustomState) []TrackedItem {
+	items = appendFishingPondWeightItems(items, shared.CaughtChildFishWeights[:], false)
+	items = appendFishingPondWeightItems(items, shared.CaughtAdultFishWeights[:], true)
+	return items
+}
+
+func appendFishingPondWeightItems(items []TrackedItem, caughtWeights []uint8, adult bool) []TrackedItem {
+	if len(caughtWeights) == 0 {
+		return items
+	}
+
+	count := int(caughtWeights[0])
+	if count > len(caughtWeights)-1 {
+		count = len(caughtWeights) - 1
+	}
+	if count <= 0 {
+		return items
+	}
+
+	counts := make(map[uint8]int, count)
+	for index := 1; index <= count; index++ {
+		itemID := ootFishingPondItemID(adult, caughtWeights[index])
+		if itemID == "" {
+			continue
+		}
+		counts[caughtWeights[index]]++
+	}
+
+	if adult {
+		for weight := uint8(fishingPondAdultFishMinWeight); weight <= fishingPondAdultFishMaxWeight; weight++ {
+			if qty := counts[weight]; qty > 0 {
+				items = append(items, TrackedItem{ID: ootFishingPondItemID(true, weight), Qty: qty})
+			}
+		}
+		for weight := uint8(fishingPondAdultLoachMinWeight); weight <= fishingPondAdultLoachMaxWeight; weight++ {
+			rawWeight := weight | fishingPondLoachWeightMask
+			if qty := counts[rawWeight]; qty > 0 {
+				items = append(items, TrackedItem{ID: ootFishingPondItemID(true, rawWeight), Qty: qty})
+			}
+		}
+		return items
+	}
+
+	for weight := uint8(fishingPondChildFishMinWeight); weight <= fishingPondChildFishMaxWeight; weight++ {
+		if qty := counts[weight]; qty > 0 {
+			items = append(items, TrackedItem{ID: ootFishingPondItemID(false, weight), Qty: qty})
+		}
+	}
+	for weight := uint8(fishingPondChildLoachMinWeight); weight <= fishingPondChildLoachMaxWeight; weight++ {
+		rawWeight := weight | fishingPondLoachWeightMask
+		if qty := counts[rawWeight]; qty > 0 {
+			items = append(items, TrackedItem{ID: ootFishingPondItemID(false, rawWeight), Qty: qty})
+		}
+	}
+
+	return items
+}
+
+func ootFishingPondItemID(adult bool, rawWeight uint8) string {
+	weight := rawWeight &^ fishingPondLoachWeightMask
+	if rawWeight&fishingPondLoachWeightMask != 0 {
+		if adult {
+			if weight < fishingPondAdultLoachMinWeight || weight > fishingPondAdultLoachMaxWeight {
+				return ""
+			}
+			return "OOT_FISHING_POND_ADULT_LOACH_" + itoa(int(weight)) + "LBS"
+		}
+		if weight < fishingPondChildLoachMinWeight || weight > fishingPondChildLoachMaxWeight {
+			return ""
+		}
+		return "OOT_FISHING_POND_CHILD_LOACH_" + itoa(int(weight)) + "LBS"
+	}
+
+	if adult {
+		if weight < fishingPondAdultFishMinWeight || weight > fishingPondAdultFishMaxWeight {
+			return ""
+		}
+		return "OOT_FISHING_POND_ADULT_FISH_" + itoa(int(weight)) + "LBS"
+	}
+	if weight < fishingPondChildFishMinWeight || weight > fishingPondChildFishMaxWeight {
+		return ""
+	}
+	return "OOT_FISHING_POND_CHILD_FISH_" + itoa(int(weight)) + "LBS"
 }
 
 func hasMmSkeletonKey(mm *MmState) bool {

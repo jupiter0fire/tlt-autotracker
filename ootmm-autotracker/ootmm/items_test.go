@@ -558,6 +558,36 @@ func TestExtractItemsIgnoresDisabledSharedOcarinaButtons(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesOotFishingPondItems(t *testing.T) {
+	state := &GameState{}
+	state.Shared.CaughtChildFishWeights[0] = 3
+	state.Shared.CaughtChildFishWeights[1] = 2
+	state.Shared.CaughtChildFishWeights[2] = fishingPondLoachWeightMask | 19
+	state.Shared.CaughtChildFishWeights[3] = fishingPondLoachWeightMask | 19
+	state.Shared.CaughtAdultFishWeights[0] = 3
+	state.Shared.CaughtAdultFishWeights[1] = 25
+	state.Shared.CaughtAdultFishWeights[2] = fishingPondLoachWeightMask | 36
+	state.Shared.CaughtAdultFishWeights[3] = 1
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_FISHING_POND_CHILD_FISH_2LBS"]; got != 1 {
+		t.Fatalf("OOT_FISHING_POND_CHILD_FISH_2LBS = %d, want 1", got)
+	}
+	if got := items["OOT_FISHING_POND_CHILD_LOACH_19LBS"]; got != 2 {
+		t.Fatalf("OOT_FISHING_POND_CHILD_LOACH_19LBS = %d, want 2", got)
+	}
+	if got := items["OOT_FISHING_POND_ADULT_FISH_25LBS"]; got != 1 {
+		t.Fatalf("OOT_FISHING_POND_ADULT_FISH_25LBS = %d, want 1", got)
+	}
+	if got := items["OOT_FISHING_POND_ADULT_LOACH_36LBS"]; got != 1 {
+		t.Fatalf("OOT_FISHING_POND_ADULT_LOACH_36LBS = %d, want 1", got)
+	}
+	if _, ok := items["OOT_FISHING_POND_ADULT_FISH_1LBS"]; ok {
+		t.Fatal("OOT_FISHING_POND_ADULT_FISH_1LBS should not be exported")
+	}
+}
+
 func TestExtractItemsOnlyChangesRequestedMissingItems(t *testing.T) {
 	base := &GameState{}
 	base.Oot.QuestItems = 1 << QuestOotMedallionForest
