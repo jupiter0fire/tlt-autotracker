@@ -793,6 +793,26 @@ func TestExtractChecksIncludesLiveOotCollectibleFlags(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesDodongoHeartMinibossLavaCollectibleFallback(t *testing.T) {
+	state := &GameState{}
+	state.Oot.LiveSceneID = 1
+	state.Oot.LiveCollectFlags = 1 << 24
+	state.Oot.HasLiveSceneFlags = true
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Dodongo Cavern Heart Miniboss Lava"]; !ok {
+		t.Fatal("missing Dodongo Cavern Heart Miniboss Lava live collectible fallback")
+	}
+
+	state = &GameState{}
+	state.Oot.SceneFlags[1].Collectibles = 1 << 24
+
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Dodongo Cavern Heart Miniboss Lava"]; !ok {
+		t.Fatal("missing Dodongo Cavern Heart Miniboss Lava stable collectible fallback")
+	}
+}
+
 func TestExtractChecksFallsBackToStableKey(t *testing.T) {
 	original := checkNameTable
 	checkNameTable = map[string]string{}

@@ -37,6 +37,7 @@ var (
 	scrubCheckTables       map[string]map[int]string
 	silverRupeeCheckTables map[string]map[int]string
 	npcSymbolTables        map[string]map[string]string
+	sceneCheckFallbacks    map[string]string
 )
 
 //go:embed locations.json
@@ -50,6 +51,9 @@ func init() {
 	scrubCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	silverRupeeCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	npcSymbolTables = map[string]map[string]string{"OOT": {}, "MM": {}}
+	sceneCheckFallbacks = map[string]string{
+		sceneCheckKey("OOT", 1, "collect", 24): "Dodongo Cavern Heart Miniboss Lava",
+	}
 
 	var locations locationFile
 	if err := json.Unmarshal(embeddedLocations, &locations); err != nil {
@@ -125,6 +129,9 @@ func sceneCheckKey(game string, scene int, kind string, bit int) string {
 func lookupSceneCheckName(game string, scene int, kind string, bit int) (string, bool) {
 	key := sceneCheckKey(game, scene, kind, bit)
 	name, ok := checkNameTable[key]
+	if !ok {
+		name, ok = sceneCheckFallbacks[key]
+	}
 	return name, ok
 }
 

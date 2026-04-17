@@ -37,6 +37,8 @@ const (
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
 	ootEventSongSunCustom           = 0x5a
+	ootItemRutoLetter               = 0x1b
+	mmItemRutoLetter                = 0xb6
 )
 
 var mmOwlItems = [...]struct {
@@ -185,6 +187,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
 	}
+	items = append(items, TrackedItem{"OOT_BOTTLE_RUTO_LETTER", countOotBottleItem(oot.Items[:], ootItemRutoLetter)})
 
 	// OoT trade items — bitmasks from ExtraRecords.
 	// OotExtraTrade: u16 child (upper 16 bits) | u16 adult (lower 16 bits).
@@ -271,6 +274,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 			items = append(items, TrackedItem{entry.ItemID, qty})
 		}
 	}
+	items = append(items, TrackedItem{"MM_BOTTLE_RUTO_LETTER", countMmBottleItem(mm.Items[:], mmItemRutoLetter)})
 
 	// MM trade items — bitmasks from ExtraRecords (stored in OoT save).
 	// MmExtraTrade (big-endian): trade1:6|trade2:5|trade3:5|tradeObtained1:6|tradeObtained2:5|tradeObtained3:5
@@ -966,4 +970,26 @@ func isOotBottleItem(itemID uint8) bool {
 	default:
 		return false
 	}
+}
+
+func countOotBottleItem(items []uint8, target uint8) int {
+	return countBottleItem(items, target, ootInventorySlotEntry, "OOT_BOTTLE_")
+}
+
+func countMmBottleItem(items []uint8, target uint8) int {
+	return countBottleItem(items, target, mmInventorySlotEntry, "MM_BOTTLE_")
+}
+
+func countBottleItem(items []uint8, target uint8, slotEntry func(int) inventorySlotEntry, bottlePrefix string) int {
+	count := 0
+	for index, itemID := range items {
+		if itemID != target {
+			continue
+		}
+		entry := slotEntry(index)
+		if len(entry.ItemID) >= len(bottlePrefix) && entry.ItemID[:len(bottlePrefix)] == bottlePrefix {
+			count++
+		}
+	}
+	return count
 }
