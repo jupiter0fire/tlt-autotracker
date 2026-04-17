@@ -139,6 +139,7 @@ const (
 	OotOffDungeonItems = 0xA8   // OotDungeonItems[0x14]
 	OotOffDungeonKeys  = 0xBC   // s8[0x13]
 	OotOffGoldTokens   = 0xD0   // u16
+	OotOffGsFlags      = 0xE9C  // u8[24] (s32[6])
 	OotOffChecksum     = 0x1352 // u16 additive checksum over OotSave with checksum zeroed
 
 	// Scene flags
@@ -147,7 +148,7 @@ const (
 	OotPermCount     = 124
 
 	// Event flags
-	OotOffEventsChk  = 0xED8 // u16[14] — from info start (OotSave + 0x20)
+	OotOffEventsChk  = 0xED4 // u16[14]
 	OotOffEventsMisc = 0xEF8 // u16[30]
 
 	// Extra records stored in perm[N].raw + 0x10

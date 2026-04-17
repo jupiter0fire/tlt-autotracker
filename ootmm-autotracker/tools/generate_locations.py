@@ -38,6 +38,7 @@ XFLAG_TYPES = {
 }
 
 BITMAP_SPECS = {
+    ("OOT", "gs"): "gsOot",
     ("OOT", "npc"): "npcOot",
     ("MM", "npc"): "npcMm",
     ("OOT", "shop"): "shopsOot",
@@ -257,9 +258,13 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                         bit = int(value, 0)
                     except ValueError:
                         continue
+                    if check_type == "gs":
+                        bit -= 8
                     if bit < 0:
                         continue
                     add_unique_mapping(bitmap_checks_raw, bitmap_conflicts, (bitmap_block, bit), location)
+                    if game == "OOT" and bitmap_block == "gsOot":
+                        bitmap_variant_candidates[(bitmap_block, bit)].append((scene_name, location))
                     continue
 
                 if check_type not in XFLAG_TYPES:
@@ -351,7 +356,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
 
         vanilla_names = [location for _, location in unique_entries if not location.startswith("MQ ")]
         mq_names = [location for _, location in unique_entries if location.startswith("MQ ")]
-        if len(vanilla_names) != 1 or len(mq_names) != 1:
+        if not vanilla_names or not mq_names:
             continue
 
         bitmap_conflict_entries.append(
@@ -359,8 +364,8 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                 "block": block,
                 "bit": bit,
                 "dungeonMq": dungeon_mq,
-                "vanilla": vanilla_names[0],
-                "mq": mq_names[0],
+                "vanilla": vanilla_names,
+                "mq": mq_names,
             }
         )
     symbol_checks = [

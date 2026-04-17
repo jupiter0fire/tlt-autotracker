@@ -421,6 +421,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 
 	appendBitmapChecks(state.Shared.Bitmap("npcOot"), "OOT", "npc", npcCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("npcMm"), "MM", "npc", npcCheckName)
+	appendOotGsChecks(state.Oot.GsFlags[:], &state.Oot, appendCheck)
 	appendOotXflagChecks(state.Shared.Bitmap("xflagsOot"), &state.Oot, appendCheck)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsMm"), "MM", "xflag", xflagCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("shopsOot"), "OOT", "shop", shopCheckName)
@@ -462,6 +463,26 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	return checks
 }
 
+func appendOotGsChecks(bitmap []uint32, oot *OotState, appendCheck func(string, string)) {
+	for wordIndex, value := range bitmap {
+		for bit := 0; bit < 32; bit++ {
+			if value&(1<<uint(bit)) == 0 {
+				continue
+			}
+			index := wordIndex*32 + bit
+			if name, ok := gsCheckName("OOT", index); ok {
+				appendCheck("OOT_gs_"+itoa(index), name)
+				continue
+			}
+			if names, ok := ootConflictingGsCheckNames(oot, index); ok {
+				for _, name := range names {
+					appendCheck("OOT_gs_"+itoa(index), name)
+				}
+			}
+		}
+	}
+}
+
 func appendOotXflagChecks(bitmap []uint8, oot *OotState, appendCheck func(string, string)) {
 	for byteIndex, value := range bitmap {
 		for bit := 0; bit < 8; bit++ {
@@ -469,12 +490,14 @@ func appendOotXflagChecks(bitmap []uint8, oot *OotState, appendCheck func(string
 				continue
 			}
 			index := byteIndex*8 + bit
-			name, ok := xflagCheckName("OOT", index)
-			if !ok {
-				name, ok = ootConflictingXflagCheckName(oot, index)
-			}
-			if ok {
+			if name, ok := xflagCheckName("OOT", index); ok {
 				appendCheck("OOT_xflag_"+itoa(index), name)
+				continue
+			}
+			if names, ok := ootConflictingXflagCheckNames(oot, index); ok {
+				for _, name := range names {
+					appendCheck("OOT_xflag_"+itoa(index), name)
+				}
 			}
 		}
 	}

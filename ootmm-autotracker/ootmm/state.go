@@ -114,6 +114,7 @@ type OotState struct {
 	DungeonKeys  [19]int8
 
 	GoldTokens                  uint16
+	GsFlags                     [6]uint32
 	RuntimeMqBits               uint32
 	RuntimeMaxKeys              [OotRuntimeSceneCount]uint8
 	RuntimeSilverRupeeCounts    [OotSilverRupeeSetCount]uint8

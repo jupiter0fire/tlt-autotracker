@@ -1,6 +1,9 @@
 package ootmm
 
-import "testing"
+import (
+	"encoding/binary"
+	"testing"
+)
 
 func TestExtractItemsNormalizesOotInventorySlots(t *testing.T) {
 	state := &GameState{}
@@ -887,22 +890,21 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 	}
 }
 
-
 func TestExtractChecksResolvesOotXflagConflictsFromRuntimeMqBits(t *testing.T) {
 	originalXflags := xflagCheckTables
-	originalConflicts := ootXflagConflictTable
+	originalConflicts := ootBitmapConflictTable["xflagsOot"]
 	xflagCheckTables = map[string]map[int]string{
 		"OOT": {176: "Dodongo Cavern Pot Miniboss 4"},
 		"MM":  {},
 	}
-	ootXflagConflictTable = map[int]bitmapConflictEntry{
-		173: {Block: "xflagsOot", Bit: 173, DungeonMq: OotMqDodongosCavern, Vanilla: "Dodongo Cavern Pot Miniboss 1", Mq: "MQ Dodongo Cavern Pot Miniboss 2"},
-		174: {Block: "xflagsOot", Bit: 174, DungeonMq: OotMqDodongosCavern, Vanilla: "Dodongo Cavern Pot Miniboss 2", Mq: "MQ Dodongo Cavern Pot Miniboss 3"},
-		175: {Block: "xflagsOot", Bit: 175, DungeonMq: OotMqDodongosCavern, Vanilla: "Dodongo Cavern Pot Miniboss 3", Mq: "MQ Dodongo Cavern Pot Miniboss 4"},
+	ootBitmapConflictTable["xflagsOot"] = map[int]bitmapConflictEntry{
+		173: {Block: "xflagsOot", Bit: 173, DungeonMq: OotMqDodongosCavern, Vanilla: []string{"Dodongo Cavern Pot Miniboss 1"}, Mq: []string{"MQ Dodongo Cavern Pot Miniboss 2"}},
+		174: {Block: "xflagsOot", Bit: 174, DungeonMq: OotMqDodongosCavern, Vanilla: []string{"Dodongo Cavern Pot Miniboss 2"}, Mq: []string{"MQ Dodongo Cavern Pot Miniboss 3"}},
+		175: {Block: "xflagsOot", Bit: 175, DungeonMq: OotMqDodongosCavern, Vanilla: []string{"Dodongo Cavern Pot Miniboss 3"}, Mq: []string{"MQ Dodongo Cavern Pot Miniboss 4"}},
 	}
 	defer func() {
 		xflagCheckTables = originalXflags
-		ootXflagConflictTable = originalConflicts
+		ootBitmapConflictTable["xflagsOot"] = originalConflicts
 	}()
 
 	state := &GameState{}
@@ -928,6 +930,139 @@ func TestExtractChecksResolvesOotXflagConflictsFromRuntimeMqBits(t *testing.T) {
 	if _, ok := checks["MQ Dodongo Cavern Pot Miniboss 2"]; !ok {
 		t.Fatal("missing MQ Dodongo xflag conflict resolution")
 	}
+}
+
+func TestExtractChecksResolvesDodongoGsConflictsFromRuntimeMqBits(t *testing.T) {
+	originalGs := gsCheckTables
+	originalConflicts := ootBitmapConflictTable["gsOot"]
+	gsCheckTables = map[string]map[int]string{
+		"OOT": {9: "Dodongo Cavern GS Scarecrow"},
+	}
+	ootBitmapConflictTable["gsOot"] = map[int]bitmapConflictEntry{
+		8:  {Block: "gsOot", Bit: 8, DungeonMq: OotMqDodongosCavern, Vanilla: []string{"Dodongo Cavern GS Stairs Vines"}, Mq: []string{"MQ Dodongo Cavern GS Near Boss"}},
+		10: {Block: "gsOot", Bit: 10, DungeonMq: OotMqDodongosCavern, Vanilla: []string{"Dodongo Cavern GS Stairs Top"}, Mq: []string{"MQ Dodongo Cavern GS Upper Lizalfos"}},
+		11: {Block: "gsOot", Bit: 11, DungeonMq: OotMqDodongosCavern, Vanilla: []string{"Dodongo Cavern GS Near Boss"}, Mq: []string{"MQ Dodongo Cavern GS Poe Room Side"}},
+	}
+	defer func() {
+		gsCheckTables = originalGs
+		ootBitmapConflictTable["gsOot"] = originalConflicts
+	}()
+
+	state := &GameState{}
+	state.Oot.HasRuntimeMqBits = true
+	for _, bit := range []int{8, 9, 10, 11} {
+		setWordBitmapBit(state.Oot.GsFlags[:], bit)
+	}
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Dodongo Cavern GS Stairs Vines",
+		"Dodongo Cavern GS Stairs Top",
+		"Dodongo Cavern GS Near Boss",
+		"Dodongo Cavern GS Scarecrow",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing vanilla Dodongo GS check %q", name)
+		}
+	}
+
+	state.Oot.RuntimeMqBits = 1 << OotMqDodongosCavern
+	checks = checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"MQ Dodongo Cavern GS Near Boss",
+		"MQ Dodongo Cavern GS Upper Lizalfos",
+		"MQ Dodongo Cavern GS Poe Room Side",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing MQ Dodongo GS check %q", name)
+		}
+	}
+	if _, ok := checks["Dodongo Cavern GS Stairs Vines"]; ok {
+		t.Fatal("vanilla Dodongo Cavern GS Stairs Vines should not be exported for MQ")
+	}
+}
+
+func TestDodongoGsConflictsGenerated(t *testing.T) {
+	assertConflictContains := func(vanilla string, mq string) {
+		t.Helper()
+		for _, entry := range ootBitmapConflictTable["gsOot"] {
+			if containsString(entry.Vanilla, vanilla) && containsString(entry.Mq, mq) {
+				return
+			}
+		}
+		t.Fatalf("missing generated Dodongo GS conflict %q <-> %q", vanilla, mq)
+	}
+
+	assertConflictContains("Dodongo Cavern GS Stairs Vines", "MQ Dodongo Cavern GS Near Boss")
+	assertConflictContains("Dodongo Cavern GS Stairs Top", "MQ Dodongo Cavern GS Upper Lizalfos")
+	assertConflictContains("Dodongo Cavern GS Near Boss", "MQ Dodongo Cavern GS Time Blocks")
+}
+
+func TestExtractChecksIncludesDodongoGsChecksFromGeneratedConflicts(t *testing.T) {
+	state := &GameState{}
+	state.Oot.HasRuntimeMqBits = true
+	for _, bit := range []int{8, 9, 10, 11, 12} {
+		setWordBitmapBit(state.Oot.GsFlags[:], bit)
+	}
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Dodongo Cavern GS Stairs Vines",
+		"Dodongo Cavern GS Scarecrow",
+		"Dodongo Cavern GS Stairs Top",
+		"Dodongo Cavern GS Near Boss",
+		"Dodongo Cavern GS Side Room",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing vanilla Dodongo GS check %q from generated conflicts", name)
+		}
+	}
+
+	state.Oot.RuntimeMqBits = 1 << OotMqDodongosCavern
+	checks = checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"MQ Dodongo Cavern GS Near Boss",
+		"MQ Dodongo Cavern GS Poe Room Side",
+		"MQ Dodongo Cavern GS Upper Lizalfos",
+		"MQ Dodongo Cavern GS Time Blocks",
+		"MQ Dodongo Cavern GS Larve Room",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing MQ Dodongo GS check %q from generated conflicts", name)
+		}
+	}
+}
+
+func TestParseOotSaveReadsGsFlags(t *testing.T) {
+	data := make([]byte, OotSaveSize)
+	data[OotOffInvItems] = 0x00
+	data[OotOffInvItems+15] = 0x0F
+	binary.BigEndian.PutUint32(data[OotOffGsFlags+4:], 0x12345678)
+	binary.BigEndian.PutUint16(data[OotOffGoldTokens:], 42)
+
+	var oot OotState
+	if err := parseOotSave(&oot, data); err != nil {
+		t.Fatalf("parseOotSave: %v", err)
+	}
+	if oot.GoldTokens != 42 {
+		t.Fatalf("unexpected OoT gold token count: %d", oot.GoldTokens)
+	}
+	if oot.GsFlags[1] != 0x12345678 {
+		t.Fatalf("unexpected OoT gs flags word: %#x", oot.GsFlags[1])
+	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func setWordBitmapBit(bitmap []uint32, bit int) {
+	bitmap[bit/32] |= 1 << uint(bit%32)
 }
 
 func TestExtractChecksIncludesShopBitmapChecks(t *testing.T) {

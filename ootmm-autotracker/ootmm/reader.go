@@ -202,6 +202,9 @@ func parseOotSave(oot *OotState, data []byte) error {
 		oot.DungeonKeys[i] = int8(data[OotOffDungeonKeys+i])
 	}
 	oot.GoldTokens = binary.BigEndian.Uint16(data[OotOffGoldTokens:])
+	for i := range oot.GsFlags {
+		oot.GsFlags[i] = binary.BigEndian.Uint32(data[OotOffGsFlags+i*4:])
+	}
 
 	// Scene flags
 	for i := 0; i < OotPermCount; i++ {
@@ -223,11 +226,9 @@ func parseOotSave(oot *OotState, data []byte) error {
 		oot.ExtraRecords[i] = binary.BigEndian.Uint32(data[off:])
 	}
 
-	// Event flags — these are within OotSaveInfo which starts at OotSave+0x20
-	// ASSERT_OFFSET(OotSave, info.eventsMisc, 0xef8) — this is from OotSave start
-	eventsChkOff := 0xED8 // eventsChk offset from OotSave start
+	// Event flags
 	for i := 0; i < 14; i++ {
-		oot.EventsChk[i] = binary.BigEndian.Uint16(data[eventsChkOff+i*2:])
+		oot.EventsChk[i] = binary.BigEndian.Uint16(data[OotOffEventsChk+i*2:])
 	}
 	eventsMiscOff := OotOffEventsMisc
 	for i := 0; i < 30; i++ {
