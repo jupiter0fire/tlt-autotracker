@@ -372,14 +372,14 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		// Each set bit in the chests field = one opened chest
 		for bit := 0; bit < 32; bit++ {
 			if chests&(1<<uint(bit)) != 0 {
-				if name, ok := lookupSceneCheckName("OOT", sceneIdx, "chest", bit); ok {
+				if name, ok := ootSceneCheckNameForState(&state.Oot, sceneIdx, "chest", bit); ok {
 					appendCheck(ootSceneCheckID(sceneIdx, "chest", bit), name)
 				}
 			}
 		}
 		for bit := 0; bit < 32; bit++ {
 			if collectibles&(1<<uint(bit)) != 0 {
-				if name, ok := lookupSceneCheckName("OOT", sceneIdx, "collect", bit); ok {
+				if name, ok := ootSceneCheckNameForState(&state.Oot, sceneIdx, "collect", bit); ok {
 					appendCheck(ootSceneCheckID(sceneIdx, "collect", bit), name)
 				}
 			}

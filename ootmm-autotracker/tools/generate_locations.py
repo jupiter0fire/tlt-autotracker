@@ -207,6 +207,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
 
     scene_checks_raw: dict[str, str] = {}
     scene_conflicts: set[str] = set()
+    scene_variant_candidates: dict[str, list[tuple[str, str]]] = defaultdict(list)
     bitmap_checks_raw: dict[tuple[str, int], str] = {}
     bitmap_conflicts: set[tuple[str, int]] = set()
     bitmap_variant_candidates: dict[tuple[str, int], list[tuple[str, str]]] = defaultdict(list)
@@ -238,6 +239,8 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     if bit < 0 or bit >= 32:
                         continue
                     key = scene_check_key(game, scene_id, scene_kind, bit)
+                    if game == "OOT":
+                        scene_variant_candidates[key].append((scene_name, location))
                     add_unique_mapping(scene_checks_raw, scene_conflicts, key, location)
                     continue
 
@@ -289,6 +292,39 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
         {"key": key, "name": name}
         for key, name in sorted(finalize_mapping(scene_checks_raw, scene_conflicts).items())
     ]
+    scene_conflict_entries = []
+    for key, entries in sorted(scene_variant_candidates.items()):
+        unique_entries: list[tuple[str, str]] = []
+        seen_names: set[str] = set()
+        for scene_name, location in entries:
+            if location in seen_names:
+                continue
+            seen_names.add(location)
+            unique_entries.append((scene_name, location))
+        if len(unique_entries) <= 1:
+            continue
+
+        scene_names = {scene_name for scene_name, _ in unique_entries}
+        if len(scene_names) != 1:
+            continue
+        scene_name = next(iter(scene_names))
+        dungeon_mq = OOT_MQ_DUNGEON_IDS.get(scene_name)
+        if dungeon_mq is None:
+            continue
+
+        vanilla_names = [location for _, location in unique_entries if not location.startswith("MQ ")]
+        mq_names = [location for _, location in unique_entries if location.startswith("MQ ")]
+        if len(vanilla_names) != 1 or len(mq_names) != 1:
+            continue
+
+        scene_conflict_entries.append(
+            {
+                "key": key,
+                "dungeonMq": dungeon_mq,
+                "vanilla": vanilla_names[0],
+                "mq": mq_names[0],
+            }
+        )
     bitmap_checks = [
         {"block": block, "bit": bit, "name": name}
         for (block, bit), name in sorted(finalize_mapping(bitmap_checks_raw, bitmap_conflicts).items())
@@ -334,6 +370,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
 
     return {
         "scene": scene_checks,
+        "scene_conflicts": scene_conflict_entries,
         "bitmap": bitmap_checks,
         "bitmap_conflicts": bitmap_conflict_entries,
         "symbols": symbol_checks,

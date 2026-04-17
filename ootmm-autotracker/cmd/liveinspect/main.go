@@ -1,94 +1,56 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"sort"
+"fmt"
+"os"
+"strings"
 
-	"github.com/ootmm-autotracker/n64"
-	"github.com/ootmm-autotracker/ootmm"
-	"github.com/ootmm-autotracker/retroarch"
+"github.com/ootmm-autotracker/n64"
+"github.com/ootmm-autotracker/ootmm"
+"github.com/ootmm-autotracker/retroarch"
 )
 
-const inspectBit = 170
-
 func main() {
-	client := retroarch.NewClient(retroarch.DefaultHost, retroarch.DefaultPort)
-	if err := client.Connect(); err != nil {
-		fatalf("connect RetroArch: %v", err)
-	}
-	defer client.Close()
+client := retroarch.NewClient(retroarch.DefaultHost, retroarch.DefaultPort)
+if err := client.Connect(); err != nil {
+fmt.Fprintf(os.Stderr, "connect RetroArch: %v\n", err)
+os.Exit(1)
+}
+defer client.Close()
 
-	mem := n64.NewMemory(client)
-	if err := mem.Probe(); err != nil {
-		fatalf("probe memory: %v", err)
-	}
-
-	reader := ootmm.NewReader(mem)
-	var (
-		state *ootmm.GameState
-		err   error
-	)
-	for attempt := 0; attempt < 8; attempt++ {
-		state, err = reader.ReadState()
-		if err != nil {
-			fatalf("read state: %v", err)
-		}
-		if state != nil && state.Valid && state.ActiveGame != ootmm.GameNone {
-			break
-		}
-	}
-
-	if state == nil {
-		fatalf("reader returned nil state")
-	}
-
-	fmt.Printf("state valid=%v active=%s save=%d ootScene=%#x hasRuntimeMq=%v runtimeMqBits=%#x liveXflag170=%v liveXflag173=%v liveXflag174=%v liveXflag175=%v liveXflag176=%v\n",
-		state.Valid,
-		state.ActiveGame,
-		state.SaveIndex,
-		state.Oot.SceneID,
-		state.Oot.HasRuntimeMqBits,
-		state.Oot.RuntimeMqBits,
-		isBitSet(state.Shared.Bitmap("xflagsOot"), inspectBit),
-		isBitSet(state.Shared.Bitmap("xflagsOot"), 173),
-		isBitSet(state.Shared.Bitmap("xflagsOot"), 174),
-		isBitSet(state.Shared.Bitmap("xflagsOot"), 175),
-		isBitSet(state.Shared.Bitmap("xflagsOot"), 176),
-	)
-	fmt.Printf("live scene=%#x chest=%#08x collect=%#08x tempCollect=%#08x hasLive=%v\n",
-		state.Oot.LiveSceneID,
-		state.Oot.LiveChestFlags,
-		state.Oot.LiveCollectFlags,
-		state.Oot.LiveTempCollectFlag,
-		state.Oot.HasLiveSceneFlags,
-	)
-	targets := []string{
-		"Dodongo Cavern Heart Miniboss Lava",
-		"Dodongo Cavern Pot Miniboss 1",
-		"Dodongo Cavern Pot Miniboss 2",
-		"Dodongo Cavern Pot Miniboss 3",
-		"Dodongo Cavern Pot Miniboss 4",
-	}
-	present := map[string]bool{}
-	for _, check := range ootmm.ExtractChecks(state) {
-		present[check.Name] = true
-	}
-	sort.Strings(targets)
-	for _, target := range targets {
-		fmt.Printf("target=%q present=%v\n", target, present[target])
-	}
+mem := n64.NewMemory(client)
+if err := mem.Probe(); err != nil {
+fmt.Fprintf(os.Stderr, "probe memory: %v\n", err)
+os.Exit(1)
 }
 
-func isBitSet(bitmap []byte, bit int) bool {
-	byteIndex := bit / 8
-	if byteIndex < 0 || byteIndex >= len(bitmap) {
-		return false
-	}
-	return bitmap[byteIndex]&(1<<uint(bit%8)) != 0
+reader := ootmm.NewReader(mem)
+state, err := reader.ReadState()
+if err != nil {
+fmt.Fprintf(os.Stderr, "read state: %v\n", err)
+os.Exit(1)
 }
 
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
+if state == nil {
+fmt.Fprintf(os.Stderr, "reader returned nil state\n")
+os.Exit(1)
+}
+
+fmt.Printf("active game: %s\n", state.ActiveGame)
+fmt.Printf("current OoT scene: %#x\n", state.Oot.SceneID)
+fmt.Printf("live chest flags: %#08x\n", state.Oot.LiveChestFlags)
+if len(state.Oot.SceneFlags) > 1 {
+fmt.Printf("stable scene 1 chest flags: %#08x\n", state.Oot.SceneFlags[1].Chests)
+}
+
+foundCompass := false
+for _, check := range ootmm.ExtractChecks(state) {
+if strings.Contains(strings.ToLower(check.Name), "dodongo") && strings.Contains(strings.ToLower(check.Name), "compass") {
+fmt.Printf("ExtractChecks includes: %s\n", check.Name)
+foundCompass = true
+}
+}
+if !foundCompass {
+fmt.Println("ExtractChecks does NOT include any Dodongo Cavern Compass chest name.")
+}
 }

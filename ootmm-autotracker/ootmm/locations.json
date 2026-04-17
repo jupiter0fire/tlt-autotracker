@@ -1465,6 +1465,596 @@
       "name": "Goron City Big Pot HP"
     }
   ],
+  "scene_conflicts": [
+    {
+      "key": "OOT_chest_0_1",
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Slingshot Chest",
+      "mq": "MQ Deku Tree Compass Chest"
+    },
+    {
+      "key": "OOT_chest_0_2",
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Compass Chest",
+      "mq": "MQ Deku Tree Slingshot Room Far Chest"
+    },
+    {
+      "key": "OOT_chest_0_3",
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Map Chest",
+      "mq": "MQ Deku Tree Map Chest"
+    },
+    {
+      "key": "OOT_chest_0_4",
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Basement Chest",
+      "mq": "MQ Deku Tree Basement Chest"
+    },
+    {
+      "key": "OOT_chest_0_5",
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Slingshot Side Chest",
+      "mq": "MQ Deku Tree Before Water Platform Chest"
+    },
+    {
+      "key": "OOT_chest_0_6",
+      "dungeonMq": 0,
+      "vanilla": "Deku Tree Compass Room Side Chest",
+      "mq": "MQ Deku Tree Slingshot Chest"
+    },
+    {
+      "key": "OOT_chest_11_0",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Stalfos",
+      "mq": "MQ Gerudo Training Grounds Left Side Iron Knuckle Chest"
+    },
+    {
+      "key": "OOT_chest_11_1",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Lizalfos",
+      "mq": "MQ Gerudo Training Grounds Right Side Dinolfos Chest"
+    },
+    {
+      "key": "OOT_chest_11_10",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Chest 2",
+      "mq": "MQ Gerudo Training Grounds Maze Third Chest"
+    },
+    {
+      "key": "OOT_chest_11_11",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Upper Fake Ceiling",
+      "mq": "MQ Gerudo Training Grounds Maze First Chest"
+    },
+    {
+      "key": "OOT_chest_11_13",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Water",
+      "mq": "MQ Gerudo Training Grounds Water Room Chest"
+    },
+    {
+      "key": "OOT_chest_11_14",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Behind Block Enemy Back",
+      "mq": "MQ Gerudo Training Grounds Torch Slug Room Switch Chest"
+    },
+    {
+      "key": "OOT_chest_11_17",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Near Block",
+      "mq": "MQ Gerudo Training Grounds Stalfos Room Chest"
+    },
+    {
+      "key": "OOT_chest_11_18",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Hammer Room",
+      "mq": "MQ Gerudo Training Grounds Torch Slug Room Clear Chest"
+    },
+    {
+      "key": "OOT_chest_11_19",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Entrance 2",
+      "mq": "MQ Gerudo Training Grounds Entryway Left Chest"
+    },
+    {
+      "key": "OOT_chest_11_2",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Behind Block Visible",
+      "mq": "MQ Gerudo Training Grounds Silver Block Room Chest"
+    },
+    {
+      "key": "OOT_chest_11_3",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Eye Statue",
+      "mq": "MQ Gerudo Training Grounds Spinning Statue Chest"
+    },
+    {
+      "key": "OOT_chest_11_4",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Upper Cage",
+      "mq": "MQ Gerudo Training Grounds Ice Arrows Chest"
+    },
+    {
+      "key": "OOT_chest_11_5",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Side Chest 1",
+      "mq": "MQ Gerudo Training Grounds Maze Right Side Middle Chest"
+    },
+    {
+      "key": "OOT_chest_11_6",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Chest 1",
+      "mq": "MQ Gerudo Training Grounds Maze Second Chest"
+    },
+    {
+      "key": "OOT_chest_11_7",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Grounds Entrance 1",
+      "mq": "MQ Gerudo Training Grounds Entryway Right Chest"
+    },
+    {
+      "key": "OOT_chest_11_8",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Side Chest 2",
+      "mq": "MQ Gerudo Training Grounds Maze Right Side Right Chest"
+    },
+    {
+      "key": "OOT_chest_11_9",
+      "dungeonMq": 10,
+      "vanilla": "Gerudo Training Maze Chest 3",
+      "mq": "MQ Gerudo Training Grounds Maze Fourth Chest"
+    },
+    {
+      "key": "OOT_chest_13_10",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Light Chest Around 1",
+      "mq": "MQ Ganon Castle Spirit Trial First Chest"
+    },
+    {
+      "key": "OOT_chest_13_20",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Spirit Chest 2",
+      "mq": "MQ Ganon Castle Spirit Trial Second Chest"
+    },
+    {
+      "key": "OOT_chest_13_5",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Shadow Chest 2",
+      "mq": "MQ Ganon Castle Shadow Trial Switch Chest"
+    },
+    {
+      "key": "OOT_chest_13_6",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Water Chest 1",
+      "mq": "MQ Ganon Castle Spirit Trial Gold Gauntlets Chest"
+    },
+    {
+      "key": "OOT_chest_13_7",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Water Chest 2",
+      "mq": "MQ Ganon Castle Spirit Trial Front Left Sun Chest"
+    },
+    {
+      "key": "OOT_chest_13_8",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Shadow Chest 1",
+      "mq": "MQ Ganon Castle Spirit Trial Back Left Sun Chest"
+    },
+    {
+      "key": "OOT_chest_13_9",
+      "dungeonMq": 11,
+      "vanilla": "Ganon Castle Forest Chest",
+      "mq": "MQ Ganon Castle Spirit Trial Back Right Sun Chest"
+    },
+    {
+      "key": "OOT_chest_1_4",
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Bomb Bag Chest",
+      "mq": "MQ Dodongo Cavern Bomb Bag Chest"
+    },
+    {
+      "key": "OOT_chest_1_5",
+      "dungeonMq": 1,
+      "vanilla": "Dodongo Cavern Compass Chest",
+      "mq": "MQ Dodongo Cavern Compass Chest"
+    },
+    {
+      "key": "OOT_chest_2_1",
+      "dungeonMq": 2,
+      "vanilla": "Jabu-Jabu Boomerang Chest",
+      "mq": "MQ Jabu-Jabu SoT Room Lower Chest"
+    },
+    {
+      "key": "OOT_chest_2_2",
+      "dungeonMq": 2,
+      "vanilla": "Jabu-Jabu Map Chest",
+      "mq": "MQ Jabu-Jabu Second Room B1 Chest"
+    },
+    {
+      "key": "OOT_chest_2_4",
+      "dungeonMq": 2,
+      "vanilla": "Jabu-Jabu Compass Chest",
+      "mq": "MQ Jabu-Jabu Third Room West Chest"
+    },
+    {
+      "key": "OOT_chest_3_0",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Mini-Boss Key",
+      "mq": "MQ Forest Temple Wolfos Chest"
+    },
+    {
+      "key": "OOT_chest_3_1",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Map",
+      "mq": "MQ Forest Temple East Garden Ledge Chest"
+    },
+    {
+      "key": "OOT_chest_3_11",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Antichamber",
+      "mq": "MQ Forest Temple Antichamber"
+    },
+    {
+      "key": "OOT_chest_3_12",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Bow",
+      "mq": "MQ Forest Temple Bow Chest"
+    },
+    {
+      "key": "OOT_chest_3_13",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Poe Key",
+      "mq": "MQ Forest Temple Map Chest"
+    },
+    {
+      "key": "OOT_chest_3_14",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Boss Key",
+      "mq": "MQ Forest Temple Boss Key Chest"
+    },
+    {
+      "key": "OOT_chest_3_15",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Compass",
+      "mq": "MQ Forest Temple Compass Chest"
+    },
+    {
+      "key": "OOT_chest_3_2",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Floormaster",
+      "mq": "MQ Forest Temple ReDead Chest"
+    },
+    {
+      "key": "OOT_chest_3_3",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Tree Small Key",
+      "mq": "MQ Forest Temple First Room Chest"
+    },
+    {
+      "key": "OOT_chest_3_5",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Garden",
+      "mq": "MQ Forest Temple East Garden High Ledge Chest"
+    },
+    {
+      "key": "OOT_chest_3_9",
+      "dungeonMq": 3,
+      "vanilla": "Forest Temple Well",
+      "mq": "MQ Forest Temple Well Chest"
+    },
+    {
+      "key": "OOT_chest_4_0",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Boss Key Side Chest",
+      "mq": "MQ Fire Temple Hammer Chest"
+    },
+    {
+      "key": "OOT_chest_4_1",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Jail 1 Chest",
+      "mq": "MQ Fire Temple 1f Lava Room Goron Chest"
+    },
+    {
+      "key": "OOT_chest_4_11",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Below Maze Chest",
+      "mq": "MQ Fire Temple Compass Chest"
+    },
+    {
+      "key": "OOT_chest_4_12",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Boss Key Chest",
+      "mq": "MQ Fire Temple Map Chest"
+    },
+    {
+      "key": "OOT_chest_4_2",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Lava Room South Jail Chest",
+      "mq": "MQ Fire Temple Early Lower Left Chest"
+    },
+    {
+      "key": "OOT_chest_4_3",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Maze Chest",
+      "mq": "MQ Fire Temple Maze Lower Chest"
+    },
+    {
+      "key": "OOT_chest_4_4",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Lava Room North Jail Chest",
+      "mq": "MQ Fire Temple Boss Key Chest"
+    },
+    {
+      "key": "OOT_chest_4_5",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Hammer",
+      "mq": "MQ Fire Temple Topmost Chest"
+    },
+    {
+      "key": "OOT_chest_4_6",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Above Maze Chest",
+      "mq": "MQ Fire Temple Maze Upper Chest"
+    },
+    {
+      "key": "OOT_chest_4_7",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Compass",
+      "mq": "MQ Fire Temple Pre-Boss Chest"
+    },
+    {
+      "key": "OOT_chest_4_8",
+      "dungeonMq": 4,
+      "vanilla": "Fire Temple Maze Jail Chest",
+      "mq": "MQ Fire Temple Maze Side Room Chest"
+    },
+    {
+      "key": "OOT_chest_5_0",
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Bombable Chest",
+      "mq": "MQ Water Temple Longshot Chest"
+    },
+    {
+      "key": "OOT_chest_5_1",
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Shell Chest",
+      "mq": "MQ Water Temple Compass Chest"
+    },
+    {
+      "key": "OOT_chest_5_2",
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Map",
+      "mq": "MQ Water Temple Map Chest"
+    },
+    {
+      "key": "OOT_chest_5_5",
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Boss Key Chest",
+      "mq": "MQ Water Temple Boss Key Chest"
+    },
+    {
+      "key": "OOT_chest_5_6",
+      "dungeonMq": 5,
+      "vanilla": "Water Temple Under Center",
+      "mq": "MQ Water Temple Central Pillar Chest"
+    },
+    {
+      "key": "OOT_chest_6_0",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Child Second Chest",
+      "mq": "MQ Spirit Temple Map Chest"
+    },
+    {
+      "key": "OOT_chest_6_1",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Sun Block Room Torches",
+      "mq": "MQ Spirit Temple Sun Block Room Chest"
+    },
+    {
+      "key": "OOT_chest_6_12",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Child Climb 1",
+      "mq": "MQ Spirit Temple Child Upper Ledge Chest"
+    },
+    {
+      "key": "OOT_chest_6_15",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Statue Upper Right",
+      "mq": "MQ Spirit Temple Chest in Box"
+    },
+    {
+      "key": "OOT_chest_6_18",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Adult Topmost Sun on Wall",
+      "mq": "MQ Spirit Temple Topmost Chest"
+    },
+    {
+      "key": "OOT_chest_6_2",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Statue Hands",
+      "mq": "MQ Spirit Temple Statue Room Ledge Chest"
+    },
+    {
+      "key": "OOT_chest_6_3",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Statue Base",
+      "mq": "MQ Spirit Temple Compass Chest"
+    },
+    {
+      "key": "OOT_chest_6_4",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Adult Lullaby",
+      "mq": "MQ Spirit Temple Purple Leever Chest"
+    },
+    {
+      "key": "OOT_chest_6_5",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Adult Late Sun on Wall",
+      "mq": "MQ Spirit Temple Boss Key Chest"
+    },
+    {
+      "key": "OOT_chest_6_6",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Child Climb 2",
+      "mq": "MQ Spirit Temple Child Upper Ground Chest"
+    },
+    {
+      "key": "OOT_chest_6_7",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Adult Silver Rupees",
+      "mq": "MQ Spirit Temple Symphony Room Chest"
+    },
+    {
+      "key": "OOT_chest_6_8",
+      "dungeonMq": 6,
+      "vanilla": "Spirit Temple Child First Chest",
+      "mq": "MQ Spirit Temple Map Room Back Chest"
+    },
+    {
+      "key": "OOT_chest_7_1",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Map",
+      "mq": "MQ Shadow Temple Compass Chest"
+    },
+    {
+      "key": "OOT_chest_7_10",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Boss Key Room 1",
+      "mq": "MQ Shadow Temple Crushing Wall Left Chest"
+    },
+    {
+      "key": "OOT_chest_7_11",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Boss Key Room 2",
+      "mq": "MQ Shadow Temple Boss Key Chest"
+    },
+    {
+      "key": "OOT_chest_7_12",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Spinning Blades Visible",
+      "mq": "MQ Shadow Temple Second Silver Rupee Visible Chest"
+    },
+    {
+      "key": "OOT_chest_7_13",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Invisible Floormaster",
+      "mq": "MQ Shadow Temple Hidden Dead Hand Chest"
+    },
+    {
+      "key": "OOT_chest_7_2",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Silver Rupees",
+      "mq": "MQ Shadow Temple Map Chest"
+    },
+    {
+      "key": "OOT_chest_7_20",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple After Wind Invisible",
+      "mq": "MQ Shadow Temple After Wind Bomb Chest"
+    },
+    {
+      "key": "OOT_chest_7_21",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Wind Room Hint",
+      "mq": "MQ Shadow Temple Wind Hint Chest"
+    },
+    {
+      "key": "OOT_chest_7_22",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Spinning Blades Invisible",
+      "mq": "MQ Shadow Temple Second Silver Rupee Invisible Chest"
+    },
+    {
+      "key": "OOT_chest_7_3",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Compass",
+      "mq": "MQ Shadow Temple First Gibdos Chest"
+    },
+    {
+      "key": "OOT_chest_7_4",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Falling Spikes Upper 1",
+      "mq": "MQ Shadow Temple Spike Curtain Upper Switch Chest"
+    },
+    {
+      "key": "OOT_chest_7_5",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Falling Spikes Lower",
+      "mq": "MQ Shadow Temple Spike Curtain Ground Chest"
+    },
+    {
+      "key": "OOT_chest_7_6",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Falling Spikes Upper 2",
+      "mq": "MQ Shadow Temple Spike Curtain Upper Cage Chest"
+    },
+    {
+      "key": "OOT_chest_7_7",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Hover Boots",
+      "mq": "MQ Shadow Temple Hover Boots Chest"
+    },
+    {
+      "key": "OOT_chest_7_8",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple After Wind",
+      "mq": "MQ Shadow Temple After Wind Gibdos Chest"
+    },
+    {
+      "key": "OOT_chest_7_9",
+      "dungeonMq": 7,
+      "vanilla": "Shadow Temple Invisible Spike Room",
+      "mq": "MQ Shadow Temple Invisible Spike Floor Chest"
+    },
+    {
+      "key": "OOT_chest_8_1",
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Compass",
+      "mq": "MQ Bottom of the Well Lens Chest"
+    },
+    {
+      "key": "OOT_chest_8_2",
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Under Debris",
+      "mq": "MQ Bottom of the Well Compass Chest"
+    },
+    {
+      "key": "OOT_chest_8_3",
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Lens",
+      "mq": "MQ Bottom of the Well Map Chest"
+    },
+    {
+      "key": "OOT_chest_9_0",
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Map",
+      "mq": "MQ Ice Cavern Compass Chest"
+    },
+    {
+      "key": "OOT_chest_9_1",
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Compass",
+      "mq": "MQ Ice Cavern Map Chest"
+    },
+    {
+      "key": "OOT_chest_9_2",
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern Iron Boots",
+      "mq": "MQ Ice Cavern Iron Boots"
+    },
+    {
+      "key": "OOT_collect_8_1",
+      "dungeonMq": 8,
+      "vanilla": "Bottom of the Well Coffin",
+      "mq": "MQ Bottom of the Well East Middle Room Key"
+    },
+    {
+      "key": "OOT_collect_9_1",
+      "dungeonMq": 9,
+      "vanilla": "Ice Cavern HP",
+      "mq": "MQ Ice Cavern Piece of Heart"
+    }
+  ],
   "bitmap": [
     {
       "block": "npcMm",

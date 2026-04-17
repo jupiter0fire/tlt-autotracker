@@ -813,6 +813,26 @@ func TestExtractChecksIncludesDodongoHeartMinibossLavaCollectibleFallback(t *tes
 	}
 }
 
+func TestExtractChecksResolvesDodongoCompassChestSceneConflict(t *testing.T) {
+	state := &GameState{}
+	state.Oot.HasRuntimeMqBits = true
+	state.Oot.SceneFlags[1].Chests = 1 << 5
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Dodongo Cavern Compass Chest"]; !ok {
+		t.Fatal("missing Dodongo Cavern Compass Chest scene conflict resolution")
+	}
+
+	state.Oot.RuntimeMqBits = 1 << OotMqDodongosCavern
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["MQ Dodongo Cavern Compass Chest"]; !ok {
+		t.Fatal("missing MQ Dodongo Cavern Compass Chest scene conflict resolution")
+	}
+	if _, ok := checks["Dodongo Cavern Compass Chest"]; ok {
+		t.Fatal("vanilla Dodongo Cavern Compass Chest should not be exported for MQ")
+	}
+}
+
 func TestExtractChecksFallsBackToStableKey(t *testing.T) {
 	original := checkNameTable
 	checkNameTable = map[string]string{}

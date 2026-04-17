@@ -8,6 +8,7 @@ import (
 
 type locationFile struct {
 	Scene           []sceneLocationEntry    `json:"scene"`
+	SceneConflicts  []sceneConflictEntry    `json:"scene_conflicts"`
 	Bitmap          []bitmapLocationEntry   `json:"bitmap"`
 	BitmapConflicts []bitmapConflictEntry   `json:"bitmap_conflicts"`
 	Symbols         []symbolLocationEntry   `json:"symbols"`
@@ -16,6 +17,13 @@ type locationFile struct {
 type sceneLocationEntry struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
+}
+
+type sceneConflictEntry struct {
+	Key       string `json:"key"`
+	DungeonMq int    `json:"dungeonMq"`
+	Vanilla   string `json:"vanilla"`
+	Mq        string `json:"mq"`
 }
 
 type bitmapLocationEntry struct {
@@ -40,6 +48,7 @@ type symbolLocationEntry struct {
 
 var (
 	checkNameTable         map[string]string
+	ootSceneConflictTable  map[string]sceneConflictEntry
 	npcCheckTables         map[string]map[int]string
 	xflagCheckTables       map[string]map[int]string
 	ootXflagConflictTable  map[int]bitmapConflictEntry
@@ -55,6 +64,7 @@ var embeddedLocations []byte
 
 func init() {
 	checkNameTable = map[string]string{}
+	ootSceneConflictTable = map[string]sceneConflictEntry{}
 	npcCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	xflagCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	ootXflagConflictTable = map[int]bitmapConflictEntry{}
@@ -79,6 +89,22 @@ func init() {
 			panic(fmt.Sprintf("duplicate scene location key %s", entry.Key))
 		}
 		checkNameTable[entry.Key] = entry.Name
+	}
+
+	for _, entry := range locations.SceneConflicts {
+		if entry.Key == "" {
+			panic("scene conflict entry is missing key")
+		}
+		if entry.DungeonMq < 0 || entry.DungeonMq >= OotMqDungeonCount {
+			panic(fmt.Sprintf("scene conflict entry %s has invalid dungeon MQ id %d", entry.Key, entry.DungeonMq))
+		}
+		if entry.Vanilla == "" || entry.Mq == "" {
+			panic(fmt.Sprintf("scene conflict entry %s is missing variant names", entry.Key))
+		}
+		if _, exists := ootSceneConflictTable[entry.Key]; exists {
+			panic(fmt.Sprintf("duplicate scene conflict entry for %s", entry.Key))
+		}
+		ootSceneConflictTable[entry.Key] = entry
 	}
 
 	for _, entry := range locations.Bitmap {
@@ -172,6 +198,18 @@ func sceneCheckName(game string, scene int, kind string, bit int) string {
 	return sceneCheckKey(game, scene, kind, bit)
 }
 
+func ootSceneCheckNameForState(oot *OotState, scene int, kind string, bit int) (string, bool) {
+	key := sceneCheckKey("OOT", scene, kind, bit)
+	if name, ok := checkNameTable[key]; ok {
+		return name, true
+	}
+	if name, ok := ootConflictingSceneCheckName(oot, key); ok {
+		return name, true
+	}
+	name, ok := sceneCheckFallbacks[key]
+	return name, ok
+}
+
 func npcCheckName(game string, id int) (string, bool) {
 	if gameTable, ok := npcCheckTables[game]; ok {
 		name, ok := gameTable[id]
@@ -198,6 +236,21 @@ func xflagCheckName(game string, bitPos int) (string, bool) {
 
 func ootConflictingXflagCheckName(oot *OotState, bitPos int) (string, bool) {
 	entry, ok := ootXflagConflictTable[bitPos]
+	if !ok {
+		return "", false
+	}
+	mq, known := ootMqDungeonState(oot, entry.DungeonMq)
+	if !known {
+		return "", false
+	}
+	if mq {
+		return entry.Mq, true
+	}
+	return entry.Vanilla, true
+}
+
+func ootConflictingSceneCheckName(oot *OotState, key string) (string, bool) {
+	entry, ok := ootSceneConflictTable[key]
 	if !ok {
 		return "", false
 	}
