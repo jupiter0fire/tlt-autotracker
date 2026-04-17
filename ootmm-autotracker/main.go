@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/ootmm-autotracker/n64"
-	"github.com/ootmm-autotracker/ootmm"
-	"github.com/ootmm-autotracker/retroarch"
-	"github.com/ootmm-autotracker/tracker"
-	"github.com/ootmm-autotracker/ws"
+	"ootmm-autotracker/n64"
+	"ootmm-autotracker/ootmm"
+	"ootmm-autotracker/retroarch"
+	"ootmm-autotracker/tracker"
+	"ootmm-autotracker/ws"
 )
 
 const (

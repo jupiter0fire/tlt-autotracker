@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/ootmm-autotracker/ootmm"
-	"github.com/ootmm-autotracker/tracker"
+	"ootmm-autotracker/ootmm"
+	"ootmm-autotracker/tracker"
 )
 
 func TestBroadcastDeltaSendsLocationBeforeItems(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ootmm-autotracker/n64"
-	"github.com/ootmm-autotracker/ootmm"
+	"ootmm-autotracker/n64"
+	"ootmm-autotracker/ootmm"
 )
 
 type consoleCommand struct {

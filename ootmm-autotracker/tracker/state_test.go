@@ -3,7 +3,7 @@ package tracker
 import (
 	"testing"
 
-	"github.com/ootmm-autotracker/ootmm"
+	"ootmm-autotracker/ootmm"
 )
 
 func TestUpdateRetainsCheckNameForUncheckedDiffs(t *testing.T) {

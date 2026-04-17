@@ -1,7 +1,7 @@
 package tracker
 
 import (
-	"github.com/ootmm-autotracker/ootmm"
+	"ootmm-autotracker/ootmm"
 )
 
 // State tracks the current and previous game state, computing deltas.

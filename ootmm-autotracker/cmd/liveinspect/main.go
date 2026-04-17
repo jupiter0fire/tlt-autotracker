@@ -5,9 +5,9 @@ import (
 "os"
 "strings"
 
-"github.com/ootmm-autotracker/n64"
-"github.com/ootmm-autotracker/ootmm"
-"github.com/ootmm-autotracker/retroarch"
+"ootmm-autotracker/n64"
+"ootmm-autotracker/ootmm"
+"ootmm-autotracker/retroarch"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ootmm-autotracker/retroarch"
+	"ootmm-autotracker/retroarch"
 )
 
 const (

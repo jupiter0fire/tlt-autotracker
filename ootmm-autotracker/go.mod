@@ -1,4 +1,4 @@
-module github.com/ootmm-autotracker
+module ootmm-autotracker
 
 go 1.22
 

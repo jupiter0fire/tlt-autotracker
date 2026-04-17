@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"github.com/ootmm-autotracker/ootmm"
-	"github.com/ootmm-autotracker/tracker"
+	"ootmm-autotracker/ootmm"
+	"ootmm-autotracker/tracker"
 )
 
 var upgrader = websocket.Upgrader{

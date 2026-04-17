@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/bits"
 
-	"github.com/ootmm-autotracker/n64"
+	"ootmm-autotracker/n64"
 )
 
 const (
