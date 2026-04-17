@@ -7,14 +7,57 @@ const (
 	dungeonItemCompassMask   = 0x02
 	dungeonItemBossKeyMask   = 0x01
 	sharedOcarinaButtonMaskDisabled = 0xffff
+	sharedOcarinaButtonAMask        = 0x0010
 	sharedOcarinaButtonCRightMask   = 0x0001
+	sharedOcarinaButtonCLeftMask    = 0x0002
+	sharedOcarinaButtonCUpMask      = 0x0004
+	sharedOcarinaButtonCDownMask    = 0x0008
 	mmExtraFlags2Notebook    = 9
 	mmExtraFlags2MaskBlast   = 10
+	mmOwlGreatBayBit         = 0
+	mmOwlZoraCapeBit         = 1
+	mmOwlSnowheadBit         = 2
+	mmOwlMountainVillageBit  = 3
+	mmOwlClockTownBit        = 4
+	mmOwlMilkRoadBit         = 5
+	mmOwlWoodfallBit         = 6
+	mmOwlSouthernSwampBit    = 7
 	mmOwlIkanaCanyonBit      = 8
+	mmOwlStoneTowerBit       = 9
+	mmOwlHiddenBit           = 15
 	ootEventSongSariaVanilla = 0x38
 	ootEventSongSariaCustom  = 0x58
 	ootEventSongSunCustom    = 0x5a
 )
+
+var mmOwlItems = [...]struct {
+	itemID string
+	bit    uint
+}{
+	{"MM_OWL_GREAT_BAY", mmOwlGreatBayBit},
+	{"MM_OWL_ZORA_CAPE", mmOwlZoraCapeBit},
+	{"MM_OWL_SNOWHEAD", mmOwlSnowheadBit},
+	{"MM_OWL_MOUNTAIN_VILLAGE", mmOwlMountainVillageBit},
+	{"MM_OWL_CLOCK_TOWN", mmOwlClockTownBit},
+	{"MM_OWL_MILK_ROAD", mmOwlMilkRoadBit},
+	{"MM_OWL_WOODFALL", mmOwlWoodfallBit},
+	{"MM_OWL_SOUTHERN_SWAMP", mmOwlSouthernSwampBit},
+	{"MM_OWL_IKANA_CANYON", mmOwlIkanaCanyonBit},
+	{"MM_OWL_STONE_TOWER", mmOwlStoneTowerBit},
+	{"MM_OWL_HIDDEN", mmOwlHiddenBit},
+}
+
+var sharedOcarinaButtons = [...]struct {
+	ootItemID string
+	mmItemID  string
+	mask      uint16
+}{
+	{"OOT_BUTTON_A", "MM_BUTTON_A", sharedOcarinaButtonAMask},
+	{"OOT_BUTTON_C_RIGHT", "MM_BUTTON_C_RIGHT", sharedOcarinaButtonCRightMask},
+	{"OOT_BUTTON_C_LEFT", "MM_BUTTON_C_LEFT", sharedOcarinaButtonCLeftMask},
+	{"OOT_BUTTON_C_UP", "MM_BUTTON_C_UP", sharedOcarinaButtonCUpMask},
+	{"OOT_BUTTON_C_DOWN", "MM_BUTTON_C_DOWN", sharedOcarinaButtonCDownMask},
+}
 
 var mmSkeletonKeyMaxKeys = [...]int{1, 3, 1, 4}
 
@@ -275,9 +318,13 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"MM_STRAY_FAIRY_TOWN", boolToInt(mm.TownStrayFairy)})
 	items = append(items, TrackedItem{"MM_GS_TOKEN_SWAMP", int(mm.SkullTokensSwamp)})
 	items = append(items, TrackedItem{"MM_GS_TOKEN_OCEAN", int(mm.SkullTokensOcean)})
-	items = append(items, TrackedItem{"MM_OWL_IKANA_CANYON", boolToInt(oot.ExtraRecords[ExtraIdxMmOwlFlags]&(1<<mmOwlIkanaCanyonBit) != 0)})
-	items = append(items, TrackedItem{"OOT_BUTTON_C_RIGHT", boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskOot, sharedOcarinaButtonCRightMask))})
-	items = append(items, TrackedItem{"MM_BUTTON_C_RIGHT", boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskMm, sharedOcarinaButtonCRightMask))})
+	for _, owl := range mmOwlItems {
+		items = append(items, TrackedItem{owl.itemID, boolToInt(oot.ExtraRecords[ExtraIdxMmOwlFlags]&(1<<owl.bit) != 0)})
+	}
+	for _, button := range sharedOcarinaButtons {
+		items = append(items, TrackedItem{button.ootItemID, boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskOot, button.mask))})
+		items = append(items, TrackedItem{button.mmItemID, boolToInt(sharedOcarinaButtonOwned(state.Shared.OcarinaButtonMaskMm, button.mask))})
+	}
 	items = appendCatalogItems(items, state)
 
 	return items

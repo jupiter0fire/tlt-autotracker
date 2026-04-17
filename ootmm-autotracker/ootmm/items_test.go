@@ -514,8 +514,9 @@ func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
 	state := &GameState{}
 	state.Mm.SkullTokensSwamp = 17
 	state.Mm.SkullTokensOcean = 11
-	state.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = 1 << mmOwlIkanaCanyonBit
-	state.Shared.OcarinaButtonMaskMm = sharedOcarinaButtonCRightMask
+	state.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = allMmOwlFlags()
+	state.Shared.OcarinaButtonMaskOot = allSharedOcarinaButtonMasks()
+	state.Shared.OcarinaButtonMaskMm = allSharedOcarinaButtonMasks()
 
 	items := itemQtyMap(ExtractItems(state))
 
@@ -525,14 +526,18 @@ func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
 	if got := items["MM_GS_TOKEN_OCEAN"]; got != 11 {
 		t.Fatalf("MM_GS_TOKEN_OCEAN = %d, want 11", got)
 	}
-	if got := items["MM_OWL_IKANA_CANYON"]; got != 1 {
-		t.Fatalf("MM_OWL_IKANA_CANYON = %d, want 1", got)
+	for _, owl := range mmOwlItems {
+		if got := items[owl.itemID]; got != 1 {
+			t.Fatalf("%s = %d, want 1", owl.itemID, got)
+		}
 	}
-	if got := items["OOT_BUTTON_C_RIGHT"]; got != 0 {
-		t.Fatalf("OOT_BUTTON_C_RIGHT = %d, want 0", got)
-	}
-	if got := items["MM_BUTTON_C_RIGHT"]; got != 1 {
-		t.Fatalf("MM_BUTTON_C_RIGHT = %d, want 1", got)
+	for _, button := range sharedOcarinaButtons {
+		if got := items[button.ootItemID]; got != 1 {
+			t.Fatalf("%s = %d, want 1", button.ootItemID, got)
+		}
+		if got := items[button.mmItemID]; got != 1 {
+			t.Fatalf("%s = %d, want 1", button.mmItemID, got)
+		}
 	}
 }
 
@@ -543,11 +548,13 @@ func TestExtractItemsIgnoresDisabledSharedOcarinaButtons(t *testing.T) {
 
 	items := itemQtyMap(ExtractItems(state))
 
-	if got := items["OOT_BUTTON_C_RIGHT"]; got != 0 {
-		t.Fatalf("OOT_BUTTON_C_RIGHT = %d, want 0 when buttons are disabled by config", got)
-	}
-	if got := items["MM_BUTTON_C_RIGHT"]; got != 0 {
-		t.Fatalf("MM_BUTTON_C_RIGHT = %d, want 0 when buttons are disabled by config", got)
+	for _, button := range sharedOcarinaButtons {
+		if got := items[button.ootItemID]; got != 0 {
+			t.Fatalf("%s = %d, want 0 when buttons are disabled by config", button.ootItemID, got)
+		}
+		if got := items[button.mmItemID]; got != 0 {
+			t.Fatalf("%s = %d, want 0 when buttons are disabled by config", button.mmItemID, got)
+		}
 	}
 }
 
@@ -564,8 +571,8 @@ func TestExtractItemsOnlyChangesRequestedMissingItems(t *testing.T) {
 	updated := *base
 	updated.Mm.SkullTokensSwamp = 9
 	updated.Mm.SkullTokensOcean = 13
-	updated.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = 1 << mmOwlIkanaCanyonBit
-	updated.Shared.OcarinaButtonMaskMm = sharedOcarinaButtonCRightMask
+	updated.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = allMmOwlFlags()
+	updated.Shared.OcarinaButtonMaskMm = allSharedOcarinaButtonMasks()
 
 	before := itemQtyMap(ExtractItems(base))
 	after := itemQtyMap(ExtractItems(&updated))
@@ -584,8 +591,8 @@ func TestExtractItemsOnlyChangesRequestedMissingItems(t *testing.T) {
 		}
 	}
 
-	if len(changed) != 4 {
-		t.Fatalf("changed item count = %d, want 4: %#v", len(changed), changed)
+	if len(changed) != 18 {
+		t.Fatalf("changed item count = %d, want 18: %#v", len(changed), changed)
 	}
 	if diff := changed["MM_GS_TOKEN_SWAMP"]; diff != [2]int{0, 9} {
 		t.Fatalf("MM_GS_TOKEN_SWAMP diff = %#v, want [0 9]", diff)
@@ -593,15 +600,35 @@ func TestExtractItemsOnlyChangesRequestedMissingItems(t *testing.T) {
 	if diff := changed["MM_GS_TOKEN_OCEAN"]; diff != [2]int{0, 13} {
 		t.Fatalf("MM_GS_TOKEN_OCEAN diff = %#v, want [0 13]", diff)
 	}
-	if diff := changed["MM_OWL_IKANA_CANYON"]; diff != [2]int{0, 1} {
-		t.Fatalf("MM_OWL_IKANA_CANYON diff = %#v, want [0 1]", diff)
+	for _, owl := range mmOwlItems {
+		if diff := changed[owl.itemID]; diff != [2]int{0, 1} {
+			t.Fatalf("%s diff = %#v, want [0 1]", owl.itemID, diff)
+		}
 	}
-	if _, ok := changed["OOT_BUTTON_C_RIGHT"]; ok {
-		t.Fatalf("OOT_BUTTON_C_RIGHT should not change: %#v", changed["OOT_BUTTON_C_RIGHT"])
+	for _, button := range sharedOcarinaButtons {
+		if _, ok := changed[button.ootItemID]; ok {
+			t.Fatalf("%s should not change: %#v", button.ootItemID, changed[button.ootItemID])
+		}
+		if diff := changed[button.mmItemID]; diff != [2]int{0, 1} {
+			t.Fatalf("%s diff = %#v, want [0 1]", button.mmItemID, diff)
+		}
 	}
-	if diff := changed["MM_BUTTON_C_RIGHT"]; diff != [2]int{0, 1} {
-		t.Fatalf("MM_BUTTON_C_RIGHT diff = %#v, want [0 1]", diff)
+}
+
+func allMmOwlFlags() uint32 {
+	var flags uint32
+	for _, owl := range mmOwlItems {
+		flags |= 1 << owl.bit
 	}
+	return flags
+}
+
+func allSharedOcarinaButtonMasks() uint16 {
+	var mask uint16
+	for _, button := range sharedOcarinaButtons {
+		mask |= button.mask
+	}
+	return mask
 }
 
 func TestExtractItemsIncludesOotSilverRupeeAnywhereItem(t *testing.T) {
