@@ -16,7 +16,7 @@ const (
 	fishingPondAdultLoachMinWeight  = 29
 	fishingPondAdultLoachMaxWeight  = 36
 	sharedOcarinaButtonMaskDisabled = 0xffff
-	sharedOcarinaButtonAMask        = 0x0010
+	sharedOcarinaButtonAMask        = 0x8000
 	sharedOcarinaButtonCRightMask   = 0x0001
 	sharedOcarinaButtonCLeftMask    = 0x0002
 	sharedOcarinaButtonCUpMask      = 0x0004

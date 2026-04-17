@@ -561,6 +561,27 @@ func TestExtractItemsIgnoresDisabledSharedOcarinaButtons(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesSharedOcarinaAButtonFromLiveMask(t *testing.T) {
+	state := &GameState{}
+	state.Shared.OcarinaButtonMaskOot = 0x800d
+	state.Shared.OcarinaButtonMaskMm = 0x800d
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_BUTTON_A"]; got != 1 {
+		t.Fatalf("OOT_BUTTON_A = %d, want 1 for live mask 0x800d", got)
+	}
+	if got := items["MM_BUTTON_A"]; got != 1 {
+		t.Fatalf("MM_BUTTON_A = %d, want 1 for live mask 0x800d", got)
+	}
+	if got := items["OOT_BUTTON_C_LEFT"]; got != 0 {
+		t.Fatalf("OOT_BUTTON_C_LEFT = %d, want 0 for live mask 0x800d", got)
+	}
+	if got := items["MM_BUTTON_C_LEFT"]; got != 0 {
+		t.Fatalf("MM_BUTTON_C_LEFT = %d, want 0 for live mask 0x800d", got)
+	}
+}
+
 func TestExtractItemsIncludesOotFishingPondItems(t *testing.T) {
 	state := &GameState{}
 	state.Shared.CaughtChildFishWeights[0] = 3
