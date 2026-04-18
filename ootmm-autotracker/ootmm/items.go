@@ -97,6 +97,29 @@ var ootSilverRupeeItemIDs = [...][2]string{
 	{"OOT_RUPEE_SILVER_GANON_FOREST", "OOT_RUPEE_SILVER_GANON_FOREST"},
 }
 
+var ootEventSymbolChecks = [...]struct {
+	symbol string
+	flags  []int
+}{
+	{symbol: "MASTER_SWORD", flags: []int{0x4f}},
+	{symbol: "LIGHT_MEDALLION", flags: []int{0x45}},
+	{symbol: "OCARINA_TIME_ITEM", flags: []int{0x43}},
+	{symbol: "OCARINA_TIME_SONG", flags: []int{0xa9}},
+	{symbol: "ROYAL_TOMB_SONG", flags: []int{ootEventSongSunCustom}},
+	{symbol: "SARIA_SONG", flags: []int{ootEventSongSariaVanilla, ootEventSongSariaCustom}},
+	{symbol: "SARIA_OCARINA", flags: []int{0xc1}},
+	{symbol: "SHEIK_FOREST", flags: []int{0x50}},
+	{symbol: "SHEIK_FIRE", flags: []int{0x51}},
+	{symbol: "SHEIK_WATER", flags: []int{0x52}},
+	{symbol: "SHEIK_SHADOW", flags: []int{0x54}},
+	{symbol: "SHEIK_LIGHT", flags: []int{0x55}},
+	{symbol: "SHEIK_SPIRIT", flags: []int{0xac}},
+	{symbol: "SONG_STORMS", flags: []int{0x5b}},
+	{symbol: "ZELDA_LETTER", flags: []int{0x40}},
+	{symbol: "ZELDA_LIGHT_ARROW", flags: []int{0xc4}},
+	{symbol: "ZELDA_SONG", flags: []int{0x59}},
+}
+
 // TrackedItem represents a single trackable item with its current quantity.
 type TrackedItem struct {
 	ID  string `json:"id"`
@@ -440,27 +463,31 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			appendCheck("MM_extra_"+itoa(mmExtraFlags2MaskBlast), name)
 		}
 	}
-
-	hasOotEventCheck := func(flag int) bool {
-		word := flag >> 4
-		if word < 0 || word >= len(state.Oot.EventsChk) {
-			return false
-		}
-		return state.Oot.EventsChk[word]&(1<<uint(flag&0xF)) != 0
-	}
-
-	if hasOotEventCheck(ootEventSongSariaVanilla) || hasOotEventCheck(ootEventSongSariaCustom) {
-		if name, ok := npcSymbolCheckName("OOT", "SARIA_SONG"); ok {
-			appendCheck("OOT_event_song_saria", name)
-		}
-	}
-	if hasOotEventCheck(ootEventSongSunCustom) {
-		if name, ok := npcSymbolCheckName("OOT", "ROYAL_TOMB_SONG"); ok {
-			appendCheck("OOT_event_song_sun", name)
-		}
-	}
+	appendOotEventSymbolChecks(state, appendCheck)
 
 	return checks
+}
+
+func appendOotEventSymbolChecks(state *GameState, appendCheck func(string, string)) {
+	for _, entry := range ootEventSymbolChecks {
+		for _, flag := range entry.flags {
+			if !hasOotEventCheck(state, flag) {
+				continue
+			}
+			if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
+				appendCheck("OOT_event_"+entry.symbol, name)
+			}
+			break
+		}
+	}
+}
+
+func hasOotEventCheck(state *GameState, flag int) bool {
+	word := flag >> 4
+	if word < 0 || word >= len(state.Oot.EventsChk) {
+		return false
+	}
+	return state.Oot.EventsChk[word]&(1<<uint(flag&0xF)) != 0
 }
 
 func appendOotGsChecks(bitmap []uint32, oot *OotState, appendCheck func(string, string)) {

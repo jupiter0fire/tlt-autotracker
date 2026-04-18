@@ -1189,6 +1189,52 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesTempleOfTimeEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"LIGHT_MEDALLION": "Temple of Time Medallion",
+			"MASTER_SWORD":    "Temple of Time Master Sword",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[0x45>>4] = (1 << (0x45 & 0xF)) | (1 << (0x4f & 0xF))
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Temple of Time Medallion"]; !ok {
+		t.Fatal("missing Temple of Time medallion check from event fallback")
+	}
+	if _, ok := checks["Temple of Time Master Sword"]; !ok {
+		t.Fatal("missing Temple of Time master sword check from event fallback")
+	}
+}
+
+func TestExtractChecksIncludesOtherOotEventSymbolFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"ZELDA_LIGHT_ARROW": "Temple of Time Light Arrows",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[0xc4>>4] = 1 << (0xc4 & 0xF)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Temple of Time Light Arrows"]; !ok {
+		t.Fatal("missing OoT event-symbol check for Light Arrows")
+	}
+}
+
 func checkNameSet(checks []TrackedCheck) map[string]struct{} {
 	result := make(map[string]struct{}, len(checks))
 	for _, check := range checks {
