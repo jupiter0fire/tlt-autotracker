@@ -158,6 +158,7 @@ type MmState struct {
 	DungeonItems     [10]uint8
 	DungeonKeys      [9]int8
 	StrayFairies     [10]int8
+	WeekEventReg     [100]uint8
 	TownStrayFairy   bool
 	SkullTokensSwamp uint16
 	SkullTokensOcean uint16

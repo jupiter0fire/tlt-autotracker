@@ -21,6 +21,10 @@ const (
 	sharedOcarinaButtonCLeftMask    = 0x0002
 	sharedOcarinaButtonCUpMask      = 0x0004
 	sharedOcarinaButtonCDownMask    = 0x0008
+	ootExtraFlagsChildWalletBit     = 17
+	ootExtraFlagsBottomlessBit      = 7
+	mmExtraFlags2ChildWalletBit     = 31
+	mmExtraFlags3BottomlessBit      = 31
 	mmExtraFlags2Notebook           = 9
 	mmExtraFlags2MaskBlast          = 10
 	mmOwlGreatBayBit                = 0
@@ -133,6 +137,27 @@ type TrackedCheck struct {
 	Checked bool   `json:"checked"`
 }
 
+func ootWalletLevel(oot *OotState) int {
+	ootFlags := oot.ExtraRecords[ExtraIdxOotFlags]
+	if ootFlags&(1<<ootExtraFlagsChildWalletBit) == 0 {
+		return 0
+	}
+	if ootFlags&(1<<ootExtraFlagsBottomlessBit) != 0 {
+		return 5
+	}
+	return GetUpgradeLevel(oot.Upgrades, 12, 2) + 1
+}
+
+func mmWalletLevel(state *GameState) int {
+	if state.Oot.ExtraRecords[ExtraIdxMmFlags2]&(1<<mmExtraFlags2ChildWalletBit) == 0 {
+		return 0
+	}
+	if state.Oot.ExtraRecords[ExtraIdxMmFlags3]&(1<<mmExtraFlags3BottomlessBit) != 0 {
+		return 5
+	}
+	return GetUpgradeLevel(state.Mm.Upgrades, 12, 2) + 1
+}
+
 // ExtractItems extracts all trackable items from the game state.
 func ExtractItems(state *GameState) []TrackedItem {
 	items := make([]TrackedItem, 0, 128)
@@ -187,7 +212,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_BOMB_BAG", GetUpgradeLevel(oot.Upgrades, 3, 3)})
 	items = append(items, TrackedItem{"OOT_STRENGTH", GetUpgradeLevel(oot.Upgrades, 6, 3)})
 	items = append(items, TrackedItem{"OOT_SCALE", GetUpgradeLevel(oot.Upgrades, 9, 3)})
-	items = append(items, TrackedItem{"OOT_WALLET", GetUpgradeLevel(oot.Upgrades, 12, 2)})
+	items = append(items, TrackedItem{"OOT_WALLET", ootWalletLevel(oot)})
 	items = append(items, TrackedItem{"OOT_BULLET_BAG", GetUpgradeLevel(oot.Upgrades, 14, 3)})
 	items = append(items, TrackedItem{"OOT_STICK_UPGRADE", GetUpgradeLevel(oot.Upgrades, 17, 3)})
 	items = append(items, TrackedItem{"OOT_NUT_UPGRADE", GetUpgradeLevel(oot.Upgrades, 20, 3)})
@@ -312,7 +337,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"MM_BOMB_BAG", GetUpgradeLevel(mm.Upgrades, 3, 3)})
 	items = append(items, TrackedItem{"MM_STRENGTH", GetUpgradeLevel(mm.Upgrades, 6, 3)})
 	items = append(items, TrackedItem{"MM_SCALE", GetUpgradeLevel(mm.Upgrades, 9, 3)})
-	items = append(items, TrackedItem{"MM_WALLET", GetUpgradeLevel(mm.Upgrades, 12, 2)})
+	items = append(items, TrackedItem{"MM_WALLET", mmWalletLevel(state)})
 
 	// MM Dungeon items
 	for i := 0; i < 10; i++ {
@@ -733,6 +758,10 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 		case "oot-extra-bit":
 			if entry.Source.Record >= 0 && entry.Source.Record < len(state.Oot.ExtraRecords) {
 				qty = boolToInt(state.Oot.ExtraRecords[entry.Source.Record]&(1<<uint(entry.Source.Bit)) != 0)
+			}
+		case "mm-week-event-bit":
+			if entry.Source.Byte >= 0 && entry.Source.Byte < len(state.Mm.WeekEventReg) {
+				qty = boolToInt(state.Mm.WeekEventReg[entry.Source.Byte]&(1<<uint(entry.Source.Bit)) != 0)
 			}
 		case "mm-derived-skeleton-key":
 			qty = boolToInt(hasMmSkeletonKey(&state.Mm))

@@ -81,6 +81,14 @@ SHARED_STORAGE = {
     "stride": 0x4000,
     "trackedSize": 0x800,
     "bitmaps": [
+        {"name": "xflagsOot", "offset": 0x000, "size": 0x2E8},
+        {"name": "npcOot", "offset": 0x2E8, "size": 0x20},
+        {"name": "shopsOot", "offset": 0x308, "size": 0x08},
+        {"name": "scrubsOot", "offset": 0x310, "size": 0x08},
+        {"name": "srOot", "offset": 0x318, "size": 0x10},
+        {"name": "xflagsMm", "offset": 0x370, "size": 0x34A},
+        {"name": "npcMm", "offset": 0x6BA, "size": 0x20},
+        {"name": "shopsMm", "offset": 0x6DA, "size": 0x04},
         {"name": "soulsEnemyOot", "offset": 0x7CC, "size": 8},
         {"name": "soulsEnemyMm", "offset": 0x7D4, "size": 8},
         {"name": "soulsBossOot", "offset": 0x7DC, "size": 2},
@@ -145,8 +153,11 @@ SPECIAL_ITEM_SOURCES = [
     {"itemId": "MM_TUNIC_ZORA", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 2}},
     {"itemId": "MM_LETTER_TO_KAFEI", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 3}},
     {"itemId": "MM_PENDANT_OF_MEMORIES", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 4}},
-    {"itemId": "MM_WALLET5", "source": {"kind": "oot-extra-bit", "record": 13, "bit": 0}},
+    {"itemId": "OOT_WALLET5", "source": {"kind": "oot-extra-bit", "record": 2, "bit": 7}},
+    {"itemId": "MM_WALLET5", "source": {"kind": "oot-extra-bit", "record": 13, "bit": 31}},
     {"itemId": "MM_STONE_OF_AGONY", "source": {"kind": "oot-extra-bit", "record": 13, "bit": 1}},
+    {"itemId": "OOT_SPIN_UPGRADE", "source": {"kind": "oot-extra-bit", "record": 2, "bit": 26}},
+    {"itemId": "MM_SPIN_UPGRADE", "source": {"kind": "mm-week-event-bit", "byte": 23, "bit": 1}},
 ]
 
 

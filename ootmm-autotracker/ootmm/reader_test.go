@@ -239,6 +239,7 @@ func TestParseMmSaveUsesPaddedInventoryOffsets(t *testing.T) {
 func TestParseMmSaveReadsTownStrayFairyWeekEvent(t *testing.T) {
 	data := make([]byte, MmSaveSize)
 	data[MmOffWeekEventReg+mmWeekEventTownStrayFairyByte] = mmWeekEventTownStrayFairyMask
+	data[MmOffWeekEventReg+23] |= 0x02
 
 	var mm MmState
 	if err := parseMmSave(&mm, data); err != nil {
@@ -246,6 +247,9 @@ func TestParseMmSaveReadsTownStrayFairyWeekEvent(t *testing.T) {
 	}
 	if !mm.TownStrayFairy {
 		t.Fatal("expected MM town stray fairy to be true")
+	}
+	if got := mm.WeekEventReg[23]; got != 0x02 {
+		t.Fatalf("unexpected MM week event byte 23: got %#02x want 0x02", got)
 	}
 }
 

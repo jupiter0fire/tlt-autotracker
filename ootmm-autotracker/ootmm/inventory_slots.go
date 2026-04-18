@@ -51,6 +51,7 @@ type catalogItemEntry struct {
 type catalogItemSource struct {
 	Kind   string `json:"kind"`
 	Block  string `json:"block,omitempty"`
+	Byte   int    `json:"byte,omitempty"`
 	Record int    `json:"record,omitempty"`
 	Bit    int    `json:"bit,omitempty"`
 }
@@ -173,6 +174,13 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			}
 			if source.Bit < 0 || source.Bit >= 32 {
 				panic(fmt.Sprintf("catalog item %s has invalid extra record bit %d", item.ItemID, source.Bit))
+			}
+		case "mm-week-event-bit":
+			if source.Byte < 0 || source.Byte >= 100 {
+				panic(fmt.Sprintf("catalog item %s has invalid MM week event byte %d", item.ItemID, source.Byte))
+			}
+			if source.Bit < 0 || source.Bit >= 8 {
+				panic(fmt.Sprintf("catalog item %s has invalid MM week event bit %d", item.ItemID, source.Bit))
 			}
 		case "oot-derived-key-ring", "mm-derived-key-ring":
 			if source.Record < 0 {

@@ -284,6 +284,7 @@ func parseMmSave(mm *MmState, data []byte) error {
 	for i := 0; i < 10; i++ {
 		mm.StrayFairies[i] = int8(data[MmOffStrayFairies+i])
 	}
+	copy(mm.WeekEventReg[:], data[MmOffWeekEventReg:MmOffWeekEventReg+len(mm.WeekEventReg)])
 	if MmOffWeekEventReg+mmWeekEventTownStrayFairyByte < len(data) {
 		mm.TownStrayFairy = data[MmOffWeekEventReg+mmWeekEventTownStrayFairyByte]&mmWeekEventTownStrayFairyMask != 0
 	}

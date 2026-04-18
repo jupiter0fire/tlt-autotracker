@@ -151,6 +151,51 @@ func TestExtractItemsReadsMmEquipmentLevels(t *testing.T) {
 	}
 }
 
+func TestExtractItemsReconstructsWalletLevelsFromFlags(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Upgrades = 2 << 12
+	state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << ootExtraFlagsChildWalletBit
+	state.Mm.Upgrades = 1 << 12
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = 1 << mmExtraFlags2ChildWalletBit
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_WALLET"]; got != 3 {
+		t.Fatalf("OOT_WALLET = %d, want 3", got)
+	}
+	if got := items["MM_WALLET"]; got != 2 {
+		t.Fatalf("MM_WALLET = %d, want 2", got)
+	}
+
+	state.Oot.ExtraRecords[ExtraIdxOotFlags] |= 1 << ootExtraFlagsBottomlessBit
+	state.Oot.ExtraRecords[ExtraIdxMmFlags3] = 1 << mmExtraFlags3BottomlessBit
+	items = itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_WALLET"]; got != 5 {
+		t.Fatalf("OOT_WALLET = %d, want 5", got)
+	}
+	if got := items["MM_WALLET"]; got != 5 {
+		t.Fatalf("MM_WALLET = %d, want 5", got)
+	}
+}
+
+func TestExtractItemsReconstructsWalletLevelsFromLiveRawFlags(t *testing.T) {
+	state := &GameState{}
+	state.Oot.Upgrades = 0x00162040
+	state.Oot.ExtraRecords[ExtraIdxOotFlags] = 0x00020020
+	state.Mm.Upgrades = 1 << 12
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = 0x80000000
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_WALLET"]; got != 3 {
+		t.Fatalf("OOT_WALLET = %d, want 3", got)
+	}
+	if got := items["MM_WALLET"]; got != 2 {
+		t.Fatalf("MM_WALLET = %d, want 2", got)
+	}
+}
+
 func TestExtractItemsUsesOfficialOotBossKeyIDs(t *testing.T) {
 	state := &GameState{}
 	state.Oot.DungeonItems[4] = 0x01
@@ -344,9 +389,9 @@ func TestExtractItemsTradeIgnoresInventorySlot(t *testing.T) {
 	}
 }
 
-func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
+func TestExtractItemsIncludesSpecialCatalogItems(t *testing.T) {
 	state := &GameState{}
-	for _, itemID := range []string{"MM_HAMMER", "MM_SPELL_FIRE", "MM_ROOM_KEY", "MM_WALLET5", "MM_STONE_OF_AGONY"} {
+	for _, itemID := range []string{"MM_HAMMER", "MM_SPELL_FIRE", "MM_ROOM_KEY", "OOT_WALLET5", "MM_WALLET5", "MM_STONE_OF_AGONY"} {
 		source := mustCatalogItemSource(itemID)
 		state.Oot.ExtraRecords[source.Record] |= 1 << uint(source.Bit)
 	}
@@ -362,6 +407,9 @@ func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
 	if got := items["MM_ROOM_KEY"]; got != 1 {
 		t.Fatalf("MM_ROOM_KEY = %d, want 1", got)
 	}
+	if got := items["OOT_WALLET5"]; got != 1 {
+		t.Fatalf("OOT_WALLET5 = %d, want 1", got)
+	}
 	if got := items["MM_WALLET5"]; got != 1 {
 		t.Fatalf("MM_WALLET5 = %d, want 1", got)
 	}
@@ -370,6 +418,32 @@ func TestExtractItemsIncludesMmSpecialItems(t *testing.T) {
 	}
 	if got := items["MM_PENDANT_OF_MEMORIES"]; got != 0 {
 		t.Fatalf("MM_PENDANT_OF_MEMORIES = %d, want 0", got)
+	}
+}
+
+func TestExtractItemsIncludesSpinUpgradeSpecialItems(t *testing.T) {
+	state := &GameState{}
+	ootSpin := mustCatalogItemSource("OOT_SPIN_UPGRADE")
+	mmSpin := mustCatalogItemSource("MM_SPIN_UPGRADE")
+	state.Oot.ExtraRecords[ootSpin.Record] |= 1 << uint(ootSpin.Bit)
+	state.Mm.WeekEventReg[mmSpin.Byte] |= 1 << uint(mmSpin.Bit)
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SPIN_UPGRADE"]; got != 1 {
+		t.Fatalf("OOT_SPIN_UPGRADE = %d, want 1", got)
+	}
+	if got := items["MM_SPIN_UPGRADE"]; got != 1 {
+		t.Fatalf("MM_SPIN_UPGRADE = %d, want 1", got)
+	}
+	if got := items["MM_STONE_OF_AGONY"]; got != 0 {
+		t.Fatalf("MM_STONE_OF_AGONY = %d, want 0", got)
+	}
+	if got := items["OOT_GANON_BK"]; got != 0 {
+		t.Fatalf("OOT_GANON_BK = %d, want 0", got)
+	}
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 0 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 0", got)
 	}
 }
 
