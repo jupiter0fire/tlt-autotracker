@@ -466,6 +466,31 @@ func TestSelectSharedStateCandidatePrefersRicherCheckState(t *testing.T) {
 	}
 }
 
+func TestSelectSharedStateCandidatePrefersTrackedSoulBitmap(t *testing.T) {
+	r := &Reader{}
+
+	payload := SharedCustomState{}
+	near := SharedCustomState{}
+	source := mustCatalogItemSource("MM_SOUL_ENEMY_EYEGORE")
+	near.SetBit(source.Block, source.Bit)
+
+	got, ok := r.selectSharedStateCandidate([]sharedStateCandidate{
+		{source: "payload-80400000", state: payload},
+		{source: "near-foreign", state: near},
+	})
+	if !ok {
+		t.Fatal("expected shared-state candidate selection to succeed")
+	}
+	if got.source != "near-foreign" {
+		t.Fatalf("selected source = %q, want near-foreign", got.source)
+	}
+	byteIndex := source.Bit / 8
+	bitMask := uint8(1 << uint(source.Bit%8))
+	if bitmap := got.state.Bitmap(source.Block); len(bitmap) <= byteIndex || bitmap[byteIndex]&bitMask == 0 {
+		t.Fatal("selected candidate is missing expected MM Soul of Eyegore bit")
+	}
+}
+
 func TestOverlaySharedCheckBitmapsAddsNearForeignScrubProgress(t *testing.T) {
 	payload := SharedCustomState{}
 	payload.SetBit("npcMm", 1)

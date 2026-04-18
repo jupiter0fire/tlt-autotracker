@@ -1080,33 +1080,27 @@ func (r *Reader) selectSharedStateCandidate(candidates []sharedStateCandidate) (
 }
 
 func (r *Reader) scoreSharedStateCandidate(candidate sharedStateCandidate) int {
-	score := sharedCheckBitmapScore(candidate.state)
+	score := sharedTrackedBitmapScore(candidate.state)
 	if r.hasLastKnownShared {
 		score += sharedStateContinuityScore(candidate.state, r.lastKnownShared)
 	}
 	return score + sharedCandidateSourceBonus(candidate.source)
 }
 
-func sharedCheckBitmapScore(shared SharedCustomState) int {
+func sharedTrackedBitmapScore(shared SharedCustomState) int {
 	score := 0
-	for _, name := range sharedCheckBitmapNames {
-		for _, value := range shared.Bitmap(name) {
-			score += bits.OnesCount8(value)
-		}
+	for name, usedBits := range sharedBitmapUsedBits {
+		score += sharedBitmapBitCount(shared.Bitmap(name), usedBits)
 	}
 	return score * 8
 }
 
 func sharedStateContinuityScore(current SharedCustomState, last SharedCustomState) int {
 	score := 0
-	for _, name := range sharedCheckBitmapNames {
+	for name, usedBits := range sharedBitmapUsedBits {
 		currentBitmap := current.Bitmap(name)
 		lastBitmap := last.Bitmap(name)
-		limit := len(currentBitmap)
-		if len(lastBitmap) > limit {
-			limit = len(lastBitmap)
-		}
-		for i := 0; i < limit; i++ {
+		for i := 0; i < sharedBitmapByteLen(usedBits); i++ {
 			var currentByte uint8
 			if i < len(currentBitmap) {
 				currentByte = currentBitmap[i]
@@ -1114,6 +1108,10 @@ func sharedStateContinuityScore(current SharedCustomState, last SharedCustomStat
 			var lastByte uint8
 			if i < len(lastBitmap) {
 				lastByte = lastBitmap[i]
+			}
+			if mask := sharedBitmapByteMask(usedBits, i); mask != 0xFF {
+				currentByte &= mask
+				lastByte &= mask
 			}
 
 			overlap := currentByte & lastByte
@@ -1126,6 +1124,40 @@ func sharedStateContinuityScore(current SharedCustomState, last SharedCustomStat
 		}
 	}
 	return score
+}
+
+func sharedBitmapBitCount(bitmap []uint8, usedBits int) int {
+	count := 0
+	for i := 0; i < sharedBitmapByteLen(usedBits); i++ {
+		var value uint8
+		if i < len(bitmap) {
+			value = bitmap[i]
+		}
+		value &= sharedBitmapByteMask(usedBits, i)
+		count += bits.OnesCount8(value)
+	}
+	return count
+}
+
+func sharedBitmapByteLen(usedBits int) int {
+	if usedBits <= 0 {
+		return 0
+	}
+	return (usedBits + 7) / 8
+}
+
+func sharedBitmapByteMask(usedBits int, byteIndex int) uint8 {
+	if usedBits <= 0 {
+		return 0
+	}
+	remaining := usedBits - byteIndex*8
+	if remaining >= 8 {
+		return 0xFF
+	}
+	if remaining <= 0 {
+		return 0
+	}
+	return uint8((1 << remaining) - 1)
 }
 
 func sharedCandidateSourceBonus(source string) int {
