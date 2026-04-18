@@ -8,6 +8,7 @@ import (
 
 	"ootmm-autotracker/n64"
 	"ootmm-autotracker/ootmm"
+	"ootmm-autotracker/pj64"
 	"ootmm-autotracker/retroarch"
 	"ootmm-autotracker/tracker"
 	"ootmm-autotracker/ws"
@@ -18,26 +19,59 @@ const (
 	retryDelay   = 2 * time.Second
 )
 
+// emulatorBackend abstracts the lifecycle of RetroArch and PJ64 connections.
+type emulatorBackend interface {
+	Connect() error
+	Close()
+}
+
 func main() {
 	raHost := flag.String("ra-host", retroarch.DefaultHost, "RetroArch host")
 	raPort := flag.Int("ra-port", retroarch.DefaultPort, "RetroArch network command port")
+	pj64Mode := flag.Bool("pj64", false, "Use Project64 backend (PJ64 Lua adapter connects to us)")
+	pj64Port := flag.Int("pj64-port", pj64.DefaultPort, "PJ64 TCP listen port")
 	wsAddr := flag.String("ws-addr", ":17026", "WebSocket listen address")
 	flag.Parse()
 	consoleCommands := startConsoleCommands()
 
 	fmt.Println("=== OoTMM Autotracker ===")
-	fmt.Printf("RetroArch: %s:%d\n", *raHost, *raPort)
-	fmt.Printf("WebSocket: %s\n", *wsAddr)
-	fmt.Println("Console: dump [label|path] schreibt einen JSON-Snapshot, help zeigt Befehle")
-	fmt.Println()
 
 	// Start WebSocket server
 	server := ws.NewServer(*wsAddr)
 	server.Start()
 
-	// Create RetroArch client
-	client := retroarch.NewClient(*raHost, *raPort)
-	mem := n64.NewMemory(client)
+	// Create emulator backend
+	var (
+		backend emulatorBackend
+		mem     *n64.Memory
+	)
+
+	if *pj64Mode {
+		srv := pj64.NewServer(*pj64Port)
+		if err := srv.Start(); err != nil {
+			log.Fatalf("PJ64 server: %v", err)
+		}
+		mem = n64.NewMemory(srv)
+		mem.SetSwizzle(false)
+		mem.SetBaseShift(n64.VirtualBase) // PJ64 always uses virtual addressing
+		backend = srv
+		fmt.Printf("PJ64:      listening on port %d\n", *pj64Port)
+		fmt.Printf("WebSocket: %s\n", *wsAddr)
+		fmt.Println("Console: dump [label|path] schreibt einen JSON-Snapshot, help zeigt Befehle")
+		fmt.Println()
+		fmt.Println("Waiting for PJ64 Lua adapter to connect...")
+		fmt.Println("(Load pj64_adapter.lua in Project64's scripting console)")
+	} else {
+		client := retroarch.NewClient(*raHost, *raPort)
+		mem = n64.NewMemory(client)
+		backend = client
+		fmt.Printf("RetroArch: %s:%d\n", *raHost, *raPort)
+		fmt.Printf("WebSocket: %s\n", *wsAddr)
+		fmt.Println("Console: dump [label|path] schreibt einen JSON-Snapshot, help zeigt Befehle")
+		fmt.Println()
+		fmt.Println("Waiting for RetroArch connection...")
+	}
+
 	reader := ootmm.NewReader(mem)
 	state := tracker.NewState()
 
@@ -48,25 +82,32 @@ func main() {
 		lastScene uint16
 	)
 
-	fmt.Println("Waiting for RetroArch connection...")
-
 	for {
 		time.Sleep(pollInterval)
 		drainConsoleCommands(consoleCommands, connected, probed, mem)
 
-		// Step 1: Ensure connected to RetroArch
+		// Step 1: Ensure connected to emulator
 		if !connected {
-			if err := client.Connect(); err != nil {
+			if err := backend.Connect(); err != nil {
 				continue
 			}
 			connected = true
 			probed = false
-			log.Println("Connected to RetroArch")
+			if *pj64Mode {
+				log.Println("PJ64 adapter connected")
+			} else {
+				log.Println("Connected to RetroArch")
+			}
 		}
 
 		// Step 2: Probe address space (once per connection)
 		if !probed {
 			if err := mem.Probe(); err != nil {
+				// Check if the connection died during probe (e.g. PJ64 Lua crashed)
+				if *pj64Mode && !backend.(*pj64.Server).IsConnected() {
+					log.Println("PJ64 connection lost during probe")
+					connected = false
+				}
 				// Not an OoTMM session yet, or emulator not running a game
 				time.Sleep(retryDelay)
 				continue
@@ -82,7 +123,7 @@ func main() {
 		if err != nil {
 			log.Printf("Read error: %v", err)
 			// Connection might be lost
-			client.Close()
+			backend.Close()
 			connected = false
 			time.Sleep(retryDelay)
 			continue

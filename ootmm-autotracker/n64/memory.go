@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-
-	"ootmm-autotracker/retroarch"
 )
 
 const (
@@ -14,18 +12,43 @@ const (
 	PhysicalBase uint32 = 0x00000000
 )
 
-// Memory provides N64-specific memory access through a RetroArch client.
-// It probes the address space at startup and then translates virtual addresses.
-type Memory struct {
-	client    *retroarch.Client
-	baseShift uint32 // 0 for physical, 0x80000000 for virtual
+// CoreReader is the interface for reading emulator core memory.
+// Both retroarch.Client and pj64.Server implement this.
+type CoreReader interface {
+	ReadMemory(addr uint32, size int) ([]byte, error)
+	ReadMemoryLarge(addr uint32, size int) ([]byte, error)
 }
 
-func NewMemory(client *retroarch.Client) *Memory {
+// Memory provides N64-specific memory access through an emulator backend.
+// It probes the address space at startup and then translates virtual addresses.
+type Memory struct {
+	client         CoreReader
+	baseShift      uint32 // 0 for physical, 0x80000000 for virtual
+	swizzle        bool   // true for RetroArch/mupen64plus word-swizzle, false for PJ64
+	fixedBaseShift bool   // true when SetBaseShift() was called; Probe() won't override
+}
+
+func NewMemory(client CoreReader) *Memory {
 	return &Memory{
 		client:    client,
 		baseShift: 0, // default to physical (Mupen64Plus-Next)
+		swizzle:   true,
 	}
+}
+
+// SetSwizzle controls whether byte-level word unswizzling is applied.
+// RetroArch/mupen64plus stores RDRAM in host byte order (needs swizzle=true).
+// PJ64 returns bytes in N64 native order (needs swizzle=false).
+func (m *Memory) SetSwizzle(s bool) {
+	m.swizzle = s
+}
+
+// SetBaseShift forces a specific address translation mode.
+// Use 0 for physical addressing (Mupen64Plus-Next), VirtualBase for virtual (PJ64).
+// When set, Probe() will not override the base shift.
+func (m *Memory) SetBaseShift(shift uint32) {
+	m.baseShift = shift
+	m.fixedBaseShift = true
 }
 
 // Probe detects whether the N64 core uses physical or virtual addressing
@@ -34,6 +57,12 @@ func NewMemory(client *retroarch.Client) *Memory {
 // both ComboCtx addresses (OoT and MM) and fall back to checking the
 // payload area at 0x80400000 which is only populated by OoTMM.
 func (m *Memory) Probe() error {
+	// When the address mode has been forced (e.g. PJ64), skip detection
+	// and only verify that OoTMM is actually running.
+	if m.fixedBaseShift {
+		return m.probeFixedMode()
+	}
+
 	magic := []byte("OoT+MM<3")
 
 	// ComboCtx addresses: OoT side and MM side
@@ -77,6 +106,33 @@ func (m *Memory) Probe() error {
 	}
 
 	return fmt.Errorf("unable to detect N64 address space (OoTMM not detected)")
+}
+
+// probeFixedMode checks for OoTMM presence when the addressing mode is already known.
+func (m *Memory) probeFixedMode() error {
+	magic := []byte("OoT+MM<3")
+	mode := "virtual"
+	if m.baseShift == 0 {
+		mode = "physical"
+	}
+
+	// Check ComboCtx addresses using the pre-set base shift
+	for _, virtAddr := range []uint32{0x80006584, 0x80098280} {
+		data, err := m.Read(virtAddr, 8)
+		if err == nil && string(data) == string(magic) {
+			log.Printf("N64 core uses %s addressing (fixed)", mode)
+			return nil
+		}
+	}
+
+	// Fallback: check payload area
+	data, err := m.Read(0x80400000, 8)
+	if err == nil && !isAllZero(data) {
+		log.Printf("N64 core uses %s addressing (fixed, detected via payload)", mode)
+		return nil
+	}
+
+	return fmt.Errorf("unable to detect OoTMM (address mode: %s)", mode)
 }
 
 func isAllZero(data []byte) bool {
@@ -129,6 +185,10 @@ func (m *Memory) ReadU32BE(virtualAddr uint32) (uint32, error) {
 }
 
 func (m *Memory) readCoreLogical(coreAddr uint32, size int) ([]byte, error) {
+	if !m.swizzle {
+		// PJ64 returns bytes in N64 native order; no alignment or unswizzle needed.
+		return m.client.ReadMemoryLarge(coreAddr, size)
+	}
 	alignedStart, alignedSize := alignedWordRead(coreAddr, size)
 	raw, err := m.client.ReadMemoryLarge(alignedStart, alignedSize)
 	if err != nil {
