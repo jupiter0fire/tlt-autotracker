@@ -1316,3 +1316,51 @@ func checkNameSet(checks []TrackedCheck) map[string]struct{} {
 	}
 	return result
 }
+
+func TestExtractChecksIncludesMmCycleFlagCollectible(t *testing.T) {
+	state := &GameState{}
+	// Scene 111 (0x6F), collectible bit 10 = Clock Town Platform HP.
+	// In MM many collectibles only live in cycle flags.
+	state.Mm.CycleFlags[111].Collectibles = 1 << 10
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Clock Town Platform HP"]; !ok {
+		t.Fatal("missing Clock Town Platform HP from MM cycle flags")
+	}
+}
+
+func TestExtractChecksIncludesMmCycleFlagChest(t *testing.T) {
+	state := &GameState{}
+	// Cycle flag chests should also be detected.
+	state.Mm.CycleFlags[108].Chests = 1 << 10
+
+	checks := ExtractChecks(state)
+	found := false
+	for _, c := range checks {
+		if c.Key == "MM_chest_108_10" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("missing MM_chest_108_10 from MM cycle flags")
+	}
+}
+
+func TestExtractChecksDoesNotDuplicateMmPermAndCycleFlags(t *testing.T) {
+	state := &GameState{}
+	// Set same bit in both perm and cycle flags.
+	state.Mm.SceneFlags[111].Collectibles = 1 << 10
+	state.Mm.CycleFlags[111].Collectibles = 1 << 10
+
+	checks := ExtractChecks(state)
+	count := 0
+	for _, c := range checks {
+		if c.Name == "Clock Town Platform HP" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("Clock Town Platform HP appeared %d times, want 1", count)
+	}
+}

@@ -434,18 +434,26 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		}
 	}
 
-	// MM scene flag-based checks (permanent only)
+	// MM scene flag-based checks: merge permanent + cycle flags.
+	// In MM many collectibles only persist in cycle flags, so we OR
+	// both to catch checks that haven't been flushed to permanent yet.
 	for sceneIdx := 0; sceneIdx < MmPermCount; sceneIdx++ {
 		sf := &state.Mm.SceneFlags[sceneIdx]
+		chests := sf.Chests
+		collectibles := sf.Collectibles
+		if sceneIdx < len(state.Mm.CycleFlags) {
+			chests |= state.Mm.CycleFlags[sceneIdx].Chests
+			collectibles |= state.Mm.CycleFlags[sceneIdx].Collectibles
+		}
 		for bit := 0; bit < 32; bit++ {
-			if sf.Chests&(1<<uint(bit)) != 0 {
+			if chests&(1<<uint(bit)) != 0 {
 				if name, ok := lookupSceneCheckName("MM", sceneIdx, "chest", bit); ok {
 					appendCheck(mmSceneCheckID(sceneIdx, "chest", bit), name)
 				}
 			}
 		}
 		for bit := 0; bit < 32; bit++ {
-			if sf.Collectibles&(1<<uint(bit)) != 0 {
+			if collectibles&(1<<uint(bit)) != 0 {
 				if name, ok := lookupSceneCheckName("MM", sceneIdx, "collect", bit); ok {
 					appendCheck(mmSceneCheckID(sceneIdx, "collect", bit), name)
 				}

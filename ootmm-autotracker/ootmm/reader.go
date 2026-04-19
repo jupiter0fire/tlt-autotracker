@@ -904,31 +904,31 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 }
 
 func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *SharedCustomState) error {
-	candidates := make([]sharedStateCandidate, 0, 3)
 	var nearForeignChecks *SharedCustomState
 	if liveChecks, err := r.readSharedCheckStateNearForeign(game); err == nil {
 		liveChecksCopy := liveChecks.Clone()
 		nearForeignChecks = &liveChecksCopy
 	}
+
+	// Prefer the near-foreign candidate (adjacent to the validated foreign
+	// save in BSS) — it reads the live gSharedCustomSave.  Fall back to
+	// payload-offset candidates only when the near-foreign scan has not
+	// yet located the foreign save address.
 	if candidate, err := r.readSharedStateNearForeignSaveCandidate(game); err == nil {
-		candidates = append(candidates, candidate)
-	}
-	if candidate, err := r.readSharedStateFromPayloadCandidate(AddrOotPayload, OotPayloadSize, saveIndex); err == nil {
-		candidates = append(candidates, candidate)
-	}
-	if candidate, err := r.readSharedStateFromPayloadCandidate(AddrMmPayload, MmPayloadSize, saveIndex); err == nil {
-		candidates = append(candidates, candidate)
-	}
-
-	if candidate, ok := r.selectSharedStateCandidate(candidates); ok {
 		*shared = candidate.state
-		overlaySharedCheckBitmaps(shared, nearForeignChecks)
-		return nil
+	} else {
+		candidates := make([]sharedStateCandidate, 0, 2)
+		if candidate, err := r.readSharedStateFromPayloadCandidate(AddrOotPayload, OotPayloadSize, saveIndex); err == nil {
+			candidates = append(candidates, candidate)
+		}
+		if candidate, err := r.readSharedStateFromPayloadCandidate(AddrMmPayload, MmPayloadSize, saveIndex); err == nil {
+			candidates = append(candidates, candidate)
+		}
+		if candidate, ok := r.selectSharedStateCandidate(candidates); ok {
+			*shared = candidate.state
+		}
 	}
 
-	if r.hasLastKnownShared {
-		*shared = r.lastKnownShared.Clone()
-	}
 	overlaySharedCheckBitmaps(shared, nearForeignChecks)
 
 	return nil
@@ -1460,11 +1460,21 @@ func isPlausibleMmSave(data []byte) bool {
 
 func isPlausibleSharedState(shared SharedCustomState) bool {
 	for name, bitmapInfo := range sharedBitmaps {
+		// OoTMM fills soul bitmaps with 0xff when soul settings are disabled;
+		// skip unused-bit validation for souls* bitmaps so the richer
+		// active-game payload copy can win candidate selection.
+		if isSoulBitmap(name) {
+			continue
+		}
 		if !sharedBitmapHasNoUnusedBits(shared.Bitmap(name), sharedBitmapUsedBits[name], bitmapInfo.Size) {
 			return false
 		}
 	}
 	return true
+}
+
+func isSoulBitmap(name string) bool {
+	return len(name) > 5 && name[:5] == "souls"
 }
 
 func mmChecksumDelta(data []byte) (int, bool) {

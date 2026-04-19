@@ -366,17 +366,52 @@ func TestRememberOotStateDropsLiveFlags(t *testing.T) {
 	}
 }
 
-func TestIsPlausibleSharedStateRejectsUnknownFutureBits(t *testing.T) {
+func TestIsPlausibleSharedStateSkipsSoulBitmaps(t *testing.T) {
+	shared := SharedCustomState{}
+	for _, bitmap := range sharedStorage.Bitmaps {
+		data := make([]byte, bitmap.Size)
+		// OoTMM fills soul bitmaps with 0xff when settings are disabled
+		if isSoulBitmap(bitmap.Name) {
+			for i := range data {
+				data[i] = 0xff
+			}
+		}
+		shared.SetBitmap(bitmap.Name, data)
+	}
+
+	if !isPlausibleSharedState(shared) {
+		t.Fatal("expected shared state with full soul bitmaps to pass plausibility")
+	}
+}
+
+func TestIsPlausibleSharedStateRejectsCheckBitmapFutureBits(t *testing.T) {
 	shared := SharedCustomState{}
 	for _, bitmap := range sharedStorage.Bitmaps {
 		shared.SetBitmap(bitmap.Name, make([]byte, bitmap.Size))
 	}
 
-	bitmap := sharedBitmaps["soulsEnemyOot"]
+	// Check bitmaps have all bits marked as used (via markSharedCheckBitmapsUsed),
+	// so set a future bit in a non-check, non-soul bitmap to test rejection.
+	// Find a bitmap that is not a soul bitmap and not a check bitmap.
+	var targetBitmap string
+	for name, info := range sharedBitmaps {
+		if !isSoulBitmap(name) {
+			// Check if it's a check bitmap (all bits used = size*8)
+			if sharedBitmapUsedBits[name] < info.Size*8 {
+				targetBitmap = name
+				break
+			}
+		}
+	}
+	if targetBitmap == "" {
+		t.Skip("no non-soul non-check bitmaps available for testing")
+	}
+
+	bitmap := sharedBitmaps[targetBitmap]
 	shared.SetBit(bitmap.Name, bitmap.Size*8-1)
 
 	if isPlausibleSharedState(shared) {
-		t.Fatal("expected shared state with future bits to fail plausibility")
+		t.Fatalf("expected shared state with future bit in %s to fail plausibility", targetBitmap)
 	}
 }
 
@@ -594,6 +629,79 @@ func TestDebugDumpOverlayMakesScrubCheckVisible(t *testing.T) {
 		return ok
 	}() == false {
 		t.Fatal("overlayed shared state is missing Lost Woods Scrub Sticks Upgrade")
+	}
+}
+
+func TestDebugDumpMmNearForeignFindsOotSave(t *testing.T) {
+	snap := loadTestDebugSnapshot(t, "mm-after-chest-20260418-212749.json")
+	mmPayload := decodeTestSnapshotRegion(t, snap, "mmPayload")
+
+	foreignAddr, ok := locateForeignOotSave(mmPayload, AddrMmPayload)
+	if !ok {
+		t.Fatal("expected to locate foreign OoT save in MM payload")
+	}
+
+	nearOffset := int(foreignAddr - AddrMmPayload - SharedCustomSaveSize)
+	if nearOffset < 0 || nearOffset+sharedStateReadSize() > len(mmPayload) {
+		t.Fatalf("near-foreign offset %#x is out of bounds", nearOffset)
+	}
+
+	window := mmPayload[nearOffset : nearOffset+sharedStateReadSize()]
+	shared, err := parseSharedCheckState(window)
+	if err != nil {
+		t.Fatalf("parse near-foreign shared check state: %v", err)
+	}
+
+	// The near-foreign SharedCustomSave should have OoT xflags from the
+	// user's session (loaded from flash).  It should NOT have thousands
+	// of MM xflag bits (which would be garbage from MIPS code).
+	xflagsMm := shared.Bitmap("xflagsMm")
+	mmBits := 0
+	for _, b := range xflagsMm {
+		for b != 0 {
+			mmBits++
+			b &= b - 1
+		}
+	}
+	if mmBits > 100 {
+		t.Fatalf("near-foreign xflagsMm has %d bits set, expected <100 for a fresh seed", mmBits)
+	}
+}
+
+func TestDebugDumpMmPayloadCandidateHasGarbageBits(t *testing.T) {
+	snap := loadTestDebugSnapshot(t, "mm-after-chest-20260418-212749.json")
+	mmPayload := decodeTestSnapshotRegion(t, snap, "mmPayload")
+
+	// The fixed-offset payload candidates read MIPS code rather than save
+	// data.  Even when one passes the plausibility filter, it contains
+	// implausibly high xflag bit counts.  The near-foreign approach must
+	// be preferred over these candidates.
+	addr, err := sharedSaveAddr(AddrMmPayload, MmPayloadSize, 0)
+	if err != nil {
+		t.Fatalf("sharedSaveAddr: %v", err)
+	}
+	offset := int(addr - AddrMmPayload)
+	end := offset + sharedStateReadSize()
+	if end > len(mmPayload) {
+		t.Skip("payload window out of bounds")
+	}
+	window := mmPayload[offset:end]
+	parsed, err := parseSharedState(window)
+	if err != nil {
+		t.Skip("payload candidate fails plausibility as expected")
+	}
+
+	xflagsOot := parsed.Bitmap("xflagsOot")
+	ootBits := 0
+	for _, b := range xflagsOot {
+		for b != 0 {
+			ootBits++
+			b &= b - 1
+		}
+	}
+	// MIPS code interpreted as xflag bitmap yields thousands of bits.
+	if ootBits < 1000 {
+		t.Fatalf("payload slot 0 xflagsOot has only %d bits, expected >1000 for garbage", ootBits)
 	}
 }
 
