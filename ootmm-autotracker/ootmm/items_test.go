@@ -1263,6 +1263,50 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOotFrogSongEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"FROGS_GAME":   "Zora River Frogs Game",
+			"FROGS_ZL":     "Zora River Frogs Zeldas Lullaby",
+			"FROGS_EPONA":  "Zora River Frogs Eponas Song",
+			"FROGS_SARIA":  "Zora River Frogs Sarias Song",
+			"FROGS_SUNS":   "Zora River Frogs Suns Song",
+			"FROGS_SOT":    "Zora River Frogs Song of Time",
+			"FROGS_STORMS": "Zora River Frogs Storms",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[ootEventFrogsGame>>4] =
+		(1 << (ootEventFrogsGame & 0xF)) |
+		(1 << (ootEventFrogsZelda & 0xF)) |
+		(1 << (ootEventFrogsEpona & 0xF)) |
+		(1 << (ootEventFrogsSun & 0xF)) |
+		(1 << (ootEventFrogsSaria & 0xF)) |
+		(1 << (ootEventFrogsSongOfTime & 0xF)) |
+		(1 << (ootEventFrogsStorms & 0xF))
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Zora River Frogs Game",
+		"Zora River Frogs Zeldas Lullaby",
+		"Zora River Frogs Eponas Song",
+		"Zora River Frogs Sarias Song",
+		"Zora River Frogs Suns Song",
+		"Zora River Frogs Song of Time",
+		"Zora River Frogs Storms",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing OoT frog song check from event fallback: %s", name)
+		}
+	}
+}
+
 func TestExtractChecksIncludesTempleOfTimeEventFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

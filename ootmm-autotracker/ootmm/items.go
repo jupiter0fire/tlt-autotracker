@@ -41,6 +41,13 @@ const (
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
 	ootEventSongSunCustom           = 0x5a
+	ootEventFrogsGame               = 0xd0
+	ootEventFrogsZelda              = 0xd1
+	ootEventFrogsEpona              = 0xd2
+	ootEventFrogsSun                = 0xd3
+	ootEventFrogsSaria              = 0xd4
+	ootEventFrogsSongOfTime         = 0xd5
+	ootEventFrogsStorms             = 0xd6
 	ootEventSkulltulaHouse10        = 0xda
 	ootEventSkulltulaHouse20        = 0xdb
 	ootEventSkulltulaHouse30        = 0xdc
@@ -115,6 +122,13 @@ var ootEventSymbolChecks = [...]struct {
 	{symbol: "OCARINA_TIME_ITEM", flags: []int{0x43}},
 	{symbol: "OCARINA_TIME_SONG", flags: []int{0xa9}},
 	{symbol: "ROYAL_TOMB_SONG", flags: []int{ootEventSongSunCustom}},
+	{symbol: "FROGS_GAME", flags: []int{ootEventFrogsGame}},
+	{symbol: "FROGS_ZL", flags: []int{ootEventFrogsZelda}},
+	{symbol: "FROGS_EPONA", flags: []int{ootEventFrogsEpona}},
+	{symbol: "FROGS_SARIA", flags: []int{ootEventFrogsSaria}},
+	{symbol: "FROGS_SUNS", flags: []int{ootEventFrogsSun}},
+	{symbol: "FROGS_SOT", flags: []int{ootEventFrogsSongOfTime}},
+	{symbol: "FROGS_STORMS", flags: []int{ootEventFrogsStorms}},
 	{symbol: "SARIA_SONG", flags: []int{ootEventSongSariaVanilla, ootEventSongSariaCustom}},
 	{symbol: "GS_10", flags: []int{ootEventSkulltulaHouse10}},
 	{symbol: "GS_20", flags: []int{ootEventSkulltulaHouse20}},
