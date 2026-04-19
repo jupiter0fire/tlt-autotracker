@@ -41,6 +41,11 @@ const (
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
 	ootEventSongSunCustom           = 0x5a
+	ootEventSkulltulaHouse10        = 0xda
+	ootEventSkulltulaHouse20        = 0xdb
+	ootEventSkulltulaHouse30        = 0xdc
+	ootEventSkulltulaHouse40        = 0xdd
+	ootEventSkulltulaHouse50        = 0xde
 	ootItemRutoLetter               = 0x1b
 	mmItemRutoLetter                = 0xb6
 )
@@ -111,6 +116,11 @@ var ootEventSymbolChecks = [...]struct {
 	{symbol: "OCARINA_TIME_SONG", flags: []int{0xa9}},
 	{symbol: "ROYAL_TOMB_SONG", flags: []int{ootEventSongSunCustom}},
 	{symbol: "SARIA_SONG", flags: []int{ootEventSongSariaVanilla, ootEventSongSariaCustom}},
+	{symbol: "GS_10", flags: []int{ootEventSkulltulaHouse10}},
+	{symbol: "GS_20", flags: []int{ootEventSkulltulaHouse20}},
+	{symbol: "GS_30", flags: []int{ootEventSkulltulaHouse30}},
+	{symbol: "GS_40", flags: []int{ootEventSkulltulaHouse40}},
+	{symbol: "GS_50", flags: []int{ootEventSkulltulaHouse50}},
 	{symbol: "SARIA_OCARINA", flags: []int{0xc1}},
 	{symbol: "SHEIK_FOREST", flags: []int{0x50}},
 	{symbol: "SHEIK_FIRE", flags: []int{0x51}},

@@ -1288,6 +1288,44 @@ func TestExtractChecksIncludesTempleOfTimeEventFallbacks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesSkulltulaHouseEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"GS_10": "Skulltula House 10 Tokens",
+			"GS_20": "Skulltula House 20 Tokens",
+			"GS_30": "Skulltula House 30 Tokens",
+			"GS_40": "Skulltula House 40 Tokens",
+			"GS_50": "Skulltula House 50 Tokens",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[ootEventSkulltulaHouse10>>4] =
+		(1 << (ootEventSkulltulaHouse10 & 0xF)) |
+		(1 << (ootEventSkulltulaHouse20 & 0xF)) |
+		(1 << (ootEventSkulltulaHouse30 & 0xF)) |
+		(1 << (ootEventSkulltulaHouse40 & 0xF)) |
+		(1 << (ootEventSkulltulaHouse50 & 0xF))
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Skulltula House 10 Tokens",
+		"Skulltula House 20 Tokens",
+		"Skulltula House 30 Tokens",
+		"Skulltula House 40 Tokens",
+		"Skulltula House 50 Tokens",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing OoT Skulltula House check from event fallback: %s", name)
+		}
+	}
+}
+
 func TestExtractChecksIncludesOtherOotEventSymbolFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
