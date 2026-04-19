@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	maxForeignOotChecksumDelta        = 0x800
 	maxForeignMmChecksumDelta         = 0x400
 	sharedOcarinaButtonMaskOotOffset  = 0x7c8
 	sharedOcarinaButtonMaskMmOffset   = 0x7ca
@@ -944,7 +945,7 @@ func (r *Reader) readOotSaveAt(addr uint32, oot *OotState) error {
 	if err != nil {
 		return fmt.Errorf("read foreign OoT save: %w", err)
 	}
-	if err := validateOotSave(data); err != nil {
+	if err := validateForeignOotSave(data); err != nil {
 		return fmt.Errorf("validate foreign OoT save: %w", err)
 	}
 
@@ -1017,22 +1018,16 @@ func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *Shar
 	}
 
 	// Prefer the near-foreign candidate (adjacent to the validated foreign
-	// save in BSS) — it reads the live gSharedCustomSave.  Fall back to
-	// payload-offset candidates only when the near-foreign scan has not
-	// yet located the foreign save address.
+	// save in BSS) — it reads the live gSharedCustomSave. Fixed payload-slot
+	// addresses are not reliable live save storage in RDRAM; when the
+	// near-foreign read is temporarily unavailable, keep the last known
+	// shared state rather than switching to a garbage payload candidate.
 	if candidate, err := r.readSharedStateNearForeignSaveCandidate(game); err == nil {
 		*shared = candidate.state
+	} else if r.hasLastKnownShared {
+		*shared = r.lastKnownShared.Clone()
 	} else {
-		candidates := make([]sharedStateCandidate, 0, 2)
-		if candidate, err := r.readSharedStateFromPayloadCandidate(AddrOotPayload, OotPayloadSize, saveIndex); err == nil {
-			candidates = append(candidates, candidate)
-		}
-		if candidate, err := r.readSharedStateFromPayloadCandidate(AddrMmPayload, MmPayloadSize, saveIndex); err == nil {
-			candidates = append(candidates, candidate)
-		}
-		if candidate, ok := r.selectSharedStateCandidate(candidates); ok {
-			*shared = candidate.state
-		}
+		*shared = SharedCustomState{}
 	}
 
 	overlaySharedCheckBitmaps(shared, nearForeignChecks)
@@ -1478,6 +1473,26 @@ func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
 		return payloadBase + uint32(offset), true
 	}
 
+	bestOffset := -1
+	bestDelta := maxForeignOotChecksumDelta + 1
+	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
+		candidate := payload[offset : offset+OotSaveSize]
+		delta, ok := ootChecksumDelta(candidate)
+		if !ok || delta > maxForeignOotChecksumDelta {
+			continue
+		}
+		if !isPlausibleOotSave(candidate) {
+			continue
+		}
+		if delta < bestDelta {
+			bestDelta = delta
+			bestOffset = offset
+		}
+	}
+	if bestOffset >= 0 {
+		return payloadBase + uint32(bestOffset), true
+	}
+
 	return 0, false
 }
 
@@ -1672,6 +1687,15 @@ func validateOotSave(data []byte) error {
 	}
 
 	expected := binary.BigEndian.Uint16(data[OotOffChecksum:])
+	checksum := ootChecksum(data)
+	if checksum != expected {
+		return fmt.Errorf("invalid OoT checksum: got %04x want %04x", expected, checksum)
+	}
+
+	return nil
+}
+
+func ootChecksum(data []byte) uint16 {
 	checksum := uint16(0)
 	for i := 0; i < OotSaveSize; i += 2 {
 		if i == OotOffChecksum {
@@ -1679,8 +1703,44 @@ func validateOotSave(data []byte) error {
 		}
 		checksum += binary.BigEndian.Uint16(data[i:])
 	}
-	if checksum != expected {
-		return fmt.Errorf("invalid OoT checksum: got %04x want %04x", expected, checksum)
+	return checksum
+}
+
+func ootChecksumDelta(data []byte) (int, bool) {
+	if len(data) < OotSaveSize {
+		return 0, false
+	}
+
+	expected := binary.BigEndian.Uint16(data[OotOffChecksum:])
+	if expected == 0 {
+		return 0, false
+	}
+
+	checksum := ootChecksum(data)
+	delta := int(checksum) - int(expected)
+	if delta < 0 {
+		delta = -delta
+	}
+	if delta > 0x8000 {
+		delta = 0x10000 - delta
+	}
+	return delta, true
+}
+
+func validateForeignOotSave(data []byte) error {
+	if err := validateOotSave(data); err == nil {
+		return nil
+	}
+
+	delta, ok := ootChecksumDelta(data)
+	if !ok {
+		return fmt.Errorf("invalid OoT checksum")
+	}
+	if delta > maxForeignOotChecksumDelta {
+		return fmt.Errorf("invalid OoT checksum delta %d", delta)
+	}
+	if !isPlausibleOotSave(data) {
+		return fmt.Errorf("OoT save failed plausibility checks")
 	}
 
 	return nil

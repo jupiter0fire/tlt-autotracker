@@ -34,7 +34,9 @@ func main() {
 
 	reader := ootmm.NewReader(mem)
 
-	// Poll rapidly to catch transitions
+	// Poll rapidly to catch transitions.
+	// Preserve the last valid MM snapshot across GameNone frames so we can
+	// distinguish real removals from transition gaps.
 	prev := make(map[string]struct{})
 	for i := 0; i < 600; i++ { // ~60 seconds at 100ms
 		state, err := reader.ReadState()
@@ -44,6 +46,7 @@ func main() {
 		}
 
 		current := make(map[string]struct{})
+		isValidMM := state.ActiveGame == ootmm.GameMm
 		if state.ActiveGame != ootmm.GameNone {
 			for _, check := range ootmm.ExtractChecks(state) {
 				name := strings.ToLower(check.Name)
@@ -61,7 +64,7 @@ func main() {
 
 		dumpState := func(prefix string) {
 			fmt.Printf(
-				"[%3d] %s game=%s mmScene=%d hasLive=%v liveChest=%#08x cycleChest45=%#08x permChest45=%#08x xflag2036=%v checks(chest=%v wonder=%v)\n",
+				"[%3d] %s game=%s mmScene=%d hasLive=%v liveChest=%#08x cycleChest45=%#08x permChest45=%#08x xflag2036=%v checks(chest=%v wonder=%v totalTermina=%d)\n",
 				i,
 				prefix,
 				state.ActiveGame,
@@ -73,19 +76,39 @@ func main() {
 				xflagSet,
 				contains(current, targetChestKey),
 				contains(current, targetXflagKey),
+				len(current),
 			)
 		}
 
-		// Report changes
-		for key := range current {
-			if _, ok := prev[key]; !ok {
-				dumpState("+ADD " + key)
+		if !isValidMM {
+			if state.ActiveGame == ootmm.GameNone && len(prev) > 0 {
+				dumpState("game=None")
+			}
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		prevChest := contains(prev, targetChestKey)
+		prevWonder := contains(prev, targetXflagKey)
+		currentChest := contains(current, targetChestKey)
+		currentWonder := contains(current, targetXflagKey)
+
+		if prevChest != currentChest {
+			if currentChest {
+				dumpState("+ADD " + targetChestKey)
+			} else {
+				dumpState("-DEL " + targetChestKey)
 			}
 		}
-		for key := range prev {
-			if _, ok := current[key]; !ok {
-				dumpState("-DEL " + key)
+		if prevWonder != currentWonder {
+			if currentWonder {
+				dumpState("+ADD " + targetXflagKey)
+			} else {
+				dumpState("-DEL " + targetXflagKey)
 			}
+		}
+		if len(prev) != len(current) && prevChest == currentChest && prevWonder == currentWonder {
+			dumpState("Termina count changed")
 		}
 		if state.ActiveGame == ootmm.GameNone && len(prev) > 0 {
 			dumpState("game=None")
