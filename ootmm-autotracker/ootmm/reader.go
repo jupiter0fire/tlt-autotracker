@@ -1367,6 +1367,10 @@ func (r *Reader) rememberOotState(oot OotState) {
 }
 
 func (r *Reader) rememberMmState(mm MmState) {
+	mm.LiveSceneID = 0
+	mm.LiveChestFlags = 0
+	mm.LiveCollectFlags = 0
+	mm.HasLiveSceneFlags = false
 	r.lastKnownMm = mm
 	r.hasLastKnownMm = true
 }
