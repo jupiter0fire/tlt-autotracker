@@ -140,6 +140,11 @@ type MmState struct {
 	Time       uint16
 	GameMode   uint32
 
+	LiveSceneID      uint16
+	LiveChestFlags   uint32
+	LiveCollectFlags uint32
+	HasLiveSceneFlags bool
+
 	// Inventory
 	Items [48]uint8
 	Ammo  [24]int8

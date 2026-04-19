@@ -445,6 +445,10 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			chests |= state.Mm.CycleFlags[sceneIdx].Chests
 			collectibles |= state.Mm.CycleFlags[sceneIdx].Collectibles
 		}
+		if state.Mm.HasLiveSceneFlags && sceneIdx == int(state.Mm.LiveSceneID) {
+			chests |= state.Mm.LiveChestFlags
+			collectibles |= state.Mm.LiveCollectFlags
+		}
 		for bit := 0; bit < 32; bit++ {
 			if chests&(1<<uint(bit)) != 0 {
 				if name, ok := lookupSceneCheckName("MM", sceneIdx, "chest", bit); ok {

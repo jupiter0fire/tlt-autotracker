@@ -38,19 +38,21 @@ os.Exit(1)
 
 fmt.Printf("active game: %s\n", state.ActiveGame)
 fmt.Printf("current OoT scene: %#x\n", state.Oot.SceneID)
-fmt.Printf("live chest flags: %#08x\n", state.Oot.LiveChestFlags)
+fmt.Printf("live OoT chest flags: %#08x\n", state.Oot.LiveChestFlags)
+fmt.Printf("current MM scene: %d (has live: %v)\n", state.Mm.LiveSceneID, state.Mm.HasLiveSceneFlags)
+fmt.Printf("live MM chest flags: %#08x\n", state.Mm.LiveChestFlags)
+fmt.Printf("live MM collect flags: %#08x\n", state.Mm.LiveCollectFlags)
 if len(state.Oot.SceneFlags) > 1 {
 fmt.Printf("stable scene 1 chest flags: %#08x\n", state.Oot.SceneFlags[1].Chests)
 }
 
-foundCompass := false
 for _, check := range ootmm.ExtractChecks(state) {
-if strings.Contains(strings.ToLower(check.Name), "dodongo") && strings.Contains(strings.ToLower(check.Name), "compass") {
-fmt.Printf("ExtractChecks includes: %s\n", check.Name)
-foundCompass = true
+name := strings.ToLower(check.Name)
+if strings.Contains(name, "dodongo") && strings.Contains(name, "compass") {
+fmt.Printf("ExtractChecks: %s\n", check.Name)
 }
+if strings.Contains(name, "termina field") {
+fmt.Printf("ExtractChecks: %s (key=%s)\n", check.Name, check.Key)
 }
-if !foundCompass {
-fmt.Println("ExtractChecks does NOT include any Dodongo Cavern Compass chest name.")
 }
 }

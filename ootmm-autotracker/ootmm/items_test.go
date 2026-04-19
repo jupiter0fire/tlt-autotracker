@@ -1364,3 +1364,56 @@ func TestExtractChecksDoesNotDuplicateMmPermAndCycleFlags(t *testing.T) {
 		t.Fatalf("Clock Town Platform HP appeared %d times, want 1", count)
 	}
 }
+
+func TestExtractChecksIncludesLiveMmChestFlags(t *testing.T) {
+	state := &GameState{}
+	// Scene 108 (0x6C), chest bit 10 — live PlayState chest flag.
+	state.Mm.LiveSceneID = 108
+	state.Mm.LiveChestFlags = 1 << 10
+	state.Mm.HasLiveSceneFlags = true
+
+	checks := ExtractChecks(state)
+	found := false
+	for _, c := range checks {
+		if c.Key == "MM_chest_108_10" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("missing MM_chest_108_10 from MM live chest flags")
+	}
+}
+
+func TestExtractChecksIncludesLiveMmCollectibleFlags(t *testing.T) {
+	state := &GameState{}
+	// Scene 111 (0x6F), collectible bit 10 — live PlayState collectible flag.
+	state.Mm.LiveSceneID = 111
+	state.Mm.LiveCollectFlags = 1 << 10
+	state.Mm.HasLiveSceneFlags = true
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Clock Town Platform HP"]; !ok {
+		t.Fatal("missing Clock Town Platform HP from MM live collectible flags")
+	}
+}
+
+func TestExtractChecksDoesNotDuplicateMmLiveAndCycleFlags(t *testing.T) {
+	state := &GameState{}
+	// Same bit in cycle flags AND live flags — should appear only once.
+	state.Mm.CycleFlags[108].Chests = 1 << 10
+	state.Mm.LiveSceneID = 108
+	state.Mm.LiveChestFlags = 1 << 10
+	state.Mm.HasLiveSceneFlags = true
+
+	checks := ExtractChecks(state)
+	count := 0
+	for _, c := range checks {
+		if c.Key == "MM_chest_108_10" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("MM_chest_108_10 appeared %d times, want 1", count)
+	}
+}

@@ -48,6 +48,7 @@ type Reader struct {
 	foreignOotSaveAddr uint32
 	foreignMmSaveAddr  uint32
 	ootPlayStateAddr   uint32
+	mmPlayStateAddr    uint32
 	comboConfigOotAddr uint32
 	comboConfigMmAddr  uint32
 	ootMaxKeysAddr     uint32
@@ -123,6 +124,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 		if err := r.readMmSave(&state.Mm); err != nil {
 			return nil, fmt.Errorf("read MM save: %w", err)
 		}
+		r.readMmLiveState(&state.Mm)
 		if err := r.readForeignOotState(&state.Oot); err != nil {
 			return nil, fmt.Errorf("read foreign OoT save: %w", err)
 		}
@@ -545,6 +547,110 @@ func isPlausibleOotPlayStateSample(sample ootPlayStateSample) bool {
 		return false
 	}
 	if sample.linkAgeOnLoad > 1 {
+		return false
+	}
+	return sample.gameplayFrames > 0
+}
+
+// --- MM live PlayState reading ---
+
+type mmPlayStateSample struct {
+	sceneID        uint16
+	actorTotal     uint8
+	currentRoom    uint8
+	gameplayFrames uint32
+	chestFlags     uint32
+	collectFlags   uint32
+}
+
+var mmPlayStateCandidateAddrs = [...]uint32{
+	AddrMmPlayState1,
+}
+
+func (r *Reader) readMmLiveState(mm *MmState) {
+	if mm == nil {
+		return
+	}
+
+	sample, ok := r.readMmPlayStateSampleCached()
+	if !ok {
+		return
+	}
+	if sample.sceneID >= MmPermCount {
+		return
+	}
+
+	mm.LiveSceneID = sample.sceneID
+	mm.LiveChestFlags = sample.chestFlags
+	mm.LiveCollectFlags = sample.collectFlags
+	mm.HasLiveSceneFlags = true
+}
+
+func (r *Reader) readMmPlayStateSampleCached() (mmPlayStateSample, bool) {
+	if r.mmPlayStateAddr != 0 {
+		sample, err := r.readMmPlayStateSample(r.mmPlayStateAddr)
+		if err == nil && isPlausibleMmPlayStateSample(sample) {
+			return sample, true
+		}
+		r.mmPlayStateAddr = 0
+	}
+
+	for _, addr := range mmPlayStateCandidateAddrs {
+		sample, err := r.readMmPlayStateSample(addr)
+		if err != nil || !isPlausibleMmPlayStateSample(sample) {
+			continue
+		}
+		r.mmPlayStateAddr = addr
+		return sample, true
+	}
+
+	return mmPlayStateSample{}, false
+}
+
+func (r *Reader) readMmPlayStateSample(addr uint32) (mmPlayStateSample, error) {
+	sceneID, err := r.mem.ReadU16BE(addr + uint32(MmPlayOffSceneID))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+	actorTotal, err := r.mem.ReadU8(addr + uint32(MmPlayOffActorTotal))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+	currentRoom, err := r.mem.ReadU8(addr + uint32(MmPlayOffCurrentRoom))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+	gameplayFrames, err := r.mem.ReadU32BE(addr + uint32(MmPlayOffGameplayFrames))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+	chestFlags, err := r.mem.ReadU32BE(addr + uint32(MmPlayOffChestFlags))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+	collectFlags, err := r.mem.ReadU32BE(addr + uint32(MmPlayOffCollectFlags))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+
+	return mmPlayStateSample{
+		sceneID:        sceneID,
+		actorTotal:     actorTotal,
+		currentRoom:    currentRoom,
+		gameplayFrames: gameplayFrames,
+		chestFlags:     chestFlags,
+		collectFlags:   collectFlags,
+	}, nil
+}
+
+func isPlausibleMmPlayStateSample(sample mmPlayStateSample) bool {
+	if sample.sceneID >= MmPermCount {
+		return false
+	}
+	if sample.actorTotal == 0 || sample.actorTotal > 200 {
+		return false
+	}
+	if sample.currentRoom >= 0x40 {
 		return false
 	}
 	return sample.gameplayFrames > 0

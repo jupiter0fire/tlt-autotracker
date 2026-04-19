@@ -881,3 +881,41 @@ func validOotComboConfigBytes(mqBits uint32, playerID byte) []byte {
 
 	return data
 }
+
+func TestIsPlausibleMmPlayStateSample(t *testing.T) {
+	good := mmPlayStateSample{
+		sceneID:        108,
+		actorTotal:     25,
+		currentRoom:    1,
+		gameplayFrames: 5000,
+		chestFlags:     1 << 10,
+		collectFlags:   0,
+	}
+	if !isPlausibleMmPlayStateSample(good) {
+		t.Fatal("expected plausible MM PlayState sample to pass")
+	}
+
+	bad := good
+	bad.sceneID = 120
+	if isPlausibleMmPlayStateSample(bad) {
+		t.Fatal("sceneID >= MmPermCount should be rejected")
+	}
+
+	bad = good
+	bad.actorTotal = 0
+	if isPlausibleMmPlayStateSample(bad) {
+		t.Fatal("actorTotal == 0 should be rejected")
+	}
+
+	bad = good
+	bad.currentRoom = 0x40
+	if isPlausibleMmPlayStateSample(bad) {
+		t.Fatal("currentRoom >= 0x40 should be rejected")
+	}
+
+	bad = good
+	bad.gameplayFrames = 0
+	if isPlausibleMmPlayStateSample(bad) {
+		t.Fatal("gameplayFrames == 0 should be rejected")
+	}
+}

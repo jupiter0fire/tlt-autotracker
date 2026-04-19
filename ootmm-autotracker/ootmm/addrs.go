@@ -20,6 +20,9 @@ const (
 	AddrOotPlayStatePal11  uint32 = 0x801C6520
 	AddrOotPlayStateDebug  uint32 = 0x80212020
 
+	// MM PlayState heap address (deterministic SystemArena allocation).
+	AddrMmPlayState1 uint32 = 0x803E6B20
+
 	// OoT gSaveContext
 	AddrOotSaveCtx uint32 = 0x8011A5D0
 	OotSaveCtxSize int    = 0x1450 // 5200 bytes
@@ -208,6 +211,20 @@ const (
 	MmCtxOffFileNum    = 0x3CA0 // u32 active save slot
 	MmCtxOffGameMode   = 0x3CA8 // s32
 	MmCtxOffCycleFlags = 0x3F68 // MmCycleSceneFlags[120], each 0x14 bytes
+
+	// Live MM PlayState fields.
+	// MM PlayState is heap-allocated (SystemArena), so we probe a small
+	// set of known heap addresses (deterministic for a given OoTMM build).
+	// Source: zeldaret/mm ActorContext (actorCtx at +0x1CA0)
+	//   ActorContextSceneFlags at actorCtx+0x1B8:
+	//     switches[4] +0x00, chest +0x10, clearedRoom +0x14,
+	//     clearedRoomTemp +0x18, collectible[4] +0x1C
+	MmPlayOffSceneID        = 0x00A4
+	MmPlayOffActorTotal     = 0x1CAE // actorCtx + 0x0E (totalLoadedActors)
+	MmPlayOffChestFlags     = 0x1E68 // actorCtx + 0x1C8 (sceneFlags.chest)
+	MmPlayOffCollectFlags   = 0x1E74 // actorCtx + 0x1D4 (sceneFlags.collectible[0])
+	MmPlayOffCurrentRoom    = 0x186E0
+	MmPlayOffGameplayFrames = 0x18840
 )
 
 // Foreign save copies inside the payload areas use the same flash layout as
