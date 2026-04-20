@@ -130,6 +130,7 @@ type OotState struct {
 
 	// Event flags
 	EventsChk  [14]uint16
+	EventsItem [4]uint16
 	EventsMisc [30]uint16
 }
 

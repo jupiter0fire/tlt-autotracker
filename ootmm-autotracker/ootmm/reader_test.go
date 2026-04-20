@@ -256,6 +256,28 @@ func TestParseMmSaveReadsTownStrayFairyWeekEvent(t *testing.T) {
 	}
 }
 
+func TestParseOotSaveReadsEventBitmaps(t *testing.T) {
+	data := make([]byte, OotSaveCtxSize)
+	data[OotOffInvItems] = emptyInventoryItem
+	binary.BigEndian.PutUint16(data[OotOffEventsChk+(ootEventSongEpona>>4)*2:], 1<<(ootEventSongEpona&0xF))
+	binary.BigEndian.PutUint16(data[OotOffEventsItem+(ootEventItemGoronBracelet>>4)*2:], 1<<(ootEventItemGoronBracelet&0xF))
+	binary.BigEndian.PutUint16(data[OotOffEventsMisc+(ootEventMiscMedigoron>>4)*2:], 1<<(ootEventMiscMedigoron&0xF))
+
+	var oot OotState
+	if err := parseOotSave(&oot, data); err != nil {
+		t.Fatalf("parseOotSave: %v", err)
+	}
+	if got := oot.EventsChk[ootEventSongEpona>>4]; got != 1<<(ootEventSongEpona&0xF) {
+		t.Fatalf("unexpected OoT eventsChk word: got %#04x", got)
+	}
+	if got := oot.EventsItem[ootEventItemGoronBracelet>>4]; got != 1<<(ootEventItemGoronBracelet&0xF) {
+		t.Fatalf("unexpected OoT eventsItem word: got %#04x", got)
+	}
+	if got := oot.EventsMisc[ootEventMiscMedigoron>>4]; got != 1<<(ootEventMiscMedigoron&0xF) {
+		t.Fatalf("unexpected OoT eventsMisc word: got %#04x", got)
+	}
+}
+
 func TestAcceptStableStateRequiresTwoMatchingObservations(t *testing.T) {
 	r := &Reader{}
 

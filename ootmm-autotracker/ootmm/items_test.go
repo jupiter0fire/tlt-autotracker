@@ -1263,6 +1263,76 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOotMalonEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"MALON_EGG":  "Malon Egg",
+			"MALON_SONG": "Lon Lon Ranch Malon Song",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[ootEventMalonEgg>>4] = 1 << (ootEventMalonEgg & 0xF)
+	state.Oot.EventsChk[ootEventSongEpona>>4] = 1 << (ootEventSongEpona & 0xF)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Malon Egg"]; !ok {
+		t.Fatal("missing OoT Malon Egg check from event fallback")
+	}
+	if _, ok := checks["Lon Lon Ranch Malon Song"]; !ok {
+		t.Fatal("missing OoT Malon Song check from event fallback")
+	}
+}
+
+func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"DARUNIA_BRACELET": "Darunia",
+			"GERUDO_ARCHERY_2": "Gerudo Fortress Archery Reward 2",
+			"LOST_WOODS_TARGET": "Lost Woods Target",
+			"MASK_SELL_BUNNY":  "Hyrule Field Sell Bunny Mask",
+			"MASK_SELL_KEATON": "Kakariko Sell Keaton Mask",
+			"MASK_SELL_SKULL":  "Lost Woods Sell Skull Mask",
+			"MASK_SELL_SPOOKY": "Graveyard Sell Spooky Mask",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsItem[ootEventItemGerudoArchery2>>4] = 1 << (ootEventItemGerudoArchery2 & 0xF)
+	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] = 1 << (ootEventItemLostWoodsTarget & 0xF)
+	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
+	state.Oot.EventsItem[ootEventItemMaskSellKeaton>>4] =
+		(1 << (ootEventItemMaskSellKeaton & 0xF)) |
+		(1 << (ootEventItemMaskSellSkull & 0xF)) |
+		(1 << (ootEventItemMaskSellSpooky & 0xF)) |
+		(1 << (ootEventItemMaskSellBunny & 0xF))
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Darunia",
+		"Gerudo Fortress Archery Reward 2",
+		"Lost Woods Target",
+		"Hyrule Field Sell Bunny Mask",
+		"Kakariko Sell Keaton Mask",
+		"Lost Woods Sell Skull Mask",
+		"Graveyard Sell Spooky Mask",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing OoT event-item symbol check: %s", name)
+		}
+	}
+}
+
 func TestExtractChecksIncludesOotFrogSongEventFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
@@ -1388,6 +1458,32 @@ func TestExtractChecksIncludesOtherOotEventSymbolFallbacks(t *testing.T) {
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Temple of Time Light Arrows"]; !ok {
 		t.Fatal("missing OoT event-symbol check for Light Arrows")
+	}
+}
+
+func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"GERUDO_ARCHERY_1": "Gerudo Fortress Archery Reward 1",
+			"MEDIGORON":        "Goron City Medigoron Giant Knife",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsMisc[ootEventMiscGerudoArchery1>>4] = 1 << (ootEventMiscGerudoArchery1 & 0xF)
+	state.Oot.EventsMisc[ootEventMiscMedigoron>>4] = 1 << (ootEventMiscMedigoron & 0xF)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Gerudo Fortress Archery Reward 1"]; !ok {
+		t.Fatal("missing OoT event-misc symbol check for Gerudo Archery Reward 1")
+	}
+	if _, ok := checks["Goron City Medigoron Giant Knife"]; !ok {
+		t.Fatal("missing OoT event-misc symbol check for Medigoron")
 	}
 }
 

@@ -40,6 +40,15 @@ const (
 	mmOwlHiddenBit                  = 15
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
+	ootEventItemGerudoArchery2      = 0x0f
+	ootEventItemLostWoodsTarget     = 0x1d
+	ootEventItemGoronBracelet       = 0x20
+	ootEventItemMaskSellKeaton      = 0x38
+	ootEventItemMaskSellSkull       = 0x39
+	ootEventItemMaskSellSpooky      = 0x3a
+	ootEventItemMaskSellBunny       = 0x3b
+	ootEventMalonEgg                = 0x12
+	ootEventSongEpona              = 0x62
 	ootEventSongSunCustom           = 0x5a
 	ootEventFrogsGame               = 0xd0
 	ootEventFrogsZelda              = 0xd1
@@ -53,9 +62,16 @@ const (
 	ootEventSkulltulaHouse30        = 0xdc
 	ootEventSkulltulaHouse40        = 0xdd
 	ootEventSkulltulaHouse50        = 0xde
+	ootEventMiscGerudoArchery1      = 0x190
+	ootEventMiscMedigoron           = 0xb2
 	ootItemRutoLetter               = 0x1b
 	mmItemRutoLetter                = 0xb6
 )
+
+type ootSymbolFlagCheck struct {
+	symbol string
+	flags  []int
+}
 
 var mmOwlItems = [...]struct {
 	itemID string
@@ -113,10 +129,9 @@ var ootSilverRupeeItemIDs = [...][2]string{
 	{"OOT_RUPEE_SILVER_GANON_FOREST", "OOT_RUPEE_SILVER_GANON_FOREST"},
 }
 
-var ootEventSymbolChecks = [...]struct {
-	symbol string
-	flags  []int
-}{
+var ootEventSymbolChecks = [...]ootSymbolFlagCheck{
+	{symbol: "MALON_EGG", flags: []int{ootEventMalonEgg}},
+	{symbol: "MALON_SONG", flags: []int{ootEventSongEpona}},
 	{symbol: "MASTER_SWORD", flags: []int{0x4f}},
 	{symbol: "LIGHT_MEDALLION", flags: []int{0x45}},
 	{symbol: "OCARINA_TIME_ITEM", flags: []int{0x43}},
@@ -146,6 +161,21 @@ var ootEventSymbolChecks = [...]struct {
 	{symbol: "ZELDA_LETTER", flags: []int{0x40}},
 	{symbol: "ZELDA_LIGHT_ARROW", flags: []int{0xc4}},
 	{symbol: "ZELDA_SONG", flags: []int{0x59}},
+}
+
+var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
+	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
+	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
+	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},
+	{symbol: "MASK_SELL_KEATON", flags: []int{ootEventItemMaskSellKeaton}},
+	{symbol: "MASK_SELL_SKULL", flags: []int{ootEventItemMaskSellSkull}},
+	{symbol: "MASK_SELL_SPOOKY", flags: []int{ootEventItemMaskSellSpooky}},
+	{symbol: "MASK_SELL_BUNNY", flags: []int{ootEventItemMaskSellBunny}},
+}
+
+var ootEventMiscSymbolChecks = [...]ootSymbolFlagCheck{
+	{symbol: "GERUDO_ARCHERY_1", flags: []int{ootEventMiscGerudoArchery1}},
+	{symbol: "MEDIGORON", flags: []int{ootEventMiscMedigoron}},
 }
 
 // TrackedItem represents a single trackable item with its current quantity.
@@ -525,18 +555,32 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		}
 	}
 	appendOotEventSymbolChecks(state, appendCheck)
+	appendOotEventItemSymbolChecks(state, appendCheck)
+	appendOotEventMiscSymbolChecks(state, appendCheck)
 
 	return checks
 }
 
 func appendOotEventSymbolChecks(state *GameState, appendCheck func(string, string)) {
-	for _, entry := range ootEventSymbolChecks {
+	appendOotSymbolChecksFromFlags(state, ootEventSymbolChecks[:], hasOotEventCheck, "OOT_event_", appendCheck)
+}
+
+func appendOotEventItemSymbolChecks(state *GameState, appendCheck func(string, string)) {
+	appendOotSymbolChecksFromFlags(state, ootEventItemSymbolChecks[:], hasOotEventItemCheck, "OOT_event_item_", appendCheck)
+}
+
+func appendOotEventMiscSymbolChecks(state *GameState, appendCheck func(string, string)) {
+	appendOotSymbolChecksFromFlags(state, ootEventMiscSymbolChecks[:], hasOotEventMiscCheck, "OOT_event_misc_", appendCheck)
+}
+
+func appendOotSymbolChecksFromFlags(state *GameState, entries []ootSymbolFlagCheck, hasFlag func(*GameState, int) bool, keyPrefix string, appendCheck func(string, string)) {
+	for _, entry := range entries {
 		for _, flag := range entry.flags {
-			if !hasOotEventCheck(state, flag) {
+			if !hasFlag(state, flag) {
 				continue
 			}
 			if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
-				appendCheck("OOT_event_"+entry.symbol, name)
+				appendCheck(keyPrefix+entry.symbol, name)
 			}
 			break
 		}
@@ -544,11 +588,23 @@ func appendOotEventSymbolChecks(state *GameState, appendCheck func(string, strin
 }
 
 func hasOotEventCheck(state *GameState, flag int) bool {
+	return hasOotEventBitmapFlag(state.Oot.EventsChk[:], flag)
+}
+
+func hasOotEventItemCheck(state *GameState, flag int) bool {
+	return hasOotEventBitmapFlag(state.Oot.EventsItem[:], flag)
+}
+
+func hasOotEventMiscCheck(state *GameState, flag int) bool {
+	return hasOotEventBitmapFlag(state.Oot.EventsMisc[:], flag)
+}
+
+func hasOotEventBitmapFlag(bitmap []uint16, flag int) bool {
 	word := flag >> 4
-	if word < 0 || word >= len(state.Oot.EventsChk) {
+	if word < 0 || word >= len(bitmap) {
 		return false
 	}
-	return state.Oot.EventsChk[word]&(1<<uint(flag&0xF)) != 0
+	return bitmap[word]&(1<<uint(flag&0xF)) != 0
 }
 
 func appendOotGsChecks(bitmap []uint32, oot *OotState, appendCheck func(string, string)) {

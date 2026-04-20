@@ -233,6 +233,9 @@ func parseOotSave(oot *OotState, data []byte) error {
 	for i := 0; i < 14; i++ {
 		oot.EventsChk[i] = binary.BigEndian.Uint16(data[OotOffEventsChk+i*2:])
 	}
+	for i := 0; i < 4; i++ {
+		oot.EventsItem[i] = binary.BigEndian.Uint16(data[OotOffEventsItem+i*2:])
+	}
 	eventsMiscOff := OotOffEventsMisc
 	for i := 0; i < 30; i++ {
 		oot.EventsMisc[i] = binary.BigEndian.Uint16(data[eventsMiscOff+i*2:])

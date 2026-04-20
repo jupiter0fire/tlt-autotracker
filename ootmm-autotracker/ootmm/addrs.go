@@ -152,6 +152,7 @@ const (
 
 	// Event flags
 	OotOffEventsChk  = 0xED4 // u16[14]
+	OotOffEventsItem = 0xEF0 // u16[4]
 	OotOffEventsMisc = 0xEF8 // u16[30]
 
 	// Extra records stored in perm[N].raw + 0x10
