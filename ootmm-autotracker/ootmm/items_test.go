@@ -1296,6 +1296,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			"DARUNIA_BRACELET": "Darunia",
 			"GERUDO_ARCHERY_2": "Gerudo Fortress Archery Reward 2",
 			"LOST_WOODS_TARGET": "Lost Woods Target",
+			"POCKET_EGG":       "Hatch Pocket Cucco",
 			"MASK_SELL_BUNNY":  "Hyrule Field Sell Bunny Mask",
 			"MASK_SELL_KEATON": "Kakariko Sell Keaton Mask",
 			"MASK_SELL_SKULL":  "Lost Woods Sell Skull Mask",
@@ -1311,6 +1312,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	state.Oot.EventsItem[ootEventItemGerudoArchery2>>4] = 1 << (ootEventItemGerudoArchery2 & 0xF)
 	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] = 1 << (ootEventItemLostWoodsTarget & 0xF)
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
+	state.Oot.EventsItem[ootEventItemPocketEgg>>4] |= 1 << (ootEventItemPocketEgg & 0xF)
 	state.Oot.EventsItem[ootEventItemMaskSellKeaton>>4] =
 		(1 << (ootEventItemMaskSellKeaton & 0xF)) |
 		(1 << (ootEventItemMaskSellSkull & 0xF)) |
@@ -1321,6 +1323,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	for _, name := range []string{
 		"Darunia",
 		"Gerudo Fortress Archery Reward 2",
+		"Hatch Pocket Cucco",
 		"Lost Woods Target",
 		"Hyrule Field Sell Bunny Mask",
 		"Kakariko Sell Keaton Mask",
@@ -1330,6 +1333,71 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		if _, ok := checks[name]; !ok {
 			t.Fatalf("missing OoT event-item symbol check: %s", name)
 		}
+	}
+}
+
+func TestExtractChecksIncludesOotPocketEggTradeFallback(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"POCKET_EGG": "Hatch Pocket Cucco",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] = 1 << ootAdultTradePocketEggBit
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Hatch Pocket Cucco"]; ok {
+		t.Fatal("unexpected Pocket Cucco check from Pocket Egg alone")
+	}
+
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] |= 1 << (ootAdultTradePocketEggBit + 3)
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Hatch Pocket Cucco"]; !ok {
+		t.Fatal("missing Pocket Cucco check from persistent adult trade progression")
+	}
+}
+
+func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"WEIRD_EGG":    "Hatch Chicken",
+			"ZELDA_LETTER": "Zelda's Letter",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] = uint32(1<<(16+ootChildTradeWeirdEggBit))
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Hatch Chicken"]; ok {
+		t.Fatal("unexpected Hatch Chicken check from Weird Egg alone")
+	}
+	if _, ok := checks["Zelda's Letter"]; ok {
+		t.Fatal("unexpected Zelda's Letter check from Weird Egg alone")
+	}
+
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] |= uint32(1 << (16 + 1))
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Hatch Chicken"]; !ok {
+		t.Fatal("missing Hatch Chicken check from persistent child trade progression")
+	}
+	if _, ok := checks["Zelda's Letter"]; ok {
+		t.Fatal("unexpected Zelda's Letter check before Zelda's Letter progression")
+	}
+
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] |= uint32(1 << (16 + 2))
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Zelda's Letter"]; !ok {
+		t.Fatal("missing Zelda's Letter check from persistent child trade progression")
 	}
 }
 

@@ -43,6 +43,7 @@ const (
 	ootEventItemGerudoArchery2      = 0x0f
 	ootEventItemLostWoodsTarget     = 0x1d
 	ootEventItemGoronBracelet       = 0x20
+	ootEventItemPocketEgg           = 0x2c
 	ootEventItemMaskSellKeaton      = 0x38
 	ootEventItemMaskSellSkull       = 0x39
 	ootEventItemMaskSellSpooky      = 0x3a
@@ -64,6 +65,11 @@ const (
 	ootEventSkulltulaHouse50        = 0xde
 	ootEventMiscGerudoArchery1      = 0x190
 	ootEventMiscMedigoron           = 0xb2
+	ootChildTradeWeirdEggBit        = 0
+	ootChildTradeHatchMask          = 0x1ffe
+	ootChildTradeLetterMask         = 0x1ffc
+	ootAdultTradePocketEggBit       = 0
+	ootAdultTradePocketCuccoMask    = 0x07fe
 	ootItemRutoLetter               = 0x1b
 	mmItemRutoLetter                = 0xb6
 )
@@ -71,6 +77,11 @@ const (
 type ootSymbolFlagCheck struct {
 	symbol string
 	flags  []int
+}
+
+type ootTradeSymbolCheck struct {
+	symbol string
+	mask   uint16
 }
 
 var mmOwlItems = [...]struct {
@@ -167,6 +178,7 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
 	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
 	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},
+	{symbol: "POCKET_EGG", flags: []int{ootEventItemPocketEgg}},
 	{symbol: "MASK_SELL_KEATON", flags: []int{ootEventItemMaskSellKeaton}},
 	{symbol: "MASK_SELL_SKULL", flags: []int{ootEventItemMaskSellSkull}},
 	{symbol: "MASK_SELL_SPOOKY", flags: []int{ootEventItemMaskSellSpooky}},
@@ -176,6 +188,23 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 var ootEventMiscSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "GERUDO_ARCHERY_1", flags: []int{ootEventMiscGerudoArchery1}},
 	{symbol: "MEDIGORON", flags: []int{ootEventMiscMedigoron}},
+}
+
+var ootTradeSymbolChecks = [...]ootTradeSymbolCheck{
+	// OoTMM persists obtained adult-trade items in ExtraIdxOotTradeSave.
+	// Pocket Cucco itself is unreliable as a standalone save bit in live files,
+	// but any adult-trade progress beyond the initial Pocket Egg implies the egg
+	// has already hatched.
+	{symbol: "POCKET_EGG", mask: ootAdultTradePocketCuccoMask},
+}
+
+var ootChildTradeSymbolChecks = [...]ootTradeSymbolCheck{
+	// Child trade progression is also persisted in ExtraIdxOotTradeSave. As
+	// with Pocket Egg, later persistent progression implies the earlier checks
+	// have already been completed even when the corresponding event bit is not
+	// present in a live save snapshot.
+	{symbol: "WEIRD_EGG", mask: ootChildTradeHatchMask},
+	{symbol: "ZELDA_LETTER", mask: ootChildTradeLetterMask},
 }
 
 // TrackedItem represents a single trackable item with its current quantity.
@@ -554,6 +583,8 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			appendCheck("MM_extra_"+itoa(mmExtraFlags2MaskBlast), name)
 		}
 	}
+	appendOotChildTradeSymbolChecks(state, appendCheck)
+	appendOotTradeSymbolChecks(state, appendCheck)
 	appendOotEventSymbolChecks(state, appendCheck)
 	appendOotEventItemSymbolChecks(state, appendCheck)
 	appendOotEventMiscSymbolChecks(state, appendCheck)
@@ -563,6 +594,30 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 
 func appendOotEventSymbolChecks(state *GameState, appendCheck func(string, string)) {
 	appendOotSymbolChecksFromFlags(state, ootEventSymbolChecks[:], hasOotEventCheck, "OOT_event_", appendCheck)
+}
+
+func appendOotChildTradeSymbolChecks(state *GameState, appendCheck func(string, string)) {
+	childTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] >> 16)
+	for _, entry := range ootChildTradeSymbolChecks {
+		if childTradeSave&entry.mask == 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
+			appendCheck("OOT_child_trade_"+entry.symbol, name)
+		}
+	}
+}
+
+func appendOotTradeSymbolChecks(state *GameState, appendCheck func(string, string)) {
+	adultTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] & 0xffff)
+	for _, entry := range ootTradeSymbolChecks {
+		if adultTradeSave&entry.mask == 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
+			appendCheck("OOT_trade_"+entry.symbol, name)
+		}
+	}
 }
 
 func appendOotEventItemSymbolChecks(state *GameState, appendCheck func(string, string)) {
