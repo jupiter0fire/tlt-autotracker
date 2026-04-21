@@ -159,6 +159,9 @@ type MmState struct {
 	// Quest items (remains, songs, notebook, heart pieces)
 	QuestItems  uint32
 	HeartPieces uint8
+	// Vanilla MM owl statue activation bits. In OoTMM these still represent the
+	// persistent activated/check state even when owl statue shuffle is enabled.
+	OwlActivationFlags uint16
 
 	// Per-dungeon packed byte: boss key/compass/map use low bits, max keys use upper bits.
 	DungeonItems     [10]uint8

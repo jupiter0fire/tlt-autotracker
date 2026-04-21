@@ -1644,6 +1644,16 @@ func TestExtractChecksIncludesLiveMmCollectibleFlags(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmOwlActivationFlags(t *testing.T) {
+	state := &GameState{}
+	state.Mm.OwlActivationFlags = 1 << mmOwlClockTownBit
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Clock Town Owl Statue"]; !ok {
+		t.Fatal("missing Clock Town Owl Statue from MM owl activation flags")
+	}
+}
+
 func TestExtractChecksDoesNotDuplicateMmLiveAndCycleFlags(t *testing.T) {
 	state := &GameState{}
 	// Same bit in cycle flags AND live flags — should appear only once.

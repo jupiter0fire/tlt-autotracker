@@ -101,6 +101,22 @@ var mmOwlItems = [...]struct {
 	{"MM_OWL_HIDDEN", mmOwlHiddenBit},
 }
 
+var mmOwlCheckSymbols = [...]struct {
+	symbol string
+	bit    uint
+}{
+	{"OWL_GREAT_BAY", mmOwlGreatBayBit},
+	{"OWL_ZORA_CAPE", mmOwlZoraCapeBit},
+	{"OWL_SNOWHEAD", mmOwlSnowheadBit},
+	{"OWL_MOUNTAIN_VILLAGE", mmOwlMountainVillageBit},
+	{"OWL_CLOCK_TOWN", mmOwlClockTownBit},
+	{"OWL_MILK_ROAD", mmOwlMilkRoadBit},
+	{"OWL_WOODFALL", mmOwlWoodfallBit},
+	{"OWL_SOUTHERN_SWAMP", mmOwlSouthernSwampBit},
+	{"OWL_IKANA_CANYON", mmOwlIkanaCanyonBit},
+	{"OWL_STONE_TOWER", mmOwlStoneTowerBit},
+}
+
 var sharedOcarinaButtons = [...]struct {
 	ootItemID string
 	mmItemID  string
@@ -581,6 +597,14 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	if mmFlags2&(1<<mmExtraFlags2MaskBlast) != 0 {
 		if name, ok := npcSymbolCheckName("MM", "MASK_BLAST"); ok {
 			appendCheck("MM_extra_"+itoa(mmExtraFlags2MaskBlast), name)
+		}
+	}
+	for _, owl := range mmOwlCheckSymbols {
+		if state.Mm.OwlActivationFlags&(1<<owl.bit) == 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("MM", owl.symbol); ok {
+			appendCheck("MM_owl_activation_"+owl.symbol, name)
 		}
 	}
 	appendOotChildTradeSymbolChecks(state, appendCheck)

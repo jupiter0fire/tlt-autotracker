@@ -154,6 +154,60 @@ func TestLocateForeignOotSaveFindsChecksummedCandidate(t *testing.T) {
 	}
 }
 
+func TestIsPlausibleOotSaveRejectsInvalidSceneID(t *testing.T) {
+	data := make([]byte, OotSaveSize)
+	binary.BigEndian.PutUint32(data[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(data[OotOffSceneID:], 0xFFFF)
+	for i := 0; i < 24; i++ {
+		data[OotOffInvItems+i] = emptyInventoryItem
+	}
+
+	if isPlausibleOotSave(data) {
+		t.Fatal("expected OoT save with invalid sceneId to fail plausibility")
+	}
+}
+
+func TestLocateForeignOotSaveFindsRewardMutatedCandidate(t *testing.T) {
+	payload := make([]byte, 0x50000)
+
+	garbageOffset := 0x39030
+	garbage := payload[garbageOffset : garbageOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(garbage[OotOffAge:], 0)
+	binary.BigEndian.PutUint16(garbage[OotOffSceneID:], 0xFFFF)
+	for i := 0; i < 24; i++ {
+		garbage[OotOffInvItems+i] = emptyInventoryItem
+	}
+	binary.BigEndian.PutUint16(garbage[OotOffChecksum:], ootChecksum(garbage)+0x0200)
+
+	validOffset := 0x429f0
+	valid := payload[validOffset : validOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(valid[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(valid[OotOffSceneID:], 0x20)
+	for i := 0; i < 24; i++ {
+		valid[OotOffInvItems+i] = emptyInventoryItem
+	}
+	valid[OotOffInvItems] = 0x00
+	valid[OotOffInvItems+1] = 0x01
+	valid[OotOffInvItems+7] = 0x08
+	valid[OotOffInvItems+12] = 0x0E
+	valid[OotOffInvItems+13] = 0x0F
+	binary.BigEndian.PutUint32(valid[OotOffUpgrades:], 0x00162040)
+	binary.BigEndian.PutUint16(valid[OotOffChecksum:], ootChecksum(valid))
+	binary.BigEndian.PutUint32(valid[OotOffUpgrades:], 0x00163040)
+
+	if delta, ok := ootChecksumDelta(valid); !ok || delta != 0x1000 {
+		t.Fatalf("reward-mutated OoT checksum delta = %d, %v, want 0x1000", delta, ok)
+	}
+
+	addr, ok := locateForeignOotSave(payload, AddrMmPayload)
+	if !ok {
+		t.Fatal("expected foreign OoT save candidate with reward-sized checksum delta")
+	}
+	if want := AddrMmPayload + uint32(validOffset); addr != want {
+		t.Fatalf("unexpected foreign OoT addr: got %08x want %08x", addr, want)
+	}
+}
+
 func TestLocateForeignMmSaveFindsChecksummedCandidate(t *testing.T) {
 	payload := make([]byte, 0x80000)
 	offset := 0x43970
@@ -255,6 +309,19 @@ func TestParseMmSaveReadsTownStrayFairyWeekEvent(t *testing.T) {
 		t.Fatalf("unexpected MM week event byte 23: got %#02x want 0x02", got)
 	}
 }
+
+func TestParseMmSaveReadsOwlActivationFlags(t *testing.T) {
+	data := make([]byte, MmSaveSize)
+	binary.BigEndian.PutUint16(data[MmOffOwlActivationFlags:], 1<<mmOwlClockTownBit)
+
+	var mm MmState
+	if err := parseMmSave(&mm, data); err != nil {
+		t.Fatalf("parseMmSave: %v", err)
+	}
+	if got := mm.OwlActivationFlags; got != 1<<mmOwlClockTownBit {
+		t.Fatalf("unexpected MM owl activation flags: got %#04x want %#04x", got, 1<<mmOwlClockTownBit)
+	}
+	}
 
 func TestParseOotSaveReadsEventBitmaps(t *testing.T) {
 	data := make([]byte, OotSaveCtxSize)
@@ -1095,6 +1162,91 @@ func TestGrassCheckDiffOnlyZoraTunicAndGrass(t *testing.T) {
 	if len(lostChecks) != 0 {
 		t.Fatalf("expected 0 lost checks, got %d:\n%s",
 			len(lostChecks), formatLines(lostChecks))
+	}
+}
+
+func TestOwlCheckDiffOnlyWalletAndClockTownOwl(t *testing.T) {
+	beforeState := readStateFromSnapshot(t, "before-owl-20260421-202333.json")
+	afterStates := map[string]*GameState{
+		"after": readStateFromSnapshot(t, "after-owl-20260421-202406.json"),
+		"live":  readStateFromSnapshot(t, "live-after-owl-20260421.json"),
+	}
+
+	beforeItems := ExtractItems(beforeState)
+	beforeChecks := ExtractChecks(beforeState)
+	beforeItemMap := make(map[string]int)
+	for _, it := range beforeItems {
+		beforeItemMap[it.ID] = it.Qty
+	}
+	beforeCheckSet := make(map[string]bool)
+	for _, ch := range beforeChecks {
+		beforeCheckSet[ch.Name] = true
+	}
+
+	for label, afterState := range afterStates {
+		t.Run(label, func(t *testing.T) {
+			afterItems := ExtractItems(afterState)
+			afterChecks := ExtractChecks(afterState)
+
+			afterItemMap := make(map[string]int)
+			for _, it := range afterItems {
+				afterItemMap[it.ID] = it.Qty
+			}
+			afterCheckSet := make(map[string]bool)
+			for _, ch := range afterChecks {
+				afterCheckSet[ch.Name] = true
+			}
+
+			allItemIDs := make(map[string]bool)
+			for id := range beforeItemMap {
+				allItemIDs[id] = true
+			}
+			for id := range afterItemMap {
+				allItemIDs[id] = true
+			}
+
+			var itemDiffs []string
+			for id := range allItemIDs {
+				if beforeItemMap[id] != afterItemMap[id] {
+					itemDiffs = append(itemDiffs, fmt.Sprintf("%s: %d -> %d", id, beforeItemMap[id], afterItemMap[id]))
+				}
+			}
+			sort.Strings(itemDiffs)
+
+			var newChecks, lostChecks []string
+			for name := range afterCheckSet {
+				if !beforeCheckSet[name] {
+					newChecks = append(newChecks, name)
+				}
+			}
+			for name := range beforeCheckSet {
+				if !afterCheckSet[name] {
+					lostChecks = append(lostChecks, name)
+				}
+			}
+			sort.Strings(newChecks)
+			sort.Strings(lostChecks)
+
+			expectedItemDiffs := map[string]bool{
+				"MM_WALLET":  true,
+				"OOT_WALLET": true,
+			}
+			if len(itemDiffs) != len(expectedItemDiffs) {
+				t.Fatalf("expected %d item diffs, got %d:\n%s", len(expectedItemDiffs), len(itemDiffs), formatLines(itemDiffs))
+			}
+			for id := range allItemIDs {
+				if beforeItemMap[id] != afterItemMap[id] && !expectedItemDiffs[id] {
+					t.Fatalf("unexpected item diff: %s: %d -> %d", id, beforeItemMap[id], afterItemMap[id])
+				}
+			}
+
+			if len(newChecks) != 1 || newChecks[0] != "Clock Town Owl Statue" {
+				t.Fatalf("expected only Clock Town Owl Statue as new check, got:\n%s", formatLines(newChecks))
+			}
+			if len(lostChecks) != 0 {
+				t.Fatalf("expected 0 lost checks, got %d:\n%s", len(lostChecks), formatLines(lostChecks))
+			}
+		})
 	}
 }
 

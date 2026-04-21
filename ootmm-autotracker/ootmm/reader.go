@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxForeignOotChecksumDelta        = 0x800
+	maxForeignOotChecksumDelta        = 0x1000
 	maxForeignMmChecksumDelta         = 0x400
 	sharedOcarinaButtonMaskOotOffset  = 0x7c8
 	sharedOcarinaButtonMaskMmOffset   = 0x7ca
@@ -279,6 +279,7 @@ func parseMmSave(mm *MmState, data []byte) error {
 	mm.Upgrades = binary.BigEndian.Uint32(data[MmOffInvUpgrades:])
 	mm.QuestItems = binary.BigEndian.Uint32(data[MmOffInvQuest:])
 	mm.HeartPieces = uint8((mm.QuestItems >> 28) & 0xF)
+	mm.OwlActivationFlags = binary.BigEndian.Uint16(data[MmOffOwlActivationFlags:])
 	mm.SkullTokensSwamp = binary.BigEndian.Uint16(data[MmOffSkullSwamp:])
 	mm.SkullTokensOcean = binary.BigEndian.Uint16(data[MmOffSkullOcean:])
 
@@ -1502,6 +1503,11 @@ func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
 func isPlausibleOotSave(data []byte) bool {
 	age := binary.BigEndian.Uint32(data[OotOffAge:])
 	if age > 1 {
+		return false
+	}
+
+	sceneID := binary.BigEndian.Uint16(data[OotOffSceneID:])
+	if sceneID >= OotPermCount {
 		return false
 	}
 
