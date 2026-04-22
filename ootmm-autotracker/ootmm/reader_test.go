@@ -321,7 +321,24 @@ func TestParseMmSaveReadsOwlActivationFlags(t *testing.T) {
 	if got := mm.OwlActivationFlags; got != 1<<mmOwlClockTownBit {
 		t.Fatalf("unexpected MM owl activation flags: got %#04x want %#04x", got, 1<<mmOwlClockTownBit)
 	}
+}
+
+func TestParseMmSaveReadsMagicFlags(t *testing.T) {
+	data := make([]byte, MmSaveSize)
+	data[MmOffMagicAcquired] = 1
+	data[MmOffDoubleMagic] = 1
+
+	var mm MmState
+	if err := parseMmSave(&mm, data); err != nil {
+		t.Fatalf("parseMmSave: %v", err)
 	}
+	if !mm.HasMagic {
+		t.Fatal("expected MM magic-acquired flag to be true")
+	}
+	if !mm.HasDoubleMagic {
+		t.Fatal("expected MM double-magic flag to be true")
+	}
+}
 
 func TestParseOotSaveReadsEventBitmaps(t *testing.T) {
 	data := make([]byte, OotSaveCtxSize)
@@ -674,7 +691,6 @@ func TestDebugDumpNearForeignSharedStateShowsScrubImmediately(t *testing.T) {
 	// do not depend on those external fixtures.
 }
 
-
 func TestDebugDumpMmNearForeignFindsOotSave(t *testing.T) {
 	snap := loadTestDebugSnapshot(t, "mm-after-chest-20260418-212749.json")
 	mmPayload := decodeTestSnapshotRegion(t, snap, "mmPayload")
@@ -725,6 +741,47 @@ func TestDebugDumpAfterGrassFindsForeignOotSaveWithDeltaTolerance(t *testing.T) 
 	expectedAddr := AddrMmPayload + expectedOffset
 	if addr != expectedAddr {
 		t.Fatalf("foreign OoT save at %#x, want %#x", addr, expectedAddr)
+	}
+}
+
+func TestDebugDumpGarbageKeepsForeignOotLocatorStable(t *testing.T) {
+	before := loadTestDebugSnapshot(t, "before-dd-20260422-193401.json")
+	after := loadTestDebugSnapshot(t, "after-dd-20260422-193433.json")
+	garbage := loadTestDebugSnapshot(t, "garbage-20260422-193744.json")
+
+	beforePayload := decodeTestSnapshotRegion(t, before, "mmPayload")
+	afterPayload := decodeTestSnapshotRegion(t, after, "mmPayload")
+	garbagePayload := decodeTestSnapshotRegion(t, garbage, "mmPayload")
+
+	beforeAddr, ok := locateForeignOotSave(beforePayload, AddrMmPayload)
+	if !ok {
+		t.Fatal("expected before-dd MM payload to locate foreign OoT save")
+	}
+	afterAddr, ok := locateForeignOotSave(afterPayload, AddrMmPayload)
+	if !ok {
+		t.Fatal("expected after-dd MM payload to locate foreign OoT save")
+	}
+	garbageAddr, ok := locateForeignOotSave(garbagePayload, AddrMmPayload)
+	if !ok {
+		t.Fatal("expected garbage MM payload to locate foreign OoT save")
+	}
+
+	if afterAddr != beforeAddr {
+		t.Fatalf("after-dd foreign OoT save moved: got %#x want %#x", afterAddr, beforeAddr)
+	}
+	if garbageAddr != beforeAddr {
+		t.Fatalf("garbage dump foreign OoT save moved: got %#x want %#x", garbageAddr, beforeAddr)
+	}
+}
+
+func TestDebugDumpGarbageReadStateKeepsSaneForeignOotState(t *testing.T) {
+	state := readStateFromSnapshot(t, "garbage-20260422-193744.json")
+
+	if got := state.Oot.SceneID; got != 0x20 {
+		t.Fatalf("garbage dump OoT scene = %#x, want 0x20", got)
+	}
+	if got := state.Oot.GoldTokens; got > 100 {
+		t.Fatalf("garbage dump OoT gold tokens = %d, want <= 100", got)
 	}
 }
 

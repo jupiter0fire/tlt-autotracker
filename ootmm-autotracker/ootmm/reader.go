@@ -186,6 +186,8 @@ func parseOotSave(oot *OotState, data []byte) error {
 	// Parse OotSave (starts at offset 0 within OotSaveContext)
 	oot.Age = binary.BigEndian.Uint32(data[OotOffAge:])
 	oot.SceneID = binary.BigEndian.Uint16(data[OotOffSceneID:])
+	oot.HasMagic = data[OotOffMagicAcquired] != 0
+	oot.HasDoubleMagic = data[OotOffDoubleMagic] != 0
 	oot.IsBiggoronSword = data[OotOffIsBiggoronSword] != 0
 
 	// Inventory
@@ -268,6 +270,8 @@ func parseMmSave(mm *MmState, data []byte) error {
 	mm.PlayerForm = data[MmOffPlayerForm]
 	mm.Day = binary.BigEndian.Uint32(data[MmOffDay:])
 	mm.Time = binary.BigEndian.Uint16(data[MmOffTime:])
+	mm.HasMagic = data[MmOffMagicAcquired] != 0
+	mm.HasDoubleMagic = data[MmOffDoubleMagic] != 0
 
 	// Inventory
 	copy(mm.Items[:], data[MmOffInvItems:MmOffInvItems+48])
@@ -949,7 +953,7 @@ func (r *Reader) readOotSaveAt(addr uint32, oot *OotState) error {
 	if err != nil {
 		return fmt.Errorf("read foreign OoT save: %w", err)
 	}
-	if err := validateForeignOotSave(data); err != nil {
+	if err := r.validateForeignOotSaveAt(addr, data); err != nil {
 		return fmt.Errorf("validate foreign OoT save: %w", err)
 	}
 
@@ -1478,7 +1482,30 @@ func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
 	}
 
 	bestOffset := -1
-	bestDelta := maxForeignOotChecksumDelta + 1
+	bestDelta := 0x10000
+	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
+		candidate := payload[offset : offset+OotSaveSize]
+		delta, ok := ootChecksumDelta(candidate)
+		if !ok {
+			continue
+		}
+		if !isPlausibleOotSave(candidate) {
+			continue
+		}
+		if !foreignOotSaveHasPlausibleSharedPrefix(payload, offset) {
+			continue
+		}
+		if delta < bestDelta {
+			bestDelta = delta
+			bestOffset = offset
+		}
+	}
+	if bestOffset >= 0 {
+		return payloadBase + uint32(bestOffset), true
+	}
+
+	bestOffset = -1
+	bestDelta = maxForeignOotChecksumDelta + 1
 	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
 		candidate := payload[offset : offset+OotSaveSize]
 		delta, ok := ootChecksumDelta(candidate)
@@ -1517,8 +1544,35 @@ func isPlausibleOotSave(data []byte) bool {
 			emptySlots++
 		}
 	}
+	if emptySlots < 8 {
+		return false
+	}
 
-	return emptySlots >= 8
+	goldTokens := binary.BigEndian.Uint16(data[OotOffGoldTokens:])
+	if goldTokens > 100 {
+		return false
+	}
+	for i := 0; i < 19; i++ {
+		keys := int8(data[OotOffDungeonKeys+i])
+		if keys < -1 || keys > 9 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func foreignOotSaveHasPlausibleSharedPrefix(payload []byte, offset int) bool {
+	if offset < int(SharedCustomSaveSize) {
+		return false
+	}
+	start := offset - int(SharedCustomSaveSize)
+	end := start + sharedStateReadSize()
+	if end > len(payload) {
+		return false
+	}
+	_, err := parseSharedState(payload[start:end])
+	return err == nil
 }
 
 func locateForeignMmSave(payload []byte, payloadBase uint32) (uint32, bool) {
@@ -1753,6 +1807,36 @@ func validateForeignOotSave(data []byte) error {
 	}
 
 	return nil
+}
+
+func (r *Reader) validateForeignOotSaveAt(addr uint32, data []byte) error {
+	if err := validateOotSave(data); err == nil {
+		return nil
+	}
+	if !isPlausibleOotSave(data) {
+		return fmt.Errorf("OoT save failed plausibility checks")
+	}
+	if r.foreignOotSaveHasPlausibleSharedPrefixAt(addr) {
+		return nil
+	}
+	return validateForeignOotSave(data)
+}
+
+func (r *Reader) foreignOotSaveHasPlausibleSharedPrefixAt(addr uint32) bool {
+	if addr < AddrMmPayload+SharedCustomSaveSize {
+		return false
+	}
+	end := uint64(addr-AddrMmPayload) + uint64(OotSaveSize)
+	if end > uint64(MmPayloadSize) {
+		return false
+	}
+	start := addr - SharedCustomSaveSize
+	data, err := r.mem.Read(start, sharedStateReadSize())
+	if err != nil {
+		return false
+	}
+	_, err = parseSharedState(data)
+	return err == nil
 }
 
 func validateMmSave(data []byte) error {

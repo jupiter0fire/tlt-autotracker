@@ -128,6 +128,8 @@ const (
 	OotOffEntrance        = 0x00 // u32
 	OotOffAge             = 0x04 // u32 (0=adult, 1=child)
 	OotOffSceneID         = 0x66 // u16 — current scene
+	OotOffMagicAcquired   = 0x3A // u8 OotSave.info.playerData.isMagicAcquired
+	OotOffDoubleMagic     = 0x3C // u8 OotSave.info.playerData.isDoubleMagicAcquired
 	OotOffIsBiggoronSword = 0x3E // u8 in OotSaveInfo
 	OotOffEquips          = 0x68 // OotItemEquips (0x0A bytes)
 
@@ -184,7 +186,9 @@ const (
 
 	// MmSaveInfo starts at 0x24
 	// MmSavePlayerData at 0x24 (size 0x28)
-	MmOffOwlActivationFlags = 0x46   // u16 MmSavePlayerData.owlActivationFlags
+	MmOffMagicAcquired      = 0x40 // u8 MmSavePlayerData.isMagicAcquired
+	MmOffDoubleMagic        = 0x41 // u8 MmSavePlayerData.isDoubleMagicAcquired
+	MmOffOwlActivationFlags = 0x46 // u16 MmSavePlayerData.owlActivationFlags
 	// MmItemEquips starts at 0x4C and is followed by 2 bytes of padding so
 	// the 4-byte aligned MmInventory begins at 0x70.
 	MmOffEquipment    = 0x6C   // u16 bitfield {boots:4, tunic:4, shield:4, sword:4}

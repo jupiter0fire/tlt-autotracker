@@ -49,7 +49,7 @@ const (
 	ootEventItemMaskSellSpooky      = 0x3a
 	ootEventItemMaskSellBunny       = 0x3b
 	ootEventMalonEgg                = 0x12
-	ootEventSongEpona              = 0x62
+	ootEventSongEpona               = 0x62
 	ootEventSongSunCustom           = 0x5a
 	ootEventFrogsGame               = 0xd0
 	ootEventFrogsZelda              = 0xd1
@@ -257,6 +257,16 @@ func mmWalletLevel(state *GameState) int {
 	return GetUpgradeLevel(state.Mm.Upgrades, 12, 2) + 1
 }
 
+func magicUpgradeLevel(hasMagic bool, hasDoubleMagic bool) int {
+	if !hasMagic {
+		return 0
+	}
+	if hasDoubleMagic {
+		return 2
+	}
+	return 1
+}
+
 // ExtractItems extracts all trackable items from the game state.
 func ExtractItems(state *GameState) []TrackedItem {
 	items := make([]TrackedItem, 0, 128)
@@ -311,6 +321,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_BOMB_BAG", GetUpgradeLevel(oot.Upgrades, 3, 3)})
 	items = append(items, TrackedItem{"OOT_STRENGTH", GetUpgradeLevel(oot.Upgrades, 6, 3)})
 	items = append(items, TrackedItem{"OOT_SCALE", GetUpgradeLevel(oot.Upgrades, 9, 3)})
+	items = append(items, TrackedItem{"OOT_MAGIC_UPGRADE", magicUpgradeLevel(oot.HasMagic, oot.HasDoubleMagic)})
 	items = append(items, TrackedItem{"OOT_WALLET", ootWalletLevel(oot)})
 	items = append(items, TrackedItem{"OOT_BULLET_BAG", GetUpgradeLevel(oot.Upgrades, 14, 3)})
 	items = append(items, TrackedItem{"OOT_STICK_UPGRADE", GetUpgradeLevel(oot.Upgrades, 17, 3)})
@@ -436,6 +447,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"MM_BOMB_BAG", GetUpgradeLevel(mm.Upgrades, 3, 3)})
 	items = append(items, TrackedItem{"MM_STRENGTH", GetUpgradeLevel(mm.Upgrades, 6, 3)})
 	items = append(items, TrackedItem{"MM_SCALE", GetUpgradeLevel(mm.Upgrades, 9, 3)})
+	items = append(items, TrackedItem{"MM_MAGIC_UPGRADE", magicUpgradeLevel(mm.HasMagic, mm.HasDoubleMagic)})
 	items = append(items, TrackedItem{"MM_WALLET", mmWalletLevel(state)})
 
 	// MM Dungeon items

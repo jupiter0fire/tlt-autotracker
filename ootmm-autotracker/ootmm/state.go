@@ -88,6 +88,8 @@ type OotState struct {
 	LiveSceneID     uint16
 	Age             uint32 // 0=adult, 1=child
 	GameMode        uint32
+	HasMagic        bool
+	HasDoubleMagic  bool
 	IsBiggoronSword bool
 
 	LiveChestFlags      uint32
@@ -136,14 +138,16 @@ type OotState struct {
 
 // MmState holds all tracked MM data.
 type MmState struct {
-	PlayerForm uint8
-	Day        uint32
-	Time       uint16
-	GameMode   uint32
+	PlayerForm     uint8
+	Day            uint32
+	Time           uint16
+	GameMode       uint32
+	HasMagic       bool
+	HasDoubleMagic bool
 
-	LiveSceneID      uint16
-	LiveChestFlags   uint32
-	LiveCollectFlags uint32
+	LiveSceneID       uint16
+	LiveChestFlags    uint32
+	LiveCollectFlags  uint32
 	HasLiveSceneFlags bool
 
 	// Inventory

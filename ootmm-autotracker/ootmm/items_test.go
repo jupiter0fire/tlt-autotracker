@@ -196,6 +196,55 @@ func TestExtractItemsReconstructsWalletLevelsFromLiveRawFlags(t *testing.T) {
 	}
 }
 
+func TestParseOotSaveReadsMagicFlags(t *testing.T) {
+	data := make([]byte, OotSaveSize)
+	data[OotOffMagicAcquired] = 1
+	data[OotOffDoubleMagic] = 1
+
+	var oot OotState
+	if err := parseOotSave(&oot, data); err != nil {
+		t.Fatalf("parseOotSave: %v", err)
+	}
+	if !oot.HasMagic {
+		t.Fatal("expected OoT magic-acquired flag to be true")
+	}
+	if !oot.HasDoubleMagic {
+		t.Fatal("expected OoT double-magic flag to be true")
+	}
+}
+
+func TestExtractItemsReportsMagicUpgradeProgression(t *testing.T) {
+	state := &GameState{}
+
+	items := itemQtyMap(ExtractItems(state))
+	if got := items["OOT_MAGIC_UPGRADE"]; got != 0 {
+		t.Fatalf("OOT_MAGIC_UPGRADE = %d, want 0", got)
+	}
+	if got := items["MM_MAGIC_UPGRADE"]; got != 0 {
+		t.Fatalf("MM_MAGIC_UPGRADE = %d, want 0", got)
+	}
+
+	state.Oot.HasMagic = true
+	state.Mm.HasMagic = true
+	items = itemQtyMap(ExtractItems(state))
+	if got := items["OOT_MAGIC_UPGRADE"]; got != 1 {
+		t.Fatalf("OOT_MAGIC_UPGRADE = %d, want 1", got)
+	}
+	if got := items["MM_MAGIC_UPGRADE"]; got != 1 {
+		t.Fatalf("MM_MAGIC_UPGRADE = %d, want 1", got)
+	}
+
+	state.Oot.HasDoubleMagic = true
+	state.Mm.HasDoubleMagic = true
+	items = itemQtyMap(ExtractItems(state))
+	if got := items["OOT_MAGIC_UPGRADE"]; got != 2 {
+		t.Fatalf("OOT_MAGIC_UPGRADE = %d, want 2", got)
+	}
+	if got := items["MM_MAGIC_UPGRADE"]; got != 2 {
+		t.Fatalf("MM_MAGIC_UPGRADE = %d, want 2", got)
+	}
+}
+
 func TestExtractItemsUsesOfficialOotBossKeyIDs(t *testing.T) {
 	state := &GameState{}
 	state.Oot.DungeonItems[4] = 0x01
@@ -591,6 +640,8 @@ func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
 	state := &GameState{}
 	state.Mm.SkullTokensSwamp = 17
 	state.Mm.SkullTokensOcean = 11
+	state.Oot.HasMagic = true
+	state.Mm.HasMagic = true
 	state.Oot.ExtraRecords[ExtraIdxMmOwlFlags] = allMmOwlFlags()
 	state.Shared.OcarinaButtonMaskOot = allSharedOcarinaButtonMasks()
 	state.Shared.OcarinaButtonMaskMm = allSharedOcarinaButtonMasks()
@@ -602,6 +653,12 @@ func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
 	}
 	if got := items["MM_GS_TOKEN_OCEAN"]; got != 11 {
 		t.Fatalf("MM_GS_TOKEN_OCEAN = %d, want 11", got)
+	}
+	if got := items["OOT_MAGIC_UPGRADE"]; got != 1 {
+		t.Fatalf("OOT_MAGIC_UPGRADE = %d, want 1", got)
+	}
+	if got := items["MM_MAGIC_UPGRADE"]; got != 1 {
+		t.Fatalf("MM_MAGIC_UPGRADE = %d, want 1", got)
 	}
 	for _, owl := range mmOwlItems {
 		if got := items[owl.itemID]; got != 1 {
@@ -1293,14 +1350,14 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
-			"DARUNIA_BRACELET": "Darunia",
-			"GERUDO_ARCHERY_2": "Gerudo Fortress Archery Reward 2",
+			"DARUNIA_BRACELET":  "Darunia",
+			"GERUDO_ARCHERY_2":  "Gerudo Fortress Archery Reward 2",
 			"LOST_WOODS_TARGET": "Lost Woods Target",
-			"POCKET_EGG":       "Hatch Pocket Cucco",
-			"MASK_SELL_BUNNY":  "Hyrule Field Sell Bunny Mask",
-			"MASK_SELL_KEATON": "Kakariko Sell Keaton Mask",
-			"MASK_SELL_SKULL":  "Lost Woods Sell Skull Mask",
-			"MASK_SELL_SPOOKY": "Graveyard Sell Spooky Mask",
+			"POCKET_EGG":        "Hatch Pocket Cucco",
+			"MASK_SELL_BUNNY":   "Hyrule Field Sell Bunny Mask",
+			"MASK_SELL_KEATON":  "Kakariko Sell Keaton Mask",
+			"MASK_SELL_SKULL":   "Lost Woods Sell Skull Mask",
+			"MASK_SELL_SPOOKY":  "Graveyard Sell Spooky Mask",
 		},
 		"MM": {},
 	}
@@ -1315,9 +1372,9 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	state.Oot.EventsItem[ootEventItemPocketEgg>>4] |= 1 << (ootEventItemPocketEgg & 0xF)
 	state.Oot.EventsItem[ootEventItemMaskSellKeaton>>4] =
 		(1 << (ootEventItemMaskSellKeaton & 0xF)) |
-		(1 << (ootEventItemMaskSellSkull & 0xF)) |
-		(1 << (ootEventItemMaskSellSpooky & 0xF)) |
-		(1 << (ootEventItemMaskSellBunny & 0xF))
+			(1 << (ootEventItemMaskSellSkull & 0xF)) |
+			(1 << (ootEventItemMaskSellSpooky & 0xF)) |
+			(1 << (ootEventItemMaskSellBunny & 0xF))
 
 	checks := checkNameSet(ExtractChecks(state))
 	for _, name := range []string{
@@ -1376,7 +1433,7 @@ func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] = uint32(1<<(16+ootChildTradeWeirdEggBit))
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] = uint32(1 << (16 + ootChildTradeWeirdEggBit))
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Hatch Chicken"]; ok {
 		t.Fatal("unexpected Hatch Chicken check from Weird Egg alone")
@@ -1422,12 +1479,12 @@ func TestExtractChecksIncludesOotFrogSongEventFallbacks(t *testing.T) {
 	state := &GameState{}
 	state.Oot.EventsChk[ootEventFrogsGame>>4] =
 		(1 << (ootEventFrogsGame & 0xF)) |
-		(1 << (ootEventFrogsZelda & 0xF)) |
-		(1 << (ootEventFrogsEpona & 0xF)) |
-		(1 << (ootEventFrogsSun & 0xF)) |
-		(1 << (ootEventFrogsSaria & 0xF)) |
-		(1 << (ootEventFrogsSongOfTime & 0xF)) |
-		(1 << (ootEventFrogsStorms & 0xF))
+			(1 << (ootEventFrogsZelda & 0xF)) |
+			(1 << (ootEventFrogsEpona & 0xF)) |
+			(1 << (ootEventFrogsSun & 0xF)) |
+			(1 << (ootEventFrogsSaria & 0xF)) |
+			(1 << (ootEventFrogsSongOfTime & 0xF)) |
+			(1 << (ootEventFrogsStorms & 0xF))
 
 	checks := checkNameSet(ExtractChecks(state))
 	for _, name := range []string{
@@ -1489,10 +1546,10 @@ func TestExtractChecksIncludesSkulltulaHouseEventFallbacks(t *testing.T) {
 	state := &GameState{}
 	state.Oot.EventsChk[ootEventSkulltulaHouse10>>4] =
 		(1 << (ootEventSkulltulaHouse10 & 0xF)) |
-		(1 << (ootEventSkulltulaHouse20 & 0xF)) |
-		(1 << (ootEventSkulltulaHouse30 & 0xF)) |
-		(1 << (ootEventSkulltulaHouse40 & 0xF)) |
-		(1 << (ootEventSkulltulaHouse50 & 0xF))
+			(1 << (ootEventSkulltulaHouse20 & 0xF)) |
+			(1 << (ootEventSkulltulaHouse30 & 0xF)) |
+			(1 << (ootEventSkulltulaHouse40 & 0xF)) |
+			(1 << (ootEventSkulltulaHouse50 & 0xF))
 
 	checks := checkNameSet(ExtractChecks(state))
 	for _, name := range []string{
