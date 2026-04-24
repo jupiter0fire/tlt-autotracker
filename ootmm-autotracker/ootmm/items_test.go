@@ -1274,8 +1274,9 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {},
 		"MM": {
-			"MASK_BLAST":      "Clock Town Blast Mask",
-			"BOMBER_NOTEBOOK": "Clock Town Bomber Notebook",
+			"HONEY_DARLING_1":  "Honey & Darling Reward Any Day",
+			"MASK_BLAST":       "Clock Town Blast Mask",
+			"BOMBER_NOTEBOOK":  "Clock Town Bomber Notebook",
 			"STRAY_FAIRY_TOWN": "Clock Town Stray Fairy",
 		},
 	}
@@ -1284,9 +1285,12 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast) | (1 << mmExtraFlags2TownStrayFairy)
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2HoneyDarling) | (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast) | (1 << mmExtraFlags2TownStrayFairy)
 
 	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Honey & Darling Reward Any Day"]; !ok {
+		t.Fatal("missing MM extra-flag check for Honey & Darling Reward Any Day")
+	}
 	if _, ok := checks["Clock Town Blast Mask"]; !ok {
 		t.Fatal("missing MM extra-flag check for Blast Mask")
 	}

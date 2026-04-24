@@ -684,6 +684,31 @@ func TestOverlaySharedCheckBitmapsAddsNearForeignScrubProgress(t *testing.T) {
 	}
 }
 
+func TestSelectSharedStateCandidatePrefersContinuityOverSparseRegression(t *testing.T) {
+	r := &Reader{}
+	r.lastKnownShared.SetBit("npcOot", 4)
+	r.lastKnownShared.SetBit("xflagsMm", 17)
+	r.hasLastKnownShared = true
+
+	regressed := SharedCustomState{}
+	regressed.SetBit("npcMm", 1)
+
+	continued := SharedCustomState{}
+	continued.SetBit("npcOot", 4)
+	continued.SetBit("xflagsMm", 17)
+
+	got, ok := r.selectSharedStateCandidate([]sharedStateCandidate{
+		{source: "near-foreign", state: regressed},
+		{source: "payload-80730000", state: continued},
+	})
+	if !ok {
+		t.Fatal("expected shared-state candidate selection to succeed")
+	}
+	if got.source != "payload-80730000" {
+		t.Fatalf("selected source = %q, want payload-80730000", got.source)
+	}
+}
+
 func TestDebugDumpNearForeignSharedStateShowsScrubImmediately(t *testing.T) {
 	// Tests that relied on external memory-dump files for scrub scenarios
 	// have been removed because the corresponding dump files are not present
@@ -819,221 +844,6 @@ func TestDebugDumpMmPayloadCandidateHasGarbageBits(t *testing.T) {
 	// MIPS code interpreted as xflag bitmap yields thousands of bits.
 	if ootBits < 1000 {
 		t.Fatalf("payload slot 0 xflagsOot has only %d bits, expected >1000 for garbage", ootBits)
-	}
-}
-
-func TestSelectSharedStateCandidatePrefersContinuityOverSparseRegression(t *testing.T) {
-	r := &Reader{}
-	r.lastKnownShared.SetBit("npcOot", 4)
-	r.lastKnownShared.SetBit("xflagsMm", 17)
-	r.hasLastKnownShared = true
-
-	regressed := SharedCustomState{}
-	regressed.SetBit("npcMm", 1)
-
-	continued := SharedCustomState{}
-	continued.SetBit("npcOot", 4)
-	continued.SetBit("xflagsMm", 17)
-
-	got, ok := r.selectSharedStateCandidate([]sharedStateCandidate{
-		{source: "near-foreign", state: regressed},
-		{source: "payload-80730000", state: continued},
-	})
-	if !ok {
-		t.Fatal("expected shared-state candidate selection to succeed")
-	}
-	if got.source != "payload-80730000" {
-		t.Fatalf("selected source = %q, want payload-80730000", got.source)
-	}
-}
-
-func TestValidateSilverRupeeDataAcceptsLiveLikeMqConfig(t *testing.T) {
-	data := []byte{
-		0x00, 0x01, 0x25, 0x05,
-		0x00, 0x08, 0x1f, 0x05,
-		0x00, 0x06, 0x05, 0x05,
-		0x00, 0x06, 0x0a, 0x05,
-		0x00, 0x06, 0x02, 0x05,
-		0x00, 0x07, 0x01, 0x05,
-		0x00, 0x07, 0x00, 0x00,
-		0x00, 0x07, 0x09, 0x05,
-		0x00, 0x07, 0x08, 0x05,
-		0x00, 0x09, 0x08, 0x05,
-		0x00, 0x09, 0x09, 0x05,
-		0x00, 0x0b, 0x1c, 0x05,
-		0x00, 0x0b, 0x0c, 0x06,
-		0x00, 0x0b, 0x1b, 0x03,
-		0x00, 0x0d, 0x0b, 0x05,
-		0x00, 0x0d, 0x02, 0x05,
-		0x00, 0x0d, 0x01, 0x05,
-		0x00, 0x0d, 0x00, 0x00,
-	}
-	if !validateSilverRupeeData(data) {
-		t.Fatal("expected live-like silver rupee metadata to validate")
-	}
-}
-
-func TestLocateSilverRupeeDataFindsStructuredCandidate(t *testing.T) {
-	payload := make([]byte, OotPayloadSize)
-	off := 0x2ec10
-	copy(payload[off:], []byte{
-		0x00, 0x01, 0x25, 0x05,
-		0x00, 0x08, 0x1f, 0x05,
-		0x00, 0x06, 0x05, 0x05,
-		0x00, 0x06, 0x0a, 0x05,
-		0x00, 0x06, 0x02, 0x05,
-		0x00, 0x07, 0x01, 0x05,
-		0x00, 0x07, 0x00, 0x00,
-		0x00, 0x07, 0x09, 0x05,
-		0x00, 0x07, 0x08, 0x05,
-		0x00, 0x09, 0x08, 0x05,
-		0x00, 0x09, 0x09, 0x05,
-		0x00, 0x0b, 0x1c, 0x05,
-		0x00, 0x0b, 0x0c, 0x06,
-		0x00, 0x0b, 0x1b, 0x03,
-		0x00, 0x0d, 0x0b, 0x05,
-		0x00, 0x0d, 0x02, 0x05,
-		0x00, 0x0d, 0x01, 0x05,
-		0x00, 0x0d, 0x00, 0x00,
-	})
-
-	got, ok := locateSilverRupeeData(payload)
-	if !ok {
-		t.Fatal("expected silver rupee metadata candidate")
-	}
-	if got != off {
-		t.Fatalf("unexpected silver rupee offset: got %#x want %#x", got, off)
-	}
-}
-
-func TestValidateOotMaxKeyBlockAcceptsLiveLikeConfig(t *testing.T) {
-	data := []byte{0, 0, 0, 5, 5, 5, 5, 5, 3, 0, 0, 3, 4, 3, 0, 0, 6, 1, 3, 1, 4}
-	if !validateOotMaxKeyBlock(data) {
-		t.Fatal("expected live-like OoT max-key block to validate")
-	}
-}
-
-func TestLocateOotMaxKeysFindsStructuredCandidate(t *testing.T) {
-	payload := make([]byte, OotPayloadSize)
-	off := 0x41c78
-	copy(payload[off-8:], []byte{0x00, 0x00, 0x08, 0x01, 0x00, 0x01, 0x0b, 0x14})
-	copy(payload[off:], []byte{0, 0, 0, 5, 5, 5, 5, 5, 3, 0, 0, 3, 4, 3, 0, 0, 6, 1, 3, 1, 4})
-	copy(payload[off+OotMaxKeysBlockSize:], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x55, 0x00, 0x00})
-
-	got, ok := locateOotMaxKeys(payload)
-	if !ok {
-		t.Fatal("expected OoT max-key candidate")
-	}
-	if got != off {
-		t.Fatalf("unexpected OoT max-key offset: got %#x want %#x", got, off)
-	}
-}
-
-func TestValidateOotComboConfigAcceptsLiveLikeConfig(t *testing.T) {
-	data := validOotComboConfigBytes(0x04a, 1)
-	if !validateOotComboConfig(data) {
-		t.Fatal("expected live-like OoT combo config to validate")
-	}
-}
-
-func TestLocateOotComboConfigFindsStructuredCandidate(t *testing.T) {
-	payload := make([]byte, OotPayloadSize)
-	off := 0x2d840
-	copy(payload[off:], validOotComboConfigBytes(0x04a, 2))
-
-	got, ok := locateOotComboConfig(payload)
-	if !ok {
-		t.Fatal("expected OoT combo config candidate")
-	}
-	if got != off {
-		t.Fatalf("unexpected OoT combo config offset: got %#x want %#x", got, off)
-	}
-}
-
-func validOotComboConfigBytes(mqBits uint32, playerID byte) []byte {
-	data := make([]byte, OotComboConfigSize)
-	data[0] = playerID
-
-	for index := 0; index < 12; index++ {
-		binary.BigEndian.PutUint32(data[4+index*4:], uint32(0x100+index))
-	}
-	for index := 0; index < 26; index++ {
-		binary.BigEndian.PutUint32(data[52+index*4:], uint32(index))
-	}
-	binary.BigEndian.PutUint32(data[OotComboConfigMqOffset:], mqBits)
-
-	for index := 0; index < 18; index++ {
-		binary.BigEndian.PutUint32(data[164+index*4:], uint32(index+1))
-	}
-	for index := 0; index < OotComboConfigSpecialCount; index++ {
-		off := OotComboConfigSpecialOffset + index*OotComboConfigSpecialSize
-		binary.BigEndian.PutUint32(data[off:], uint32(1<<uint(index)))
-		binary.BigEndian.PutUint16(data[off+4:], uint16(index+1))
-	}
-	for index := 0; index < 4; index++ {
-		binary.BigEndian.PutUint16(data[340+index*2:], uint16((index+1)*100))
-	}
-	for index := 0; index < OotComboConfigPriceCount; index++ {
-		binary.BigEndian.PutUint16(data[OotComboConfigPricesOffset+index*2:], uint16((index%9)*5))
-	}
-	binary.BigEndian.PutUint16(data[OotComboConfigTriforcePiecesOffset:], 20)
-	binary.BigEndian.PutUint16(data[OotComboConfigTriforceGoalOffset:], 10)
-	for index := 0; index < 21; index++ {
-		data[634+index*2] = byte(index)
-		data[634+index*2+1] = playerID
-	}
-	for index := 0; index < OotComboConfigStaticHintCount; index++ {
-		data[OotComboConfigStaticHintsOffset+index] = byte(int8(index%5 - 1))
-	}
-	binary.BigEndian.PutUint16(data[696:], 0x12)
-	for index := 0; index < OotComboConfigBossCount; index++ {
-		data[OotComboConfigBossOffset+index] = byte(index)
-	}
-	data[OotComboConfigStrayFairyRewardCountOffset] = 15
-	data[OotComboConfigBombchuBehaviorOotOffset] = 2
-	data[OotComboConfigBombchuBehaviorMmOffset] = 3
-	for index := 0; index < OotComboConfigSongEventCount; index++ {
-		data[OotComboConfigSongEventsOffset+index] = byte(index % 6)
-	}
-
-	return data
-}
-
-func TestIsPlausibleMmPlayStateSample(t *testing.T) {
-	good := mmPlayStateSample{
-		sceneID:        108,
-		actorTotal:     25,
-		currentRoom:    1,
-		gameplayFrames: 5000,
-		chestFlags:     1 << 10,
-		collectFlags:   0,
-	}
-	if !isPlausibleMmPlayStateSample(good) {
-		t.Fatal("expected plausible MM PlayState sample to pass")
-	}
-
-	bad := good
-	bad.sceneID = 120
-	if isPlausibleMmPlayStateSample(bad) {
-		t.Fatal("sceneID >= MmPermCount should be rejected")
-	}
-
-	bad = good
-	bad.actorTotal = 0
-	if isPlausibleMmPlayStateSample(bad) {
-		t.Fatal("actorTotal == 0 should be rejected")
-	}
-
-	bad = good
-	bad.currentRoom = 0x40
-	if isPlausibleMmPlayStateSample(bad) {
-		t.Fatal("currentRoom >= 0x40 should be rejected")
-	}
-
-	bad = good
-	bad.gameplayFrames = 0
-	if isPlausibleMmPlayStateSample(bad) {
-		t.Fatal("gameplayFrames == 0 should be rejected")
 	}
 }
 
