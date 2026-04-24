@@ -1066,6 +1066,21 @@ func TestFreshOotSnapshotIncludesTownStrayFairyFromExtraFlags(t *testing.T) {
 	}
 }
 
+func TestDekuPlaygroundRewardAnyDayAppearsOnlyAfterRewardDump(t *testing.T) {
+	beforeState := readStateFromSnapshot(t, "before-deku-game-20260424-211133.json")
+	afterState := readStateFromSnapshot(t, "after-deku-game-20260424-211208.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := beforeChecks["Deku Playground Reward Any Day"]; ok {
+		t.Fatal("unexpected Deku Playground Reward Any Day in before dump")
+	}
+	if _, ok := afterChecks["Deku Playground Reward Any Day"]; !ok {
+		t.Fatal("missing Deku Playground Reward Any Day in after dump")
+	}
+}
+
 func TestGrassCheckDiffOnlyZoraTunicAndGrass(t *testing.T) {
 	beforeState := readStateFromSnapshot(t, "before-grass-20260419-192606.json")
 	afterState := readStateFromSnapshot(t, "after-grass-20260419-192638.json")

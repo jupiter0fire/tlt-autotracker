@@ -1277,6 +1277,7 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 			"HONEY_DARLING_1":  "Honey & Darling Reward Any Day",
 			"MASK_BLAST":       "Clock Town Blast Mask",
 			"BOMBER_NOTEBOOK":  "Clock Town Bomber Notebook",
+			"DEKU_PLAYGROUND_1": "Deku Playground Reward Any Day",
 			"STRAY_FAIRY_TOWN": "Clock Town Stray Fairy",
 		},
 	}
@@ -1285,7 +1286,7 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2HoneyDarling) | (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast) | (1 << mmExtraFlags2TownStrayFairy)
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2HoneyDarling) | (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast) | (1 << mmExtraFlags2DekuPlayground) | (1 << mmExtraFlags2TownStrayFairy)
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Honey & Darling Reward Any Day"]; !ok {
@@ -1296,6 +1297,9 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	}
 	if _, ok := checks["Clock Town Bomber Notebook"]; !ok {
 		t.Fatal("missing MM extra-flag check for Bomber Notebook")
+	}
+	if _, ok := checks["Deku Playground Reward Any Day"]; !ok {
+		t.Fatal("missing MM extra-flag check for Deku Playground Reward Any Day")
 	}
 	if _, ok := checks["Clock Town Stray Fairy"]; !ok {
 		t.Fatal("missing MM extra-flag check for Clock Town Stray Fairy")
