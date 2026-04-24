@@ -57,6 +57,7 @@ type Reader struct {
 	lastKnownOot       OotState
 	lastKnownMm        MmState
 	lastKnownShared    SharedCustomState
+	lastKnownMmSaveIdx uint32
 	hasLastKnownOot    bool
 	hasLastKnownMm     bool
 	hasLastKnownShared bool
@@ -130,6 +131,14 @@ func (r *Reader) ReadState() (*GameState, error) {
 			return nil, fmt.Errorf("read foreign OoT save: %w", err)
 		}
 	}
+	state.Mm.ExtraFlags2 = state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+	if value, err := r.readOotExtraRecord(ExtraIdxMmFlags2); err == nil {
+		state.Mm.ExtraFlags2 |= value
+	}
+	if game == GameOot {
+		r.overlayLastKnownMm(activeSaveIndex, &state.Mm)
+		r.readMmTownStrayFairyContextFallback(&state.Mm)
+	}
 	if err := r.readSharedState(game, activeSaveIndex, &state.Shared); err != nil {
 		return nil, fmt.Errorf("read shared custom save: %w", err)
 	}
@@ -163,7 +172,7 @@ func (r *Reader) ReadState() (*GameState, error) {
 	}
 
 	r.rememberOotState(state.Oot)
-	r.rememberMmState(state.Mm)
+	r.rememberMmState(state.Mm, activeSaveIndex)
 	r.rememberSharedState(state.Shared)
 
 	return state, nil
@@ -1018,6 +1027,46 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 	return nil
 }
 
+func (r *Reader) overlayLastKnownMm(saveIndex uint32, mm *MmState) {
+	if mm == nil || !r.hasLastKnownMm || r.lastKnownMmSaveIdx != saveIndex {
+		return
+	}
+
+	for index := range mm.CycleFlags {
+		mm.CycleFlags[index].Chests |= r.lastKnownMm.CycleFlags[index].Chests
+		mm.CycleFlags[index].Switch0 |= r.lastKnownMm.CycleFlags[index].Switch0
+		mm.CycleFlags[index].Switch1 |= r.lastKnownMm.CycleFlags[index].Switch1
+		mm.CycleFlags[index].ClearedRoom |= r.lastKnownMm.CycleFlags[index].ClearedRoom
+		mm.CycleFlags[index].Collectibles |= r.lastKnownMm.CycleFlags[index].Collectibles
+	}
+	mm.TownStrayFairy = mm.TownStrayFairy || r.lastKnownMm.TownStrayFairy
+	mm.ExtraFlags2 |= r.lastKnownMm.ExtraFlags2
+}
+
+func (r *Reader) readMmTownStrayFairyContextFallback(mm *MmState) {
+	if mm == nil || mm.TownStrayFairy {
+		return
+	}
+
+	value, err := r.mem.ReadU8(AddrMmSaveCtx + uint32(MmOffWeekEventReg+mmWeekEventTownStrayFairyByte))
+	if err != nil {
+		return
+	}
+	mm.TownStrayFairy = value&mmWeekEventTownStrayFairyMask != 0
+}
+
+func (r *Reader) readOotExtraRecord(index int) (uint32, error) {
+	if index < 0 || index >= len(OotState{}.ExtraRecords) {
+		return 0, fmt.Errorf("OOT extra record index out of range: %d", index)
+	}
+	addr := AddrOotSaveCtx + uint32(OotOffPerm+index*OotPermEntrySize+OotPermExtraOff)
+	value, err := r.mem.ReadU32BE(addr)
+	if err != nil {
+		return 0, err
+	}
+	return value, nil
+}
+
 func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *SharedCustomState) error {
 	var nearForeignChecks *SharedCustomState
 	if liveChecks, err := r.readSharedCheckStateNearForeign(game); err == nil {
@@ -1369,12 +1418,13 @@ func (r *Reader) rememberOotState(oot OotState) {
 	r.hasLastKnownOot = true
 }
 
-func (r *Reader) rememberMmState(mm MmState) {
+func (r *Reader) rememberMmState(mm MmState, saveIndex uint32) {
 	mm.LiveSceneID = 0
 	mm.LiveChestFlags = 0
 	mm.LiveCollectFlags = 0
 	mm.HasLiveSceneFlags = false
 	r.lastKnownMm = mm
+	r.lastKnownMmSaveIdx = saveIndex
 	r.hasLastKnownMm = true
 }
 

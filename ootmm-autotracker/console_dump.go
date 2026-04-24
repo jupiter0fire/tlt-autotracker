@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -51,6 +52,35 @@ type memoryRegionSpec struct {
 	name    string
 	address uint32
 	size    int
+}
+
+type capturedSnapshotRegion struct {
+	name    string
+	address uint32
+	size    int
+	data    []byte
+}
+
+type snapshotCoreReader struct {
+	regions []capturedSnapshotRegion
+}
+
+func (s *snapshotCoreReader) ReadMemory(addr uint32, size int) ([]byte, error) {
+	return s.ReadMemoryLarge(addr, size)
+}
+
+func (s *snapshotCoreReader) ReadMemoryLarge(addr uint32, size int) ([]byte, error) {
+	for _, region := range s.regions {
+		if addr < region.address {
+			continue
+		}
+		offset := int(addr - region.address)
+		if offset < 0 || offset+size > len(region.data) {
+			continue
+		}
+		return region.data[offset : offset+size], nil
+	}
+	return nil, fmt.Errorf("addr %#x size %d not found", addr, size)
 }
 
 func startConsoleCommands() <-chan consoleCommand {
@@ -200,7 +230,16 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 		CreatedAt:     time.Now().Format(time.RFC3339),
 	}
 
-	reader := ootmm.NewReader(mem)
+	regions, err := captureSnapshotRegions(mem)
+	if err != nil {
+		return nil, err
+	}
+	snapshot.Regions = encodeSnapshotRegions(regions)
+
+	readerMem := n64.NewMemory(&snapshotCoreReader{regions: append([]capturedSnapshotRegion(nil), regions...)})
+	readerMem.SetBaseShift(n64.VirtualBase)
+	readerMem.SetSwizzle(false)
+	reader := ootmm.NewReader(readerMem)
 	var (
 		state   *ootmm.GameState
 		readErr error
@@ -233,13 +272,64 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 			snapshot.Summary.Checks = ootmm.ExtractChecks(state)
 		}
 	}
-
-	regions, err := readSnapshotRegions(mem)
-	if err != nil {
-		return nil, err
-	}
-	snapshot.Regions = regions
 	return snapshot, nil
+}
+
+func snapshotRegionSpecs() []memoryRegionSpec {
+	return []memoryRegionSpec{
+		{name: "comboCtxOot", address: ootmm.AddrComboCtxOot, size: ootmm.ComboCtxSize},
+		{name: "comboCtxMm", address: ootmm.AddrComboCtxMm, size: ootmm.ComboCtxSize},
+		{name: "ootSaveContext", address: ootmm.AddrOotSaveCtx, size: ootmm.OotSaveCtxSize},
+		{name: "mmSaveContext", address: ootmm.AddrMmSaveCtx, size: ootmm.MmSaveCtxSize},
+		{name: "ootPayload", address: ootmm.AddrOotPayload, size: ootmm.OotPayloadSize},
+		{name: "mmPayload", address: ootmm.AddrMmPayload, size: ootmm.MmPayloadSize},
+	}
+}
+
+func captureSnapshotRegions(mem *n64.Memory) ([]capturedSnapshotRegion, error) {
+	regions := make([]capturedSnapshotRegion, 0, len(snapshotRegionSpecs())+1)
+	for _, spec := range snapshotRegionSpecs() {
+		data, err := mem.Read(spec.address, spec.size)
+		if err != nil {
+			return nil, fmt.Errorf("Region %s lesen: %w", spec.name, err)
+		}
+		regions = append(regions, capturedSnapshotRegion{
+			name:    spec.name,
+			address: spec.address,
+			size:    spec.size,
+			data:    data,
+		})
+	}
+
+	// MM detection reads this runtime marker directly, so freeze it alongside the
+	// captured regions to keep the derived summary consistent with the snapshot.
+	runtimeBuf := make([]byte, 4)
+	binary.BigEndian.PutUint32(runtimeBuf, 1)
+	regions = append(regions, capturedSnapshotRegion{
+		name:    "mmRuntimeMarker",
+		address: 0x801F3F60,
+		size:    len(runtimeBuf),
+		data:    runtimeBuf,
+	})
+
+	return regions, nil
+}
+
+func encodeSnapshotRegions(captured []capturedSnapshotRegion) []debugSnapshotRegion {
+	regions := make([]debugSnapshotRegion, 0, len(captured))
+	for _, region := range captured {
+		if region.name == "mmRuntimeMarker" {
+			continue
+		}
+		regions = append(regions, debugSnapshotRegion{
+			Name:     region.name,
+			Address:  fmt.Sprintf("0x%08x", region.address),
+			Size:     region.size,
+			Encoding: "base64",
+			Data:     base64.StdEncoding.EncodeToString(region.data),
+		})
+	}
+	return regions
 }
 
 func readSnapshotRegions(mem *n64.Memory) ([]debugSnapshotRegion, error) {

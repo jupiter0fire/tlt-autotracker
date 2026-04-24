@@ -2,13 +2,18 @@ package tracker
 
 import (
 	"ootmm-autotracker/ootmm"
+	"time"
 )
+
+const checkRemovalGracePeriod = 5 * time.Second
 
 // State tracks the current and previous game state, computing deltas.
 type State struct {
-	prevItems  map[string]int
-	prevChecks map[string]checkState
-	prevGame   ootmm.ActiveGame
+	prevItems            map[string]int
+	prevChecks           map[string]checkState
+	pendingCheckRemovals map[string]pendingCheckRemoval
+	prevGame             ootmm.ActiveGame
+	now                  func() time.Time
 }
 
 type checkState struct {
@@ -16,10 +21,17 @@ type checkState struct {
 	Checked bool
 }
 
+type pendingCheckRemoval struct {
+	Check     checkState
+	ExpiresAt time.Time
+}
+
 func NewState() *State {
 	return &State{
-		prevItems:  make(map[string]int),
-		prevChecks: make(map[string]checkState),
+		prevItems:            make(map[string]int),
+		prevChecks:           make(map[string]checkState),
+		pendingCheckRemovals: make(map[string]pendingCheckRemoval),
+		now:                  time.Now,
 	}
 }
 
@@ -40,6 +52,7 @@ type CheckDiff struct {
 func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChecks []CheckDiff, gameChanged bool) {
 	items := ootmm.ExtractItems(gs)
 	checks := ootmm.ExtractChecks(gs)
+	now := s.now()
 
 	// Items diff
 	currentItems := make(map[string]int, len(items))
@@ -65,19 +78,40 @@ func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChe
 	// Checks diff
 	currentChecks := make(map[string]checkState, len(checks))
 	for _, ch := range checks {
-		currentChecks[ch.Key] = checkState{Name: ch.Name, Checked: ch.Checked}
+		current := checkState{Name: ch.Name, Checked: ch.Checked}
+		currentChecks[ch.Key] = current
+		delete(s.pendingCheckRemovals, ch.Key)
 		prev, existed := s.prevChecks[ch.Key]
 		if !existed || prev.Checked != ch.Checked {
 			changedChecks = append(changedChecks, CheckDiff{Name: ch.Name, Checked: ch.Checked})
 		}
+		s.prevChecks[ch.Key] = current
 	}
-	// Emit unchecked for checks that disappeared
+	// Delay unchecked diffs briefly so transient scene/load gaps do not flicker.
 	for key, prev := range s.prevChecks {
-		if _, exists := currentChecks[key]; !exists && prev.Checked {
-			changedChecks = append(changedChecks, CheckDiff{Name: prev.Name, Checked: false})
+		if _, exists := currentChecks[key]; exists {
+			continue
 		}
+		if !prev.Checked {
+			delete(s.prevChecks, key)
+			delete(s.pendingCheckRemovals, key)
+			continue
+		}
+		pending, exists := s.pendingCheckRemovals[key]
+		if !exists {
+			s.pendingCheckRemovals[key] = pendingCheckRemoval{
+				Check:     prev,
+				ExpiresAt: now.Add(checkRemovalGracePeriod),
+			}
+			continue
+		}
+		if now.Before(pending.ExpiresAt) {
+			continue
+		}
+		changedChecks = append(changedChecks, CheckDiff{Name: prev.Name, Checked: false})
+		delete(s.prevChecks, key)
+		delete(s.pendingCheckRemovals, key)
 	}
-	s.prevChecks = currentChecks
 
 	// Game change
 	gameChanged = gs.ActiveGame != s.prevGame
@@ -89,7 +123,7 @@ func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChe
 // FullState returns all items and checks as if everything changed (for initial sync).
 func (s *State) FullState(gs *ootmm.GameState) ([]ItemDiff, []CheckDiff) {
 	items := ootmm.ExtractItems(gs)
-	checks := ootmm.ExtractChecks(gs)
+	checks := s.effectiveChecks(gs)
 
 	allItems := make([]ItemDiff, len(items))
 	for i, it := range items {
@@ -102,4 +136,39 @@ func (s *State) FullState(gs *ootmm.GameState) ([]ItemDiff, []CheckDiff) {
 	}
 
 	return allItems, allChecks
+}
+
+func (s *State) effectiveChecks(gs *ootmm.GameState) []ootmm.TrackedCheck {
+	checks := ootmm.ExtractChecks(gs)
+	if len(s.pendingCheckRemovals) == 0 {
+		return checks
+	}
+
+	now := s.now()
+	seenKeys := make(map[string]struct{}, len(checks))
+	seenNames := make(map[string]struct{}, len(checks))
+	for _, ch := range checks {
+		seenKeys[ch.Key] = struct{}{}
+		seenNames[ch.Name] = struct{}{}
+	}
+	for key, pending := range s.pendingCheckRemovals {
+		if !pending.Check.Checked || !now.Before(pending.ExpiresAt) {
+			continue
+		}
+		if _, exists := seenKeys[key]; exists {
+			continue
+		}
+		if _, exists := seenNames[pending.Check.Name]; exists {
+			continue
+		}
+		checks = append(checks, ootmm.TrackedCheck{
+			Key:     key,
+			Name:    pending.Check.Name,
+			Checked: true,
+		})
+		seenKeys[key] = struct{}{}
+		seenNames[pending.Check.Name] = struct{}{}
+	}
+
+	return checks
 }

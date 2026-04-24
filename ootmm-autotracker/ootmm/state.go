@@ -173,6 +173,7 @@ type MmState struct {
 	StrayFairies     [10]int8
 	WeekEventReg     [100]uint8
 	TownStrayFairy   bool
+	ExtraFlags2      uint32
 	SkullTokensSwamp uint16
 	SkullTokensOcean uint16
 

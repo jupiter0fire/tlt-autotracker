@@ -1065,6 +1065,27 @@ func (s *snapshotCoreReader) addRegion(addr uint32, data []byte) {
 	s.regions = append(s.regions, snapshotRegion{addr: addr, data: data})
 }
 
+func (s *snapshotCoreReader) loadSnapshot(t *testing.T, snap testDebugSnapshot) {
+	t.Helper()
+	s.regions = s.regions[:0]
+
+	for _, region := range snap.Regions {
+		addr, ok := regionAddresses[region.Name]
+		if !ok {
+			continue
+		}
+		data, err := base64.StdEncoding.DecodeString(region.Data)
+		if err != nil {
+			t.Fatalf("decode region %s: %v", region.Name, err)
+		}
+		s.addRegion(addr, data)
+	}
+
+	runtimeBuf := make([]byte, 4)
+	binary.BigEndian.PutUint32(runtimeBuf, 1)
+	s.addRegion(0x801F3F60, runtimeBuf)
+}
+
 // regionAddresses maps snapshot region names to their N64 virtual addresses.
 var regionAddresses = map[string]uint32{
 	"comboCtxOot":    AddrComboCtxOot,
@@ -1104,11 +1125,26 @@ func readStateFromSnapshot(t *testing.T, name string) *GameState {
 	t.Helper()
 	snap := loadTestDebugSnapshot(t, name)
 	cr := newSnapshotCoreReader(t, snap)
+	reader := newReaderFromSnapshotCore(cr)
+	return readStateFromReader(t, reader, name)
+}
+
+func newReaderFromSnapshotCore(cr *snapshotCoreReader) *Reader {
 	mem := n64.NewMemory(cr)
 	mem.SetBaseShift(n64.VirtualBase)
 	mem.SetSwizzle(false)
+	return NewReader(mem)
+}
 
-	reader := NewReader(mem)
+func newReaderFromSnapshot(t *testing.T, name string) *Reader {
+	t.Helper()
+	snap := loadTestDebugSnapshot(t, name)
+	cr := newSnapshotCoreReader(t, snap)
+	return newReaderFromSnapshotCore(cr)
+}
+
+func readStateFromReader(t *testing.T, reader *Reader, name string) *GameState {
+	t.Helper()
 	var state *GameState
 	for attempt := 0; attempt < 3; attempt++ {
 		var err error
@@ -1124,6 +1160,100 @@ func readStateFromSnapshot(t *testing.T, name string) *GameState {
 		t.Fatalf("ReadState from %s did not produce a valid game state", name)
 	}
 	return state
+}
+
+func TestInMmSnapshotIncludesRequestedMmChecksAndItem(t *testing.T) {
+	state := readStateFromSnapshot(t, "in-mm-20260423-173418.json")
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Road to Southern Swamp HP",
+		"Clock Town Tree HP",
+		"Clock Town Platform HP",
+		"Clock Town Stray Fairy",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing %s from in-mm snapshot", name)
+		}
+	}
+	items := itemQtyMap(ExtractItems(state))
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 in in-mm snapshot", got)
+	}
+}
+
+func TestMmToOotSnapshotTransitionPreservesRequestedMmState(t *testing.T) {
+	mmReader := newReaderFromSnapshot(t, "in-mm-20260423-173418.json")
+	mmState := readStateFromReader(t, mmReader, "in-mm-20260423-173418.json")
+	if got := itemQtyMap(ExtractItems(mmState))["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 in source MM snapshot", got)
+	}
+
+	ootReader := newReaderFromSnapshot(t, "in-oot-20260423-173148.json")
+	ootReader.lastKnownMm = mmReader.lastKnownMm
+	ootReader.lastKnownMmSaveIdx = mmReader.lastKnownMmSaveIdx
+	ootReader.hasLastKnownMm = mmReader.hasLastKnownMm
+	ootState := readStateFromReader(t, ootReader, "in-oot-20260423-173148.json")
+
+	checks := checkNameSet(ExtractChecks(ootState))
+	for _, name := range []string{
+		"Road to Southern Swamp HP",
+		"Clock Town Tree HP",
+		"Clock Town Platform HP",
+		"Clock Town Stray Fairy",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing %s after MM->OoT snapshot transition", name)
+		}
+	}
+	items := itemQtyMap(ExtractItems(ootState))
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 after MM->OoT snapshot transition", got)
+	}
+}
+
+func TestSameReaderMmToOotSnapshotTransitionPreservesRequestedMmState(t *testing.T) {
+	mmSnap := loadTestDebugSnapshot(t, "in-mm-20260423-173418.json")
+	ootSnap := loadTestDebugSnapshot(t, "in-oot-2-20260423-191522.json")
+	core := newSnapshotCoreReader(t, mmSnap)
+	reader := newReaderFromSnapshotCore(core)
+
+	mmState := readStateFromReader(t, reader, "in-mm-20260423-173418.json")
+	if got := itemQtyMap(ExtractItems(mmState))["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 in source MM snapshot", got)
+	}
+
+	core.loadSnapshot(t, ootSnap)
+	ootState := readStateFromReader(t, reader, "in-oot-2-20260423-191522.json")
+
+	checks := checkNameSet(ExtractChecks(ootState))
+	for _, name := range []string{
+		"Road to Southern Swamp HP",
+		"Clock Town Tree HP",
+		"Clock Town Platform HP",
+		"Clock Town Stray Fairy",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing %s after same-reader MM->OoT snapshot transition", name)
+		}
+	}
+	items := itemQtyMap(ExtractItems(ootState))
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 after same-reader MM->OoT snapshot transition", got)
+	}
+}
+
+func TestFreshOotSnapshotIncludesTownStrayFairyFromExtraFlags(t *testing.T) {
+	state := readStateFromSnapshot(t, "fresh-oot-20260423-202324.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Clock Town Stray Fairy"]; !ok {
+		t.Fatal("missing Clock Town Stray Fairy from fresh OoT snapshot")
+	}
+
+	items := itemQtyMap(ExtractItems(state))
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 in fresh OoT snapshot", got)
+	}
 }
 
 func TestGrassCheckDiffOnlyZoraTunicAndGrass(t *testing.T) {

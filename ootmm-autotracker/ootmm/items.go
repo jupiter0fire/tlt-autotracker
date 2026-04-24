@@ -23,10 +23,12 @@ const (
 	sharedOcarinaButtonCDownMask    = 0x0008
 	ootExtraFlagsChildWalletBit     = 17
 	ootExtraFlagsBottomlessBit      = 7
+	// OoT/MM extra-record bitfields are stored MSB-first on N64.
 	mmExtraFlags2ChildWalletBit     = 31
 	mmExtraFlags3BottomlessBit      = 31
-	mmExtraFlags2Notebook           = 9
-	mmExtraFlags2MaskBlast          = 10
+	mmExtraFlags2Notebook           = 22
+	mmExtraFlags2MaskBlast          = 21
+	mmExtraFlags2TownStrayFairy     = 4
 	mmOwlGreatBayBit                = 0
 	mmOwlZoraCapeBit                = 1
 	mmOwlSnowheadBit                = 2
@@ -115,6 +117,15 @@ var mmOwlCheckSymbols = [...]struct {
 	{"OWL_SOUTHERN_SWAMP", mmOwlSouthernSwampBit},
 	{"OWL_IKANA_CANYON", mmOwlIkanaCanyonBit},
 	{"OWL_STONE_TOWER", mmOwlStoneTowerBit},
+}
+
+var mmExtraSymbolChecks = [...]struct {
+	bit    int
+	symbol string
+}{
+	{mmExtraFlags2Notebook, "BOMBER_NOTEBOOK"},
+	{mmExtraFlags2MaskBlast, "MASK_BLAST"},
+	{mmExtraFlags2TownStrayFairy, "STRAY_FAIRY_TOWN"},
 }
 
 var sharedOcarinaButtons = [...]struct {
@@ -255,6 +266,20 @@ func mmWalletLevel(state *GameState) int {
 		return 5
 	}
 	return GetUpgradeLevel(state.Mm.Upgrades, 12, 2) + 1
+}
+
+func mmExtraFlags2(state *GameState) uint32 {
+	if state == nil {
+		return 0
+	}
+	if state.Mm.ExtraFlags2 != 0 {
+		return state.Mm.ExtraFlags2
+	}
+	return state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+}
+
+func mmTownStrayFairyCollected(state *GameState) bool {
+	return state.Mm.TownStrayFairy || mmExtraFlags2(state)&(1<<mmExtraFlags2TownStrayFairy) != 0
 }
 
 func magicUpgradeLevel(hasMagic bool, hasDoubleMagic bool) int {
@@ -487,7 +512,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		}
 		items = append(items, TrackedItem{fairyID, int(mm.StrayFairies[i])})
 	}
-	items = append(items, TrackedItem{"MM_STRAY_FAIRY_TOWN", boolToInt(mm.TownStrayFairy)})
+	items = append(items, TrackedItem{"MM_STRAY_FAIRY_TOWN", boolToInt(mmTownStrayFairyCollected(state))})
 	items = append(items, TrackedItem{"MM_GS_TOKEN_SWAMP", int(mm.SkullTokensSwamp)})
 	items = append(items, TrackedItem{"MM_GS_TOKEN_OCEAN", int(mm.SkullTokensOcean)})
 	for _, owl := range mmOwlItems {
@@ -600,15 +625,13 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
 
-	mmFlags2 := state.Oot.ExtraRecords[ExtraIdxMmFlags2]
-	if mmFlags2&(1<<mmExtraFlags2Notebook) != 0 {
-		if name, ok := npcSymbolCheckName("MM", "BOMBER_NOTEBOOK"); ok {
-			appendCheck("MM_extra_"+itoa(mmExtraFlags2Notebook), name)
+	mmFlags2 := mmExtraFlags2(state)
+	for _, entry := range mmExtraSymbolChecks {
+		if mmFlags2&(1<<entry.bit) == 0 {
+			continue
 		}
-	}
-	if mmFlags2&(1<<mmExtraFlags2MaskBlast) != 0 {
-		if name, ok := npcSymbolCheckName("MM", "MASK_BLAST"); ok {
-			appendCheck("MM_extra_"+itoa(mmExtraFlags2MaskBlast), name)
+		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
+			appendCheck("MM_extra_"+itoa(entry.bit), name)
 		}
 	}
 	for _, owl := range mmOwlCheckSymbols {
@@ -949,7 +972,7 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 		case "mm-derived-skeleton-key":
 			qty = boolToInt(hasMmSkeletonKey(&state.Mm))
 		case "mm-derived-transcendent-fairy":
-			qty = boolToInt(hasMmTranscendentFairy(&state.Mm))
+			qty = boolToInt(hasMmTranscendentFairy(state))
 		}
 		items = append(items, TrackedItem{ID: entry.ItemID, Qty: qty})
 	}
@@ -1234,12 +1257,12 @@ func ootSilverRupeeCount(oot *OotState, silverRupeeID int) int {
 	return int((oot.ExtraRecords[recordIndex] >> shift) & 0xff)
 }
 
-func hasMmTranscendentFairy(mm *MmState) bool {
-	if !mm.TownStrayFairy {
+func hasMmTranscendentFairy(state *GameState) bool {
+	if !mmTownStrayFairyCollected(state) {
 		return false
 	}
 	for index := 0; index < len(mmSkeletonKeyMaxKeys); index++ {
-		if mm.StrayFairies[index] < 15 {
+		if state.Mm.StrayFairies[index] < 15 {
 			return false
 		}
 	}

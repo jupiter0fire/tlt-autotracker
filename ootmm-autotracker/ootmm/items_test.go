@@ -1276,6 +1276,7 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 		"MM": {
 			"MASK_BLAST":      "Clock Town Blast Mask",
 			"BOMBER_NOTEBOOK": "Clock Town Bomber Notebook",
+			"STRAY_FAIRY_TOWN": "Clock Town Stray Fairy",
 		},
 	}
 	t.Cleanup(func() {
@@ -1283,7 +1284,7 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast)
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast) | (1 << mmExtraFlags2TownStrayFairy)
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Clock Town Blast Mask"]; !ok {
@@ -1291,6 +1292,19 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	}
 	if _, ok := checks["Clock Town Bomber Notebook"]; !ok {
 		t.Fatal("missing MM extra-flag check for Bomber Notebook")
+	}
+	if _, ok := checks["Clock Town Stray Fairy"]; !ok {
+		t.Fatal("missing MM extra-flag check for Clock Town Stray Fairy")
+	}
+}
+
+func TestExtractItemsIncludesMmTownStrayFairyFromExtraFlags2(t *testing.T) {
+	state := &GameState{}
+	state.Mm.ExtraFlags2 = 1 << mmExtraFlags2TownStrayFairy
+
+	items := itemQtyMap(ExtractItems(state))
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 from MM extra flags", got)
 	}
 }
 
