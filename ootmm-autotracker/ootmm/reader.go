@@ -137,7 +137,6 @@ func (r *Reader) ReadState() (*GameState, error) {
 	}
 	if game == GameOot {
 		r.overlayLastKnownMm(activeSaveIndex, &state.Mm)
-		r.readMmTownStrayFairyContextFallback(&state.Mm)
 	}
 	if err := r.readSharedState(game, activeSaveIndex, &state.Shared); err != nil {
 		return nil, fmt.Errorf("read shared custom save: %w", err)
@@ -1041,18 +1040,6 @@ func (r *Reader) overlayLastKnownMm(saveIndex uint32, mm *MmState) {
 	}
 	mm.TownStrayFairy = mm.TownStrayFairy || r.lastKnownMm.TownStrayFairy
 	mm.ExtraFlags2 |= r.lastKnownMm.ExtraFlags2
-}
-
-func (r *Reader) readMmTownStrayFairyContextFallback(mm *MmState) {
-	if mm == nil || mm.TownStrayFairy {
-		return
-	}
-
-	value, err := r.mem.ReadU8(AddrMmSaveCtx + uint32(MmOffWeekEventReg+mmWeekEventTownStrayFairyByte))
-	if err != nil {
-		return
-	}
-	mm.TownStrayFairy = value&mmWeekEventTownStrayFairyMask != 0
 }
 
 func (r *Reader) readOotExtraRecord(index int) (uint32, error) {
