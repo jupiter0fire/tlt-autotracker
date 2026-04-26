@@ -4,3 +4,26 @@
 /ootmm-autotracker/memory-dumps
 /ootmm-autotracker/dist
 /ootmm-autotracker/ootmm-autotracker
+
+# Cargo cult gitignore
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+venv/
+.venv/
+env/
+.env
+.env.*
+pip-wheel-metadata/
+# IDEs / editors
+.vscode/
+.idea/
+# macOS
+.DS_Store
+# swap/temp files
+*~
+*.swp
