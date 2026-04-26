@@ -38,17 +38,17 @@ def parse_args() -> argparse.Namespace:
 
 def format_inventory(items: dict[str, int]) -> str:
 	entries = [f"{item_id} x{qty}" for item_id, qty in sorted(items.items()) if qty > 0]
-	return ", ".join(entries) if entries else "keine Items"
+	return ", ".join(entries) if entries else "no items"
 
 
 def format_checks(current_checks: set[str], limit: int = 12) -> str:
 	entries = sorted(current_checks)
 	if not entries:
-		return "keine Checks"
+		return "no checks"
 	if len(entries) <= limit:
 		return ", ".join(entries)
 	preview = ", ".join(entries[:limit])
-	return f"{preview} (+{len(entries) - limit} weitere)"
+	return f"{preview} (+{len(entries) - limit} more)"
 
 
 def get_item_updates(payload: dict[str, Any], current_items: dict[str, int]) -> list[str]:
@@ -75,11 +75,11 @@ def get_item_updates(payload: dict[str, Any], current_items: dict[str, int]) -> 
 				current_items.pop(item_id, None)
 
 			if qty > 0 and previous_qty == 0:
-				updates.append(f"neues Item: {item_id} (+{qty}, jetzt {new_qty})")
+				updates.append(f"new item: {item_id} (+{qty}, now {new_qty})")
 			elif qty > 0:
-				updates.append(f"Item-Update: {item_id} (+{qty}, jetzt {new_qty})")
+				updates.append(f"Item update: {item_id} (+{qty}, now {new_qty})")
 			elif qty < 0:
-				updates.append(f"Item-Update: {item_id} ({qty}, jetzt {max(new_qty, 0)})")
+				updates.append(f"Item update: {item_id} ({qty}, now {max(new_qty, 0)})")
 	else:
 		current_items.clear()
 		for entry in item_entries:
@@ -89,7 +89,7 @@ def get_item_updates(payload: dict[str, Any], current_items: dict[str, int]) -> 
 			qty = entry.get("qty")
 			if isinstance(item_id, str) and isinstance(qty, int) and qty > 0:
 				current_items[item_id] = qty
-		updates.append(f"aktueller Bestand: {format_inventory(current_items)}")
+		updates.append(f"current inventory: {format_inventory(current_items)}")
 
 	return updates
 
@@ -112,11 +112,11 @@ def get_check_updates(payload: dict[str, Any], current_checks: set[str]) -> list
 
 			if checked:
 				if name not in current_checks:
-					updates.append(f"neuer Check: {name}")
+					updates.append(f"new check: {name}")
 				current_checks.add(name)
 			else:
 				if name in current_checks:
-					updates.append(f"Check entfernt: {name}")
+					updates.append(f"check removed: {name}")
 				current_checks.discard(name)
 	else:
 		current_checks.clear()
@@ -127,7 +127,7 @@ def get_check_updates(payload: dict[str, Any], current_checks: set[str]) -> list
 			checked = entry.get("checked")
 			if isinstance(name, str) and checked is True:
 				current_checks.add(name)
-		updates.append(f"aktuelle Checks: {format_checks(current_checks)}")
+		updates.append(f"current checks: {format_checks(current_checks)}")
 
 	return updates
 

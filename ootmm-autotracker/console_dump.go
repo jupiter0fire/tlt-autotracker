@@ -100,11 +100,11 @@ func startConsoleCommands() <-chan consoleCommand {
 			select {
 			case commands <- command:
 			default:
-				log.Printf("Konsole: Befehlswarteschlange voll, verwerfe %q", line)
+				log.Printf("Console: command queue full, dropping %q", line)
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			log.Printf("Konsole: Eingabefehler: %v", err)
+			log.Printf("Console: input error: %v", err)
 		}
 	}()
 	return commands
@@ -127,35 +127,35 @@ func handleConsoleCommand(command consoleCommand, connected, probed bool, mem *n
 		printConsoleHelp()
 	case "dump", "snapshot":
 		if !connected || !probed {
-			log.Printf("Snapshot nicht moeglich: RetroArch/OoTMM ist aktuell nicht verbunden")
+			log.Printf("Snapshot not possible: RetroArch/OoTMM is not currently connected")
 			return
 		}
 		path, err := resolveSnapshotPath(command.args, time.Now())
 		if err != nil {
-			log.Printf("Snapshot-Pfad ungueltig: %v", err)
+			log.Printf("Snapshot path invalid: %v", err)
 			return
 		}
 		absolutePath, err := filepath.Abs(path)
 		if err != nil {
-			log.Printf("Snapshot-Pfad konnte nicht aufgeloest werden: %v", err)
+			log.Printf("Snapshot path could not be resolved: %v", err)
 			return
 		}
-		log.Printf("Schreibe Snapshot nach %s", absolutePath)
+		log.Printf("Writing snapshot to %s", absolutePath)
 		if err := writeDebugSnapshot(absolutePath, mem); err != nil {
-			log.Printf("Snapshot fehlgeschlagen: %v", err)
+			log.Printf("Snapshot failed: %v", err)
 			return
 		}
-		log.Printf("Snapshot gespeichert: %s", absolutePath)
+		log.Printf("Snapshot saved: %s", absolutePath)
 	default:
-		log.Printf("Unbekannter Konsolenbefehl %q", command.name)
+		log.Printf("Unknown console command %q", command.name)
 		printConsoleHelp()
 	}
 }
 
 func printConsoleHelp() {
-	log.Printf("Konsole: help | dump [label|pfad] | snapshot [label|pfad]")
-	log.Printf("Beispiel: dump vor-sarias-song")
-	log.Printf("Beispiel: dump memory-dumps/nach-check.json")
+	log.Printf("Console: help | dump [label|path] | snapshot [label|path]")
+	log.Printf("Example: dump vor-sarias-song")
+	log.Printf("Example: dump memory-dumps/nach-check.json")
 }
 
 func resolveSnapshotPath(raw string, now time.Time) (string, error) {
@@ -166,7 +166,7 @@ func resolveSnapshotPath(raw string, now time.Time) (string, error) {
 	}
 
 	if strings.Contains(trimmed, "..") {
-		return "", fmt.Errorf("Pfad mit '..' wird nicht unterstuetzt")
+		return "", fmt.Errorf("path containing '..' is not supported")
 	}
 
 	if strings.ContainsRune(trimmed, os.PathSeparator) || filepath.Ext(trimmed) != "" {
@@ -175,7 +175,7 @@ func resolveSnapshotPath(raw string, now time.Time) (string, error) {
 
 	label := sanitizeSnapshotLabel(trimmed)
 	if label == "" {
-		return "", fmt.Errorf("leerer Snapshot-Name")
+		return "", fmt.Errorf("empty snapshot name")
 	}
 	return filepath.Join("memory-dumps", fmt.Sprintf("%s-%s.json", label, timestamp)), nil
 }
@@ -212,14 +212,14 @@ func writeDebugSnapshot(path string, mem *n64.Memory) error {
 
 	data, err := json.MarshalIndent(snapshot, "", "  ")
 	if err != nil {
-		return fmt.Errorf("snapshot JSON erstellen: %w", err)
+		return fmt.Errorf("creating snapshot JSON: %w", err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("Snapshot-Verzeichnis anlegen: %w", err)
+		return fmt.Errorf("creating snapshot directory: %w", err)
 	}
 	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
-		return fmt.Errorf("Snapshot schreiben: %w", err)
+		return fmt.Errorf("writing snapshot: %w", err)
 	}
 	return nil
 }
@@ -291,7 +291,7 @@ func captureSnapshotRegions(mem *n64.Memory) ([]capturedSnapshotRegion, error) {
 	for _, spec := range snapshotRegionSpecs() {
 		data, err := mem.Read(spec.address, spec.size)
 		if err != nil {
-			return nil, fmt.Errorf("Region %s lesen: %w", spec.name, err)
+			return nil, fmt.Errorf("reading region %s: %w", spec.name, err)
 		}
 		regions = append(regions, capturedSnapshotRegion{
 			name:    spec.name,
@@ -346,7 +346,7 @@ func readSnapshotRegions(mem *n64.Memory) ([]debugSnapshotRegion, error) {
 	for _, spec := range specs {
 		data, err := mem.Read(spec.address, spec.size)
 		if err != nil {
-			return nil, fmt.Errorf("Region %s lesen: %w", spec.name, err)
+			return nil, fmt.Errorf("reading region %s: %w", spec.name, err)
 		}
 		regions = append(regions, debugSnapshotRegion{
 			Name:     spec.name,
