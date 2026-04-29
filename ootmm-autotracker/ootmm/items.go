@@ -88,6 +88,11 @@ type ootTradeSymbolCheck struct {
 	mask   uint16
 }
 
+type ootQuestSymbolCheck struct {
+	symbol string
+	bit    int
+}
+
 var mmOwlItems = [...]struct {
 	itemID string
 	bit    uint
@@ -236,6 +241,10 @@ var ootChildTradeSymbolChecks = [...]ootTradeSymbolCheck{
 	// present in a live save snapshot.
 	{symbol: "WEIRD_EGG", mask: ootChildTradeHatchMask},
 	{symbol: "ZELDA_LETTER", mask: ootChildTradeLetterMask},
+}
+
+var ootQuestSymbolChecks = [...]ootQuestSymbolCheck{
+	{symbol: "GERUDO_CARD", bit: QuestOotGerudoCard},
 }
 
 // TrackedItem represents a single trackable item with its current quantity.
@@ -646,6 +655,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			appendCheck("MM_owl_activation_"+owl.symbol, name)
 		}
 	}
+	appendOotQuestSymbolChecks(state, appendCheck)
 	appendOotChildTradeSymbolChecks(state, appendCheck)
 	appendOotTradeSymbolChecks(state, appendCheck)
 	appendOotEventSymbolChecks(state, appendCheck)
@@ -653,6 +663,17 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendOotEventMiscSymbolChecks(state, appendCheck)
 
 	return checks
+}
+
+func appendOotQuestSymbolChecks(state *GameState, appendCheck func(string, string)) {
+	for _, entry := range ootQuestSymbolChecks {
+		if !HasQuestBit(state.Oot.QuestItems, entry.bit) {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
+			appendCheck("OOT_quest_"+entry.symbol, name)
+		}
+	}
 }
 
 func appendOotEventSymbolChecks(state *GameState, appendCheck func(string, string)) {
