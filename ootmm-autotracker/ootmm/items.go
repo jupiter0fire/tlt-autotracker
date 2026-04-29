@@ -44,6 +44,8 @@ const (
 	mmOwlHiddenBit                  = 15
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
+	ootEventItemShootingGalleryChild = 0x0d
+	ootEventItemShootingGalleryAdult = 0x0e
 	ootEventItemGerudoArchery2      = 0x0f
 	ootEventItemLostWoodsTarget     = 0x1d
 	ootEventItemGoronBracelet       = 0x20
@@ -212,6 +214,8 @@ var ootEventSymbolChecks = [...]ootSymbolFlagCheck{
 }
 
 var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
+	{symbol: "SHOOTING_GAME_CHILD", flags: []int{ootEventItemShootingGalleryChild}},
+	{symbol: "SHOOTING_GAME_ADULT", flags: []int{ootEventItemShootingGalleryAdult}},
 	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
 	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
 	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},

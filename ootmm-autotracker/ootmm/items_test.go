@@ -1376,6 +1376,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			"GERUDO_ARCHERY_2":  "Gerudo Fortress Archery Reward 2",
 			"LOST_WOODS_TARGET": "Lost Woods Target",
 			"POCKET_EGG":        "Hatch Pocket Cucco",
+			"SHOOTING_GAME_ADULT": "Shooting Gallery Adult",
+			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
 			"MASK_SELL_BUNNY":   "Hyrule Field Sell Bunny Mask",
 			"MASK_SELL_KEATON":  "Kakariko Sell Keaton Mask",
 			"MASK_SELL_SKULL":   "Lost Woods Sell Skull Mask",
@@ -1388,7 +1390,10 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.EventsItem[ootEventItemGerudoArchery2>>4] = 1 << (ootEventItemGerudoArchery2 & 0xF)
+	state.Oot.EventsItem[ootEventItemShootingGalleryChild>>4] =
+		(1 << (ootEventItemShootingGalleryChild & 0xF)) |
+		(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
+		(1 << (ootEventItemGerudoArchery2 & 0xF))
 	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] = 1 << (ootEventItemLostWoodsTarget & 0xF)
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
 	state.Oot.EventsItem[ootEventItemPocketEgg>>4] |= 1 << (ootEventItemPocketEgg & 0xF)
@@ -1404,6 +1409,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		"Gerudo Fortress Archery Reward 2",
 		"Hatch Pocket Cucco",
 		"Lost Woods Target",
+		"Shooting Gallery Adult",
+		"Shooting Gallery Child",
 		"Hyrule Field Sell Bunny Mask",
 		"Kakariko Sell Keaton Mask",
 		"Lost Woods Sell Skull Mask",

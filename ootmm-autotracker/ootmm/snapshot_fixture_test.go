@@ -132,6 +132,15 @@ func TestSnapshotFixtureMarketDogLadyIncludesCheck(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureChildShootingGalleryIncludesCheck(t *testing.T) {
+	state := loadSnapshotFixtureState(t, "child-shooting-gallery-20260429-210339.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Shooting Gallery Child"]; !ok {
+		t.Fatal("missing Shooting Gallery Child check from snapshot fixture")
+	}
+}
+
 func TestSnapshotFixtureHoneyDarlingFalsePositive(t *testing.T) {
 	state := loadSnapshotFixtureState(t, "honey-darling-false-20260429-204043.json")
 
