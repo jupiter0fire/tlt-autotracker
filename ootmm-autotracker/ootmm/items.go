@@ -44,9 +44,9 @@ const (
 	mmOwlHiddenBit                  = 15
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
-	ootEventItemTalonBottle         = 0x02
-	ootEventItemShootingGalleryChild = 0x0d
-	ootEventItemShootingGalleryAdult = 0x0e
+	ootEventItemTalonBottle                 = 0x02
+	ootEventItemLostWoodsMemoryOrShootingChild = 0x0d
+	ootEventItemShootingGalleryAdult       = 0x0e
 	ootEventItemGerudoArchery2      = 0x0f
 	ootEventItemLostWoodsTarget     = 0x1d
 	ootEventItemGoronBracelet       = 0x20
@@ -78,6 +78,10 @@ const (
 	ootChildTradeLetterMask         = 0x1ffc
 	ootAdultTradePocketEggBit       = 0
 	ootAdultTradePocketCuccoMask    = 0x07fe
+	ootSceneShootingGallery         = 67
+	ootSceneLostWoods               = 76
+	ootNpcLostWoodsMemoryBit        = 12
+	ootNpcShootingGalleryChildBit   = 31
 	ootItemRutoLetter               = 0x1b
 	mmItemRutoLetter                = 0xb6
 )
@@ -216,7 +220,6 @@ var ootEventSymbolChecks = [...]ootSymbolFlagCheck{
 
 var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "TALON_BOTTLE", flags: []int{ootEventItemTalonBottle}},
-	{symbol: "SHOOTING_GAME_CHILD", flags: []int{ootEventItemShootingGalleryChild}},
 	{symbol: "SHOOTING_GAME_ADULT", flags: []int{ootEventItemShootingGalleryAdult}},
 	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
 	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
@@ -668,6 +671,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendOotTradeSymbolChecks(state, appendCheck)
 	appendOotEventSymbolChecks(state, appendCheck)
 	appendOotEventItemSymbolChecks(state, appendCheck)
+	appendOotAmbiguousEventItemChecks(state, appendCheck)
 	appendOotEventMiscSymbolChecks(state, appendCheck)
 
 	return checks
@@ -716,8 +720,47 @@ func appendOotEventItemSymbolChecks(state *GameState, appendCheck func(string, s
 	appendOotSymbolChecksFromFlags(state, ootEventItemSymbolChecks[:], hasOotEventItemCheck, "OOT_event_item_", appendCheck)
 }
 
+func appendOotAmbiguousEventItemChecks(state *GameState, appendCheck func(string, string)) {
+	if !hasOotEventItemCheck(state, ootEventItemLostWoodsMemoryOrShootingChild) {
+		return
+	}
+
+	// OoT item-get-inf flag 0x0d shows up for both the Lost Woods memory game
+	// and the child shooting gallery in snapshot evidence, so prefer the shared
+	// NPC bitmap when present and otherwise fall back to the current scene.
+	symbol := "SHOOTING_GAME_CHILD"
+	npcOot := state.Shared.Bitmap("npcOot")
+	switch {
+	case bitmapHasBit(npcOot, ootNpcLostWoodsMemoryBit):
+		symbol = "LOST_WOODS_MEMORY"
+	case bitmapHasBit(npcOot, ootNpcShootingGalleryChildBit):
+		symbol = "SHOOTING_GAME_CHILD"
+	default:
+		switch ootCurrentSceneID(state) {
+		case ootSceneLostWoods:
+			symbol = "LOST_WOODS_MEMORY"
+		case ootSceneShootingGallery:
+			symbol = "SHOOTING_GAME_CHILD"
+		}
+	}
+
+	if name, ok := npcSymbolCheckName("OOT", symbol); ok {
+		appendCheck("OOT_event_item_"+symbol, name)
+	}
+}
+
 func appendOotEventMiscSymbolChecks(state *GameState, appendCheck func(string, string)) {
 	appendOotSymbolChecksFromFlags(state, ootEventMiscSymbolChecks[:], hasOotEventMiscCheck, "OOT_event_misc_", appendCheck)
+}
+
+func ootCurrentSceneID(state *GameState) uint16 {
+	if state == nil {
+		return 0xffff
+	}
+	if state.Oot.HasLiveSceneFlags && state.Oot.LiveSceneID < OotPermCount {
+		return state.Oot.LiveSceneID
+	}
+	return state.Oot.SceneID
 }
 
 func appendOotSymbolChecksFromFlags(state *GameState, entries []ootSymbolFlagCheck, hasFlag func(*GameState, int) bool, keyPrefix string, appendCheck func(string, string)) {

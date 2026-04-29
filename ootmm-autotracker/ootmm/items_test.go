@@ -1391,9 +1391,10 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.EventsItem[ootEventItemShootingGalleryChild>>4] =
+	state.Oot.SceneID = ootSceneShootingGallery
+	state.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] =
 		(1 << (ootEventItemTalonBottle & 0xF)) |
-		(1 << (ootEventItemShootingGalleryChild & 0xF)) |
+		(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)) |
 		(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
 		(1 << (ootEventItemGerudoArchery2 & 0xF))
 	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] = 1 << (ootEventItemLostWoodsTarget & 0xF)

@@ -141,6 +141,18 @@ func TestSnapshotFixtureChildShootingGalleryIncludesCheck(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureOcarinaGameIncludesCheck(t *testing.T) {
+	state := loadSnapshotFixtureState(t, "ocarina-game-20260429-213033.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lost Woods Memory Game"]; !ok {
+		t.Fatal("missing Lost Woods Memory Game check from snapshot fixture")
+	}
+	if _, ok := checks["Shooting Gallery Child"]; ok {
+		t.Fatal("unexpected Shooting Gallery Child check from ocarina-game snapshot fixture")
+	}
+}
+
 func TestSnapshotFixtureLonLonRanchTalonBottleIncludesCheck(t *testing.T) {
 	state := loadSnapshotFixtureState(t, "lon-lon-ranch-talon-bottle-20260429-210824.json")
 
