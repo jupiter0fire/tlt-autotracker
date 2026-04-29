@@ -122,3 +122,15 @@ func TestSnapshotFixtureGerudoCardIncludesCheck(t *testing.T) {
 		t.Fatal("missing Gerudo Member Card check from snapshot fixture")
 	}
 }
+
+func TestSnapshotFixtureHoneyDarlingFalsePositive(t *testing.T) {
+	state := loadSnapshotFixtureState(t, "honey-darling-false-20260429-204043.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Honey & Darling Reward Any Day"]; ok {
+		t.Fatal("unexpected Honey & Darling Reward Any Day check from snapshot fixture")
+	}
+	if _, ok := checks["Honey & Darling Reward All Days"]; ok {
+		t.Fatal("unexpected Honey & Darling Reward All Days check from snapshot fixture")
+	}
+}

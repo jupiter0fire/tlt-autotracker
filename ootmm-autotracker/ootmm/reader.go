@@ -132,9 +132,6 @@ func (r *Reader) ReadState() (*GameState, error) {
 		}
 	}
 	state.Mm.ExtraFlags2 = state.Oot.ExtraRecords[ExtraIdxMmFlags2]
-	if value, err := r.readOotExtraRecord(ExtraIdxMmFlags2); err == nil {
-		state.Mm.ExtraFlags2 |= value
-	}
 	if game == GameOot {
 		r.overlayLastKnownMm(activeSaveIndex, &state.Mm)
 	}
