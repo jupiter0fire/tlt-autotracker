@@ -141,6 +141,15 @@ func TestSnapshotFixtureChildShootingGalleryIncludesCheck(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureLonLonRanchTalonBottleIncludesCheck(t *testing.T) {
+	state := loadSnapshotFixtureState(t, "lon-lon-ranch-talon-bottle-20260429-210824.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lon Lon Ranch Talon Bottle"]; !ok {
+		t.Fatal("missing Lon Lon Ranch Talon Bottle check from snapshot fixture")
+	}
+}
+
 func TestSnapshotFixtureHoneyDarlingFalsePositive(t *testing.T) {
 	state := loadSnapshotFixtureState(t, "honey-darling-false-20260429-204043.json")
 

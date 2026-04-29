@@ -44,6 +44,7 @@ const (
 	mmOwlHiddenBit                  = 15
 	ootEventSongSariaVanilla        = 0x38
 	ootEventSongSariaCustom         = 0x58
+	ootEventItemTalonBottle         = 0x02
 	ootEventItemShootingGalleryChild = 0x0d
 	ootEventItemShootingGalleryAdult = 0x0e
 	ootEventItemGerudoArchery2      = 0x0f
@@ -214,6 +215,7 @@ var ootEventSymbolChecks = [...]ootSymbolFlagCheck{
 }
 
 var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
+	{symbol: "TALON_BOTTLE", flags: []int{ootEventItemTalonBottle}},
 	{symbol: "SHOOTING_GAME_CHILD", flags: []int{ootEventItemShootingGalleryChild}},
 	{symbol: "SHOOTING_GAME_ADULT", flags: []int{ootEventItemShootingGalleryAdult}},
 	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},

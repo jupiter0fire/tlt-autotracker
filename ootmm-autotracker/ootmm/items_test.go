@@ -1376,6 +1376,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			"GERUDO_ARCHERY_2":  "Gerudo Fortress Archery Reward 2",
 			"LOST_WOODS_TARGET": "Lost Woods Target",
 			"POCKET_EGG":        "Hatch Pocket Cucco",
+			"TALON_BOTTLE":      "Lon Lon Ranch Talon Bottle",
 			"SHOOTING_GAME_ADULT": "Shooting Gallery Adult",
 			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
 			"MASK_SELL_BUNNY":   "Hyrule Field Sell Bunny Mask",
@@ -1391,6 +1392,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 
 	state := &GameState{}
 	state.Oot.EventsItem[ootEventItemShootingGalleryChild>>4] =
+		(1 << (ootEventItemTalonBottle & 0xF)) |
 		(1 << (ootEventItemShootingGalleryChild & 0xF)) |
 		(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
 		(1 << (ootEventItemGerudoArchery2 & 0xF))
@@ -1408,6 +1410,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		"Darunia",
 		"Gerudo Fortress Archery Reward 2",
 		"Hatch Pocket Cucco",
+		"Lon Lon Ranch Talon Bottle",
 		"Lost Woods Target",
 		"Shooting Gallery Adult",
 		"Shooting Gallery Child",
