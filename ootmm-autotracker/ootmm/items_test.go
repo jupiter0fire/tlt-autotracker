@@ -1613,6 +1613,7 @@ func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
 			"GERUDO_ARCHERY_1": "Gerudo Fortress Archery Reward 1",
+			"DOG_LADY":        "Market Dog Lady HP",
 			"MEDIGORON":        "Goron City Medigoron Giant Knife",
 		},
 		"MM": {},
@@ -1622,12 +1623,16 @@ func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.EventsMisc[ootEventMiscGerudoArchery1>>4] = 1 << (ootEventMiscGerudoArchery1 & 0xF)
+	state.Oot.EventsMisc[ootEventMiscGerudoArchery1>>4] |= 1 << (ootEventMiscGerudoArchery1 & 0xF)
+	state.Oot.EventsMisc[ootEventMiscRichardHeartPiece>>4] |= 1 << (ootEventMiscRichardHeartPiece & 0xF)
 	state.Oot.EventsMisc[ootEventMiscMedigoron>>4] = 1 << (ootEventMiscMedigoron & 0xF)
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Gerudo Fortress Archery Reward 1"]; !ok {
 		t.Fatal("missing OoT event-misc symbol check for Gerudo Archery Reward 1")
+	}
+	if _, ok := checks["Market Dog Lady HP"]; !ok {
+		t.Fatal("missing OoT event-misc symbol check for Market Dog Lady HP")
 	}
 	if _, ok := checks["Goron City Medigoron Giant Knife"]; !ok {
 		t.Fatal("missing OoT event-misc symbol check for Medigoron")

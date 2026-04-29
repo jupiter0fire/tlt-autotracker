@@ -123,6 +123,15 @@ func TestSnapshotFixtureGerudoCardIncludesCheck(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureMarketDogLadyIncludesCheck(t *testing.T) {
+	state := loadSnapshotFixtureState(t, "market-dog-lady-20260429-205725.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Market Dog Lady HP"]; !ok {
+		t.Fatal("missing Market Dog Lady HP check from snapshot fixture")
+	}
+}
+
 func TestSnapshotFixtureHoneyDarlingFalsePositive(t *testing.T) {
 	state := loadSnapshotFixtureState(t, "honey-darling-false-20260429-204043.json")
 

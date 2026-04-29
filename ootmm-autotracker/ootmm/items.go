@@ -68,6 +68,7 @@ const (
 	ootEventSkulltulaHouse40        = 0xdd
 	ootEventSkulltulaHouse50        = 0xde
 	ootEventMiscGerudoArchery1      = 0x190
+	ootEventMiscRichardHeartPiece   = 0x191
 	ootEventMiscMedigoron           = 0xb2
 	ootChildTradeWeirdEggBit        = 0
 	ootChildTradeHatchMask          = 0x1ffe
@@ -223,6 +224,7 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 
 var ootEventMiscSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "GERUDO_ARCHERY_1", flags: []int{ootEventMiscGerudoArchery1}},
+	{symbol: "DOG_LADY", flags: []int{ootEventMiscRichardHeartPiece}},
 	{symbol: "MEDIGORON", flags: []int{ootEventMiscMedigoron}},
 }
 
