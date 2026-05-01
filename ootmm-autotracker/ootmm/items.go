@@ -24,66 +24,68 @@ const (
 	ootExtraFlagsChildWalletBit     = 17
 	ootExtraFlagsBottomlessBit      = 7
 	// OoT/MM extra-record bitfields are stored MSB-first on N64.
-	mmExtraFlags2ChildWalletBit     = 31
-	mmExtraFlags3BottomlessBit      = 31
-	mmExtraFlags2HoneyDarling       = 27
-	mmExtraFlags2Notebook           = 22
-	mmExtraFlags2MaskBlast          = 21
-	mmExtraFlags2DekuPlayground     = 20
-	mmExtraFlags2TownStrayFairy     = 4
-	mmOwlGreatBayBit                = 0
-	mmOwlZoraCapeBit                = 1
-	mmOwlSnowheadBit                = 2
-	mmOwlMountainVillageBit         = 3
-	mmOwlClockTownBit               = 4
-	mmOwlMilkRoadBit                = 5
-	mmOwlWoodfallBit                = 6
-	mmOwlSouthernSwampBit           = 7
-	mmOwlIkanaCanyonBit             = 8
-	mmOwlStoneTowerBit              = 9
-	mmOwlHiddenBit                  = 15
-	ootEventSongSariaVanilla        = 0x38
-	ootEventSongSariaCustom         = 0x58
-	ootEventItemTalonBottle                 = 0x02
+	mmExtraFlags2ChildWalletBit                = 31
+	mmExtraFlags3BottomlessBit                 = 31
+	mmExtraFlags2HoneyDarling                  = 27
+	mmExtraFlags2Notebook                      = 22
+	mmExtraFlags2MaskBlast                     = 21
+	mmExtraFlags2DekuPlayground                = 20
+	mmExtraFlags2TownStrayFairy                = 4
+	mmOwlGreatBayBit                           = 0
+	mmOwlZoraCapeBit                           = 1
+	mmOwlSnowheadBit                           = 2
+	mmOwlMountainVillageBit                    = 3
+	mmOwlClockTownBit                          = 4
+	mmOwlMilkRoadBit                           = 5
+	mmOwlWoodfallBit                           = 6
+	mmOwlSouthernSwampBit                      = 7
+	mmOwlIkanaCanyonBit                        = 8
+	mmOwlStoneTowerBit                         = 9
+	mmOwlHiddenBit                             = 15
+	ootEventSongSariaVanilla                   = 0x38
+	ootEventSongSariaCustom                    = 0x58
+	ootEventItemTalonBottle                    = 0x02
 	ootEventItemLostWoodsMemoryOrShootingChild = 0x0d
-	ootEventItemShootingGalleryAdult       = 0x0e
-	ootEventItemGerudoArchery2      = 0x0f
-	ootEventItemLostWoodsTarget     = 0x1d
-	ootEventItemGoronBracelet       = 0x20
-	ootEventItemPocketEgg           = 0x2c
-	ootEventItemMaskSellKeaton      = 0x38
-	ootEventItemMaskSellSkull       = 0x39
-	ootEventItemMaskSellSpooky      = 0x3a
-	ootEventItemMaskSellBunny       = 0x3b
-	ootEventMalonEgg                = 0x12
-	ootEventSongEpona               = 0x62
-	ootEventSongSunCustom           = 0x5a
-	ootEventFrogsGame               = 0xd0
-	ootEventFrogsZelda              = 0xd1
-	ootEventFrogsEpona              = 0xd2
-	ootEventFrogsSun                = 0xd3
-	ootEventFrogsSaria              = 0xd4
-	ootEventFrogsSongOfTime         = 0xd5
-	ootEventFrogsStorms             = 0xd6
-	ootEventSkulltulaHouse10        = 0xda
-	ootEventSkulltulaHouse20        = 0xdb
-	ootEventSkulltulaHouse30        = 0xdc
-	ootEventSkulltulaHouse40        = 0xdd
-	ootEventSkulltulaHouse50        = 0xde
-	ootEventMiscGerudoArchery1      = 0x190
-	ootEventMiscRichardHeartPiece   = 0x191
-	ootEventMiscMedigoron           = 0xb2
-	ootChildTradeWeirdEggBit        = 0
-	ootChildTradeHatchMask          = 0x1ffe
-	ootChildTradeLetterMask         = 0x1ffc
-	ootAdultTradePocketEggBit       = 0
-	ootAdultTradePocketCuccoMask    = 0x07fe
-	ootSceneShootingGallery         = 67
-	ootSceneLostWoods               = 76
-	ootNpcLostWoodsMemoryBit        = 12
-	ootNpcShootingGalleryChildBit   = 31
-	ootItemRutoLetter               = 0x1b
-	mmItemRutoLetter                = 0xb6
+	ootEventItemLostWoodsMemory                = 0x17
+	ootEventItemShootingGalleryAdult           = 0x0e
+	ootEventItemGerudoArchery2                 = 0x0f
+	ootEventItemLostWoodsTarget                = 0x1d
+	ootEventItemGoronBracelet                  = 0x20
+	ootEventItemPocketEgg                      = 0x2c
+	ootEventItemMaskSellKeaton                 = 0x38
+	ootEventItemMaskSellSkull                  = 0x39
+	ootEventItemMaskSellSpooky                 = 0x3a
+	ootEventItemMaskSellBunny                  = 0x3b
+	ootEventMalonEgg                           = 0x12
+	ootEventSongEpona                          = 0x62
+	ootEventSongSunCustom                      = 0x5a
+	ootEventFrogsGame                          = 0xd0
+	ootEventFrogsZelda                         = 0xd1
+	ootEventFrogsEpona                         = 0xd2
+	ootEventFrogsSun                           = 0xd3
+	ootEventFrogsSaria                         = 0xd4
+	ootEventFrogsSongOfTime                    = 0xd5
+	ootEventFrogsStorms                        = 0xd6
+	ootEventSkulltulaHouse10                   = 0xda
+	ootEventSkulltulaHouse20                   = 0xdb
+	ootEventSkulltulaHouse30                   = 0xdc
+	ootEventSkulltulaHouse40                   = 0xdd
+	ootEventSkulltulaHouse50                   = 0xde
+	ootEventMiscGerudoArchery1                 = 0x190
+	ootEventMiscRichardHeartPiece              = 0x191
+	ootEventMiscMedigoron                      = 0xb2
+	ootChildTradeWeirdEggBit                   = 0
+	ootChildTradeHatchMask                     = 0x1ffe
+	ootChildTradeLetterMask                    = 0x1ffc
+	ootAdultTradePocketEggBit                  = 0
+	ootAdultTradePocketCuccoMask               = 0x07fe
+	ootSceneShootingGallery                    = 0x42
+	ootSceneShootingGallerySave                = 0x43
+	ootEntranceChildArchery                    = 0x16d
+	ootNpcLostWoodsMemoryBit                   = 12
+	ootNpcShootingGalleryChildBit              = 31
+	ootItemRutoLetter                          = 0x1b
+	mmItemRutoLetter                           = 0xb6
 )
 
 type ootSymbolFlagCheck struct {
@@ -721,32 +723,25 @@ func appendOotEventItemSymbolChecks(state *GameState, appendCheck func(string, s
 }
 
 func appendOotAmbiguousEventItemChecks(state *GameState, appendCheck func(string, string)) {
-	if !hasOotEventItemCheck(state, ootEventItemLostWoodsMemoryOrShootingChild) {
-		return
-	}
-
-	// OoT item-get-inf flag 0x0d shows up for both the Lost Woods memory game
-	// and the child shooting gallery in snapshot evidence, so prefer the shared
-	// NPC bitmap when present and otherwise fall back to the current scene.
-	symbol := "SHOOTING_GAME_CHILD"
 	npcOot := state.Shared.Bitmap("npcOot")
-	switch {
-	case bitmapHasBit(npcOot, ootNpcLostWoodsMemoryBit):
-		symbol = "LOST_WOODS_MEMORY"
-	case bitmapHasBit(npcOot, ootNpcShootingGalleryChildBit):
-		symbol = "SHOOTING_GAME_CHILD"
-	default:
-		switch ootCurrentSceneID(state) {
-		case ootSceneLostWoods:
-			symbol = "LOST_WOODS_MEMORY"
-		case ootSceneShootingGallery:
-			symbol = "SHOOTING_GAME_CHILD"
+	if bitmapHasBit(npcOot, ootNpcLostWoodsMemoryBit) || hasOotEventItemCheck(state, ootEventItemLostWoodsMemory) || ootHasLostWoodsMemoryGameProgress(state) {
+		if name, ok := npcSymbolCheckName("OOT", "LOST_WOODS_MEMORY"); ok {
+			appendCheck("OOT_event_item_LOST_WOODS_MEMORY", name)
 		}
 	}
 
-	if name, ok := npcSymbolCheckName("OOT", symbol); ok {
-		appendCheck("OOT_event_item_"+symbol, name)
+	if bitmapHasBit(npcOot, ootNpcShootingGalleryChildBit) || hasOotEventItemCheck(state, ootEventItemLostWoodsMemoryOrShootingChild) {
+		if name, ok := npcSymbolCheckName("OOT", "SHOOTING_GAME_CHILD"); ok {
+			appendCheck("OOT_event_item_SHOOTING_GAME_CHILD", name)
+		}
 	}
+}
+
+func ootHasLostWoodsMemoryGameProgress(state *GameState) bool {
+	if state == nil {
+		return false
+	}
+	return state.Oot.OcarinaGameRound > 0
 }
 
 func appendOotEventMiscSymbolChecks(state *GameState, appendCheck func(string, string)) {

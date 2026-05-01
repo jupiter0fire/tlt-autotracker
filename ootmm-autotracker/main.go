@@ -255,7 +255,7 @@ func selectBackend(raHost string, raPort int, pj64Port int, wsAddr string, force
 	if forcePJ64 {
 		fmt.Printf("PJ64:      listening on port %d\n", pj64Port)
 		fmt.Printf("WebSocket: %s\n", wsAddr)
-		fmt.Println("Console: dump [label|path] schreibt einen JSON-Snapshot, help zeigt Befehle")
+		fmt.Println("Console: dump [label|path] writes a JSON-Snapshot, help shows commands")
 		fmt.Println()
 		fmt.Println("Waiting for Project64 Lua adapter to connect...")
 		fmt.Println("(Load pj64_adapter.lua in Project64's scripting console)")
@@ -265,9 +265,9 @@ func selectBackend(raHost string, raPort int, pj64Port int, wsAddr string, force
 	fmt.Printf("RetroArch: %s:%d\n", raHost, raPort)
 	fmt.Printf("PJ64:      listening on port %d\n", pj64Port)
 	fmt.Printf("WebSocket: %s\n", wsAddr)
-	fmt.Println("Console: dump [label|path] schreibt einen JSON-Snapshot, help zeigt Befehle")
+	fmt.Println("Console: dump [label|path] writes a JSON-Snapshot, help shows commands")
 	fmt.Println()
-	fmt.Println("Pruefe RetroArch und Project64...")
+	fmt.Println("Checking RetroArch and Project64...")
 
 	retroArchOption := newRetroArchOption(raHost, raPort)
 	pj64Option, err := newPJ64Option(pj64Port)

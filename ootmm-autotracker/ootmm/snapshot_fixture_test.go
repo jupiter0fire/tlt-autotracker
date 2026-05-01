@@ -1,8 +1,8 @@
 package ootmm
 
 import (
-	"encoding/binary"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -53,6 +53,14 @@ func (s *snapshotFixtureCoreReader) ReadMemoryLarge(addr uint32, size int) ([]by
 }
 
 func loadSnapshotFixtureState(t *testing.T, name string) *GameState {
+	return loadSnapshotFixtureStateOptions(t, name, false)
+}
+
+func loadSnapshotFixtureStateAllowGameNone(t *testing.T, name string) *GameState {
+	return loadSnapshotFixtureStateOptions(t, name, true)
+}
+
+func loadSnapshotFixtureStateOptions(t *testing.T, name string, allowGameNone bool) *GameState {
 	t.Helper()
 
 	raw, err := os.ReadFile(filepath.Join("testdata", "dumps", name))
@@ -102,11 +110,43 @@ func loadSnapshotFixtureState(t *testing.T, name string) *GameState {
 			return state
 		}
 	}
+	if allowGameNone {
+		fallback, err := loadSnapshotFixtureOfflineState(mem, state)
+		if err != nil {
+			t.Fatalf("read offline snapshot fixture state %s: %v", name, err)
+		}
+		return fallback
+	}
 	if state == nil {
 		t.Fatalf("snapshot fixture %s produced no state", name)
 	}
 	t.Fatalf("snapshot fixture %s produced incomplete state: valid=%v activeGame=%v", name, state.Valid, state.ActiveGame)
 	return nil
+}
+
+func loadSnapshotFixtureOfflineState(mem *n64.Memory, base *GameState) (*GameState, error) {
+	state := &GameState{}
+	if base != nil {
+		*state = *base
+	}
+
+	ootData, err := mem.Read(AddrOotSaveCtx, OotSaveCtxSize)
+	if err != nil {
+		return nil, fmt.Errorf("read OoT save context: %w", err)
+	}
+	if err := parseOotSave(&state.Oot, ootData); err != nil {
+		return nil, fmt.Errorf("parse OoT save context: %w", err)
+	}
+
+	if mmData, err := mem.Read(AddrMmSaveCtx, MmSaveCtxSize); err == nil {
+		if err := parseMmSave(&state.Mm, mmData); err != nil {
+			return nil, fmt.Errorf("parse MM save context: %w", err)
+		}
+		state.Mm.ExtraFlags2 = state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+	}
+
+	state.Valid = true
+	return state, nil
 }
 
 func TestSnapshotFixtureGerudoCardIncludesCheck(t *testing.T) {
@@ -148,8 +188,29 @@ func TestSnapshotFixtureOcarinaGameIncludesCheck(t *testing.T) {
 	if _, ok := checks["Lost Woods Memory Game"]; !ok {
 		t.Fatal("missing Lost Woods Memory Game check from snapshot fixture")
 	}
-	if _, ok := checks["Shooting Gallery Child"]; ok {
-		t.Fatal("unexpected Shooting Gallery Child check from ocarina-game snapshot fixture")
+}
+
+func TestSnapshotFixtureMemoryGameTransitionIncludesCheck(t *testing.T) {
+	state := loadSnapshotFixtureStateAllowGameNone(t, "test-20260501-110855.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lost Woods Memory Game"]; !ok {
+		t.Fatal("missing Lost Woods Memory Game check from transition snapshot fixture")
+	}
+	if _, ok := checks["Shooting Gallery Child"]; !ok {
+		t.Fatal("missing Shooting Gallery Child check from transition snapshot fixture")
+	}
+}
+
+func TestSnapshotFixtureMemoryGameAndChildShootingIncludesChecks(t *testing.T) {
+	state := loadSnapshotFixtureState(t, "test-20260501-125454.json")
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lost Woods Memory Game"]; !ok {
+		t.Fatal("missing Lost Woods Memory Game check from combined snapshot fixture")
+	}
+	if _, ok := checks["Shooting Gallery Child"]; !ok {
+		t.Fatal("missing Shooting Gallery Child check from combined snapshot fixture")
 	}
 }
 

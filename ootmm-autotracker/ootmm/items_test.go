@@ -213,6 +213,19 @@ func TestParseOotSaveReadsMagicFlags(t *testing.T) {
 	}
 }
 
+func TestParseOotSaveReadsOcarinaGameRound(t *testing.T) {
+	data := make([]byte, OotSaveSize)
+	data[OotOffOcarinaGameRound] = 1
+
+	var oot OotState
+	if err := parseOotSave(&oot, data); err != nil {
+		t.Fatalf("parseOotSave: %v", err)
+	}
+	if oot.OcarinaGameRound != 1 {
+		t.Fatalf("OcarinaGameRound = %d, want 1", oot.OcarinaGameRound)
+	}
+}
+
 func TestExtractItemsReportsMagicUpgradeProgression(t *testing.T) {
 	state := &GameState{}
 
@@ -1274,11 +1287,11 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {},
 		"MM": {
-			"HONEY_DARLING_1":  "Honey & Darling Reward Any Day",
-			"MASK_BLAST":       "Clock Town Blast Mask",
-			"BOMBER_NOTEBOOK":  "Clock Town Bomber Notebook",
+			"HONEY_DARLING_1":   "Honey & Darling Reward Any Day",
+			"MASK_BLAST":        "Clock Town Blast Mask",
+			"BOMBER_NOTEBOOK":   "Clock Town Bomber Notebook",
 			"DEKU_PLAYGROUND_1": "Deku Playground Reward Any Day",
-			"STRAY_FAIRY_TOWN": "Clock Town Stray Fairy",
+			"STRAY_FAIRY_TOWN":  "Clock Town Stray Fairy",
 		},
 	}
 	t.Cleanup(func() {
@@ -1372,17 +1385,18 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
-			"DARUNIA_BRACELET":  "Darunia",
-			"GERUDO_ARCHERY_2":  "Gerudo Fortress Archery Reward 2",
-			"LOST_WOODS_TARGET": "Lost Woods Target",
-			"POCKET_EGG":        "Hatch Pocket Cucco",
-			"TALON_BOTTLE":      "Lon Lon Ranch Talon Bottle",
+			"DARUNIA_BRACELET":    "Darunia",
+			"GERUDO_ARCHERY_2":    "Gerudo Fortress Archery Reward 2",
+			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
+			"LOST_WOODS_TARGET":   "Lost Woods Target",
+			"POCKET_EGG":          "Hatch Pocket Cucco",
+			"TALON_BOTTLE":        "Lon Lon Ranch Talon Bottle",
 			"SHOOTING_GAME_ADULT": "Shooting Gallery Adult",
 			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
-			"MASK_SELL_BUNNY":   "Hyrule Field Sell Bunny Mask",
-			"MASK_SELL_KEATON":  "Kakariko Sell Keaton Mask",
-			"MASK_SELL_SKULL":   "Lost Woods Sell Skull Mask",
-			"MASK_SELL_SPOOKY":  "Graveyard Sell Spooky Mask",
+			"MASK_SELL_BUNNY":     "Hyrule Field Sell Bunny Mask",
+			"MASK_SELL_KEATON":    "Kakariko Sell Keaton Mask",
+			"MASK_SELL_SKULL":     "Lost Woods Sell Skull Mask",
+			"MASK_SELL_SPOOKY":    "Graveyard Sell Spooky Mask",
 		},
 		"MM": {},
 	}
@@ -1391,12 +1405,13 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.SceneID = ootSceneShootingGallery
+	state.Oot.Entrance = ootEntranceChildArchery
+	state.Oot.SceneID = ootSceneShootingGallerySave
 	state.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] =
 		(1 << (ootEventItemTalonBottle & 0xF)) |
-		(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)) |
-		(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
-		(1 << (ootEventItemGerudoArchery2 & 0xF))
+			(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)) |
+			(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
+			(1 << (ootEventItemGerudoArchery2 & 0xF))
 	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] = 1 << (ootEventItemLostWoodsTarget & 0xF)
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
 	state.Oot.EventsItem[ootEventItemPocketEgg>>4] |= 1 << (ootEventItemPocketEgg & 0xF)
@@ -1423,6 +1438,57 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		if _, ok := checks[name]; !ok {
 			t.Fatalf("missing OoT event-item symbol check: %s", name)
 		}
+	}
+}
+
+func TestExtractChecksIncludesOotMemoryGameFromRoundProgress(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
+			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.OcarinaGameRound = 1
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lost Woods Memory Game"]; !ok {
+		t.Fatal("missing Lost Woods Memory Game check from OoT memory-game progress fallback")
+	}
+	if _, ok := checks["Shooting Gallery Child"]; ok {
+		t.Fatal("unexpected Shooting Gallery Child check from OoT memory-game progress fallback")
+	}
+}
+
+func TestExtractChecksIncludesOotMemoryAndChildShootingFromSeparateSignals(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
+			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.OcarinaGameRound = 1
+	state.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] = 1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lost Woods Memory Game"]; !ok {
+		t.Fatal("missing Lost Woods Memory Game check from separate OoT fallback signals")
+	}
+	if _, ok := checks["Shooting Gallery Child"]; !ok {
+		t.Fatal("missing Shooting Gallery Child check from separate OoT fallback signals")
 	}
 }
 
@@ -1624,7 +1690,7 @@ func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
 			"GERUDO_ARCHERY_1": "Gerudo Fortress Archery Reward 1",
-			"DOG_LADY":        "Market Dog Lady HP",
+			"DOG_LADY":         "Market Dog Lady HP",
 			"MEDIGORON":        "Goron City Medigoron Giant Knife",
 		},
 		"MM": {},

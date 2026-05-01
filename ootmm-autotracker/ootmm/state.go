@@ -84,13 +84,15 @@ func (s *SharedCustomState) SetBit(name string, bit int) {
 
 // OotState holds all tracked OoT data.
 type OotState struct {
-	SceneID         uint16
-	LiveSceneID     uint16
-	Age             uint32 // 0=adult, 1=child
-	GameMode        uint32
-	HasMagic        bool
-	HasDoubleMagic  bool
-	IsBiggoronSword bool
+	Entrance         uint32
+	SceneID          uint16
+	LiveSceneID      uint16
+	Age              uint32 // 0=adult, 1=child
+	GameMode         uint32
+	OcarinaGameRound uint8
+	HasMagic         bool
+	HasDoubleMagic   bool
+	IsBiggoronSword  bool
 
 	LiveChestFlags      uint32
 	LiveCollectFlags    uint32
