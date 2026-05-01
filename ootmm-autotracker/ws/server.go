@@ -139,7 +139,7 @@ func (s *Server) BroadcastItems(items []tracker.ItemDiff, diff bool) {
 		Refresh: true,
 		Items:   items,
 	}
-	s.broadcast(msg)
+	s.broadcastReadyClients(msg)
 }
 
 // BroadcastChecks sends check updates to all connected clients.
@@ -153,7 +153,7 @@ func (s *Server) BroadcastChecks(checks []tracker.CheckDiff, diff bool) {
 		Refresh: true,
 		Checks:  checks,
 	}
-	s.broadcast(msg)
+	s.broadcastReadyClients(msg)
 }
 
 // BroadcastDelta sends location updates before item/check diffs when they changed in the same poll.
@@ -174,10 +174,16 @@ func (s *Server) BroadcastLocation(game ootmm.ActiveGame, sceneID uint16) {
 		Game:    game.String(),
 		SceneID: sceneID,
 	}
-	s.broadcast(msg)
+	s.broadcastReadyClients(msg)
 }
 
-func (s *Server) broadcast(msg interface{}) {
+func (s *Server) broadcastReadyClients(msg interface{}) {
+	s.broadcast(msg, func(client *clientState) bool {
+		return !client.wantsFull
+	})
+}
+
+func (s *Server) broadcast(msg interface{}, include func(*clientState) bool) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("JSON marshal error: %v", err)
@@ -187,7 +193,10 @@ func (s *Server) broadcast(msg interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for conn := range s.clients {
+	for conn, client := range s.clients {
+		if include != nil && !include(client) {
+			continue
+		}
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			conn.Close()
 			delete(s.clients, conn)
@@ -238,6 +247,29 @@ func (s *Server) FlushFullState(items []tracker.ItemDiff, checks []tracker.Check
 		Refresh: false,
 		Checks:  checks,
 	})
+
+	s.sendToClients(conns, map[string]interface{}{
+		"type":    "refresh",
+		"refresh": true,
+	})
+}
+
+// FlushInitialItems sends only the current item inventory to clients that
+// connected before the tracker had an established baseline.
+func (s *Server) FlushInitialItems(items []tracker.ItemDiff) {
+	conns := s.consumeFullSyncRequests()
+	if len(conns) == 0 {
+		return
+	}
+
+	if len(items) > 0 {
+		s.sendToClients(conns, ItemMessage{
+			Type:    "item",
+			Diff:    false,
+			Refresh: false,
+			Items:   items,
+		})
+	}
 
 	s.sendToClients(conns, map[string]interface{}{
 		"type":    "refresh",

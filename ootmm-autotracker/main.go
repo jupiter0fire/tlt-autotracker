@@ -138,6 +138,7 @@ func main() {
 		}
 
 		// Step 4: Compute deltas
+		hadTrackerBaseline := state.Initialized()
 		changedItems, changedChecks, gameChanged := state.Update(gs)
 		currentScene := getActiveScene(gs)
 		locationChanged := gameChanged || currentScene != lastScene || gs.ActiveGame != lastGame
@@ -152,7 +153,11 @@ func main() {
 
 			if server.HasPendingFullSync() {
 				fullItems, fullChecks := state.FullState(gs)
-				server.FlushFullState(fullItems, fullChecks, gs.ActiveGame, currentScene)
+				if hadTrackerBaseline {
+					server.FlushFullState(fullItems, fullChecks, gs.ActiveGame, currentScene)
+				} else {
+					server.FlushInitialItems(fullItems)
+				}
 			}
 
 			lastScene = currentScene

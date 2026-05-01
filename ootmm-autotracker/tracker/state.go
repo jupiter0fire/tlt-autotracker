@@ -13,6 +13,7 @@ type State struct {
 	prevChecks           map[string]checkState
 	pendingCheckRemovals map[string]pendingCheckRemoval
 	prevGame             ootmm.ActiveGame
+	initialized          bool
 	now                  func() time.Time
 }
 
@@ -116,8 +117,14 @@ func (s *State) Update(gs *ootmm.GameState) (changedItems []ItemDiff, changedChe
 	// Game change
 	gameChanged = gs.ActiveGame != s.prevGame
 	s.prevGame = gs.ActiveGame
+	s.initialized = true
 
 	return
+}
+
+// Initialized reports whether the state has already seen at least one valid poll.
+func (s *State) Initialized() bool {
+	return s.initialized
 }
 
 // FullState returns all items and checks as if everything changed (for initial sync).
