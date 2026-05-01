@@ -234,3 +234,18 @@ func TestSnapshotFixtureHoneyDarlingFalsePositive(t *testing.T) {
 		t.Fatal("unexpected Honey & Darling Reward All Days check from snapshot fixture")
 	}
 }
+
+func TestSnapshotFixtureInitialSongOfHealingExtraFlag(t *testing.T) {
+	withoutState := loadSnapshotFixtureState(t, "mm-without-initial-song-of-healing-20260501-143756.json")
+	withState := loadSnapshotFixtureState(t, "mm-with-initial-song-of-healing-20260501-143938.json")
+
+	withoutChecks := checkNameSet(ExtractChecks(withoutState))
+	if _, ok := withoutChecks["Initial Song of Healing"]; ok {
+		t.Fatal("unexpected Initial Song of Healing check in without snapshot fixture")
+	}
+
+	withChecks := checkNameSet(ExtractChecks(withState))
+	if _, ok := withChecks["Initial Song of Healing"]; !ok {
+		t.Fatal("missing Initial Song of Healing check from snapshot fixture")
+	}
+}

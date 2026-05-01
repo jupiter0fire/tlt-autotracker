@@ -30,6 +30,7 @@ const (
 	mmExtraFlags2Notebook                      = 22
 	mmExtraFlags2MaskBlast                     = 21
 	mmExtraFlags2DekuPlayground                = 20
+	mmExtraFlags2SongHealing                   = 5
 	mmExtraFlags2TownStrayFairy                = 4
 	mmOwlGreatBayBit                           = 0
 	mmOwlZoraCapeBit                           = 1
@@ -144,6 +145,7 @@ var mmExtraSymbolChecks = [...]struct {
 	{mmExtraFlags2Notebook, "BOMBER_NOTEBOOK"},
 	{mmExtraFlags2MaskBlast, "MASK_BLAST"},
 	{mmExtraFlags2DekuPlayground, "DEKU_PLAYGROUND_1"},
+	{mmExtraFlags2SongHealing, "SONG_HEALING"},
 	{mmExtraFlags2TownStrayFairy, "STRAY_FAIRY_TOWN"},
 }
 
