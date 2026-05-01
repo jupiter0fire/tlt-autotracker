@@ -1323,6 +1323,39 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmWeekEventSymbolChecks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {},
+		"MM": {
+			"SWORDSMAN_HEART_PIECE": "Swordsman School HP",
+			"STRAY_FAIRY_TOWN":      "Clock Town Stray Fairy",
+		},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	withoutState := &GameState{}
+	withoutChecks := checkNameSet(ExtractChecks(withoutState))
+	if _, ok := withoutChecks["Swordsman School HP"]; ok {
+		t.Fatal("unexpected Swordsman School HP check without MM week event")
+	}
+
+	withState := &GameState{}
+	withState.Mm.WeekEventReg[mmWeekEventSwordsmanSchoolByte] = mmWeekEventSwordsmanSchoolMask
+	withChecks := checkNameSet(ExtractChecks(withState))
+	if _, ok := withChecks["Swordsman School HP"]; !ok {
+		t.Fatal("missing Swordsman School HP check from MM week event")
+	}
+	if _, ok := withChecks["Clock Town Stray Fairy"]; ok {
+		t.Fatal("unexpected Clock Town Stray Fairy check from MM week event fallback")
+	}
+	if len(withChecks) != 1 {
+		t.Fatalf("unexpected MM week event check count: got %d, want 1", len(withChecks))
+	}
+}
+
 func TestExtractItemsIncludesMmTownStrayFairyFromExtraFlags2(t *testing.T) {
 	state := &GameState{}
 	state.Mm.ExtraFlags2 = 1 << mmExtraFlags2TownStrayFairy

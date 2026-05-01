@@ -32,6 +32,8 @@ const (
 	mmExtraFlags2DekuPlayground                = 20
 	mmExtraFlags2SongHealing                   = 5
 	mmExtraFlags2TownStrayFairy                = 4
+	mmWeekEventSwordsmanSchoolByte             = 63
+	mmWeekEventSwordsmanSchoolMask             = 0x20
 	mmOwlGreatBayBit                           = 0
 	mmOwlZoraCapeBit                           = 1
 	mmOwlSnowheadBit                           = 2
@@ -147,6 +149,14 @@ var mmExtraSymbolChecks = [...]struct {
 	{mmExtraFlags2DekuPlayground, "DEKU_PLAYGROUND_1"},
 	{mmExtraFlags2SongHealing, "SONG_HEALING"},
 	{mmExtraFlags2TownStrayFairy, "STRAY_FAIRY_TOWN"},
+}
+
+var mmWeekEventSymbolChecks = [...]struct {
+	byteIndex int
+	mask      uint8
+	symbol    string
+}{
+	{mmWeekEventSwordsmanSchoolByte, mmWeekEventSwordsmanSchoolMask, "SWORDSMAN_HEART_PIECE"},
 }
 
 var sharedOcarinaButtons = [...]struct {
@@ -308,6 +318,13 @@ func mmExtraFlags2(state *GameState) uint32 {
 
 func mmTownStrayFairyCollected(state *GameState) bool {
 	return state.Mm.TownStrayFairy || mmExtraFlags2(state)&(1<<mmExtraFlags2TownStrayFairy) != 0
+}
+
+func hasMmWeekEventBit(state *GameState, byteIndex int, mask uint8) bool {
+	if state == nil || byteIndex < 0 || byteIndex >= len(state.Mm.WeekEventReg) {
+		return false
+	}
+	return state.Mm.WeekEventReg[byteIndex]&mask != 0
 }
 
 func magicUpgradeLevel(hasMagic bool, hasDoubleMagic bool) int {
@@ -660,6 +677,14 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		}
 		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
 			appendCheck("MM_extra_"+itoa(entry.bit), name)
+		}
+	}
+	for _, entry := range mmWeekEventSymbolChecks {
+		if !hasMmWeekEventBit(state, entry.byteIndex, entry.mask) {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
+			appendCheck("MM_week_event_"+itoa(entry.byteIndex)+"_"+itoa(int(entry.mask)), name)
 		}
 	}
 	for _, owl := range mmOwlCheckSymbols {
