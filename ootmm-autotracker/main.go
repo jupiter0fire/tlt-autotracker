@@ -21,6 +21,7 @@ const (
 	pollInterval      = 100 * time.Millisecond
 	retryDelay        = 2 * time.Second
 	startupRetryDelay = 500 * time.Millisecond
+	ootmmLostTimeout  = 20 * time.Second
 )
 
 // emulatorBackend abstracts the lifecycle of RetroArch and PJ64 connections.
@@ -74,14 +75,17 @@ func main() {
 	state := tracker.NewState()
 
 	var (
-		connected = selected.connected
-		probed    bool
-		lastGame  ootmm.ActiveGame
-		lastScene uint16
+		connected               = selected.connected
+		probed                  bool
+		lastGame                ootmm.ActiveGame
+		lastScene               uint16
+		ootmmUnavailableSince   time.Time
+		forceFullSyncOnReconnect bool
 	)
 
 	for {
 		time.Sleep(pollInterval)
+		now := time.Now()
 		drainConsoleCommands(consoleCommands, connected, probed, mem)
 
 		// Step 1: Ensure connected to emulator
@@ -91,6 +95,7 @@ func main() {
 			}
 			connected = true
 			probed = false
+			ootmmUnavailableSince = time.Time{}
 			if selected.kind == backendPJ64 {
 				log.Println("Project64 adapter connected")
 			} else {
@@ -105,12 +110,21 @@ func main() {
 				if selected.kind == backendPJ64 && !backend.IsConnected() {
 					log.Println("Project64 connection lost during probe")
 					connected = false
+				} else if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
+					log.Printf("OoTMM unavailable for %s during probe; reconnecting backend for a fresh session", elapsed.Round(time.Second))
+					reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+					connected = false
+					probed = false
+					lastGame = ootmm.GameNone
+					lastScene = 0
+					ootmmUnavailableSince = time.Time{}
 				}
 				// Not an OoTMM session yet, or emulator not running a game
 				time.Sleep(retryDelay)
 				continue
 			}
 			probed = true
+			ootmmUnavailableSince = time.Time{}
 			log.Println("OoTMM detected!")
 		}
 
@@ -120,22 +134,46 @@ func main() {
 		gs, err := reader.ReadState()
 		if err != nil {
 			log.Printf("Read error: %v", err)
-			// Connection might be lost
-			backend.Close()
+			reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
 			connected = false
+			probed = false
+			lastGame = ootmm.GameNone
+			lastScene = 0
+			ootmmUnavailableSince = time.Time{}
 			time.Sleep(retryDelay)
 			continue
 		}
 
 		if !gs.Valid {
+			if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
+				log.Printf("OoTMM unavailable for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
+				reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+				connected = false
+				probed = false
+				lastGame = ootmm.GameNone
+				lastScene = 0
+				ootmmUnavailableSince = time.Time{}
+				time.Sleep(retryDelay)
+			}
 			// OoTMM context not valid (maybe in title screen)
 			continue
 		}
 
 		if gs.ActiveGame == ootmm.GameNone {
+			if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
+				log.Printf("OoTMM did not reach a stable active game for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
+				reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+				connected = false
+				probed = false
+				lastGame = ootmm.GameNone
+				lastScene = 0
+				ootmmUnavailableSince = time.Time{}
+				time.Sleep(retryDelay)
+			}
 			// Game transition in progress or data discarded due to mid-read switch
 			continue
 		}
+		ootmmUnavailableSince = time.Time{}
 
 		// Step 4: Compute deltas
 		hadTrackerBaseline := state.Initialized()
@@ -153,7 +191,7 @@ func main() {
 
 			if server.HasPendingFullSync() {
 				fullItems, fullChecks := state.FullState(gs)
-				if hadTrackerBaseline {
+				if hadTrackerBaseline || forceFullSyncOnReconnect {
 					server.FlushFullState(fullItems, fullChecks, gs.ActiveGame, currentScene)
 				} else {
 					server.FlushInitialItems(fullItems)
@@ -168,7 +206,26 @@ func main() {
 		if gameChanged || len(changedItems) > 0 || len(changedChecks) > 0 {
 			printStatus(gs, changedItems, changedChecks, server.ClientCount())
 		}
+
+		if !hadTrackerBaseline {
+			forceFullSyncOnReconnect = false
+		}
 	}
+}
+
+func noteOoTMMUnavailable(unavailableSince *time.Time, now time.Time) time.Duration {
+	if unavailableSince.IsZero() {
+		*unavailableSince = now
+		return 0
+	}
+	return now.Sub(*unavailableSince)
+}
+
+func resetTrackingSession(backend emulatorBackend, mem *n64.Memory, server *ws.Server, forceFullSyncOnReconnect *bool) (*ootmm.Reader, *tracker.State) {
+	backend.Close()
+	server.RequestFullSyncAll()
+	*forceFullSyncOnReconnect = true
+	return ootmm.NewReader(mem), tracker.NewState()
 }
 
 func getActiveScene(gs *ootmm.GameState) uint16 {

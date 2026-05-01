@@ -121,6 +121,16 @@ func (s *Server) markClientForFullSync(conn *websocket.Conn) {
 	client.wantsFull = true
 }
 
+// RequestFullSyncAll marks every connected client to receive a fresh snapshot.
+func (s *Server) RequestFullSyncAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, client := range s.clients {
+		client.wantsFull = true
+	}
+}
+
 // ClientCount returns the number of connected tracker clients.
 func (s *Server) ClientCount() int {
 	s.mu.Lock()

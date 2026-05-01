@@ -1,6 +1,26 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
+
+func TestNoteOoTMMUnavailableTracksElapsedTime(t *testing.T) {
+	var unavailableSince time.Time
+	start := time.Unix(100, 0)
+
+	if got := noteOoTMMUnavailable(&unavailableSince, start); got != 0 {
+		t.Fatalf("first unavailable duration = %s, want 0", got)
+	}
+	if !unavailableSince.Equal(start) {
+		t.Fatalf("unavailableSince = %s, want %s", unavailableSince, start)
+	}
+
+	later := start.Add(ootmmLostTimeout + 1500*time.Millisecond)
+	if got := noteOoTMMUnavailable(&unavailableSince, later); got != later.Sub(start) {
+		t.Fatalf("later unavailable duration = %s, want %s", got, later.Sub(start))
+	}
+}
 
 func TestParseBackendChoiceMatchesAliases(t *testing.T) {
 	options := []*backendOption{
