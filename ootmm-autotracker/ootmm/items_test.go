@@ -1805,6 +1805,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			"ANJU_BOTTLE":         "Kakariko Anju Bottle",
 			"DARUNIA_BRACELET":    "Darunia",
 			"GERUDO_ARCHERY_2":    "Gerudo Fortress Archery Reward 2",
+			"KAKARIKO_ROOF_MAN":   "Kakariko Man on Roof",
+			"LABORATORY_DIVE":     "Laboratory Dive",
 			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
 			"LOST_WOODS_TARGET":   "Lost Woods Target",
 			"POCKET_EGG":          "Hatch Pocket Cucco",
@@ -1831,7 +1833,9 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)) |
 			(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
 			(1 << (ootEventItemGerudoArchery2 & 0xF))
-	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] = 1 << (ootEventItemLostWoodsTarget & 0xF)
+	state.Oot.EventsItem[ootEventItemLaboratoryDive>>4] |= 1 << (ootEventItemLaboratoryDive & 0xF)
+	state.Oot.EventsItem[ootEventItemKakarikoRoofMan>>4] |= 1 << (ootEventItemKakarikoRoofMan & 0xF)
+	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] |= 1 << (ootEventItemLostWoodsTarget & 0xF)
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
 	state.Oot.EventsItem[ootEventItemPocketEgg>>4] |= 1 << (ootEventItemPocketEgg & 0xF)
 	state.Oot.EventsItem[ootEventItemMaskSellKeaton>>4] =
@@ -1846,6 +1850,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		"Darunia",
 		"Gerudo Fortress Archery Reward 2",
 		"Hatch Pocket Cucco",
+		"Kakariko Man on Roof",
+		"Laboratory Dive",
 		"Lon Lon Ranch Talon Bottle",
 		"Lost Woods Target",
 		"Shooting Gallery Adult",
@@ -1908,6 +1914,57 @@ func TestExtractChecksIncludesOnlyAnjuBottleFromObservedEventItemDelta(t *testin
 	for name := range beforeChecks {
 		if _, ok := afterChecks[name]; !ok {
 			t.Fatalf("unexpected removed check from observed Anju event-item delta: %s", name)
+		}
+	}
+}
+
+func TestExtractChecksIncludesOnlyKakarikoRoofManFromObservedEventItemDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"KAKARIKO_ROOF_MAN": "Kakariko Man on Roof",
+			"LABORATORY_DIVE":   "Laboratory Dive",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	if _, ok := beforeChecks["Kakariko Man on Roof"]; ok {
+		t.Fatal("unexpected Kakariko Man on Roof check before Rooftop Man event-item bit is set")
+	}
+
+	afterState := &GameState{}
+	afterState.Oot.EventsItem[ootEventItemKakarikoRoofMan>>4] = 1 << (ootEventItemKakarikoRoofMan & 0xF)
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := afterChecks["Kakariko Man on Roof"]; !ok {
+		t.Fatal("missing Kakariko Man on Roof check after Rooftop Man event-item bit is set")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Kakariko Man on Roof" {
+			t.Fatalf("unexpected new check from observed Rooftop Man event-item delta: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count from observed Rooftop Man event-item delta: got %d, want 1", newChecks)
+	}
+
+	if _, ok := afterChecks["Laboratory Dive"]; ok {
+		t.Fatal("unexpected Laboratory Dive check from Rooftop Man event-item bit")
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check from observed Rooftop Man event-item delta: %s", name)
 		}
 	}
 }

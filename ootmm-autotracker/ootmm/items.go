@@ -95,6 +95,8 @@ const (
 	ootEventItemLostWoodsMemory                = 0x17
 	ootEventItemShootingGalleryAdult           = 0x0e
 	ootEventItemGerudoArchery2                 = 0x0f
+	ootEventItemLaboratoryDive                 = 0x10
+	ootEventItemKakarikoRoofMan                = 0x15
 	ootEventItemLostWoodsTarget                = 0x1d
 	ootEventItemGoronBracelet                  = 0x20
 	ootEventItemPocketEgg                      = 0x2c
@@ -324,6 +326,8 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "TALON_BOTTLE", flags: []int{ootEventItemTalonBottle}},
 	{symbol: "SHOOTING_GAME_ADULT", flags: []int{ootEventItemShootingGalleryAdult}},
 	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
+	{symbol: "LABORATORY_DIVE", flags: []int{ootEventItemLaboratoryDive}},
+	{symbol: "KAKARIKO_ROOF_MAN", flags: []int{ootEventItemKakarikoRoofMan}},
 	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
 	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},
 	{symbol: "POCKET_EGG", flags: []int{ootEventItemPocketEgg}},
