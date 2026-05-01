@@ -35,9 +35,14 @@ const (
 	mmExtraFlags3BottomlessBit                 = 31
 	mmExtraFlags2MaskKafei                     = 28
 	mmExtraFlags2HoneyDarling                  = 27
+	mmExtraFlags2RoomKey                       = 26
+	mmExtraFlags2LetterKafei                   = 25
+	mmExtraFlags2Pendant                       = 24
+	mmExtraFlags2LetterMama                    = 23
 	mmExtraFlags2Notebook                      = 22
 	mmExtraFlags2MaskBlast                     = 21
 	mmExtraFlags2DekuPlayground                = 20
+	mmExtraFlags2MaskCouple                    = 19
 	mmExtraFlags2SongHealing                   = 5
 	mmExtraFlags2TownStrayFairy                = 4
 	mmWeekEventTingleMapsByte                  = 0x118 >> 3
@@ -172,9 +177,14 @@ var mmExtraFlags2SymbolChecks = [...]struct {
 }{
 	{mmExtraFlags2MaskKafei, "MASK_KAFEI"},
 	{mmExtraFlags2HoneyDarling, "HONEY_DARLING_1"},
+	{mmExtraFlags2RoomKey, "ROOM_KEY"},
+	{mmExtraFlags2LetterKafei, "LETTER_TO_KAFEI"},
+	{mmExtraFlags2Pendant, "PENDANT_OF_MEMORIES"},
+	{mmExtraFlags2LetterMama, "LETTER_TO_MAMA"},
 	{mmExtraFlags2Notebook, "BOMBER_NOTEBOOK"},
 	{mmExtraFlags2MaskBlast, "MASK_BLAST"},
 	{mmExtraFlags2DekuPlayground, "DEKU_PLAYGROUND_1"},
+	{mmExtraFlags2MaskCouple, "MASK_COUPLE"},
 	{mmExtraFlags2SongHealing, "SONG_HEALING"},
 	{mmExtraFlags2TownStrayFairy, "STRAY_FAIRY_TOWN"},
 }

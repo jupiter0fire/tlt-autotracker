@@ -321,3 +321,59 @@ func TestSnapshotFixtureMadameAromaMaskKafeiFallback(t *testing.T) {
 		}
 	}
 }
+
+func TestSnapshotFixtureAnjuRoomKeyFallback(t *testing.T) {
+	beforeState := loadSnapshotFixtureState(t, "before-anju-key-20260501-170709.json")
+	afterState := loadSnapshotFixtureState(t, "after-anju-key-20260501-170751.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := beforeChecks["Stock Pot Inn Room Key"]; ok {
+		t.Fatal("unexpected Stock Pot Inn Room Key check in before snapshot fixture")
+	}
+	if _, ok := afterChecks["Stock Pot Inn Room Key"]; !ok {
+		t.Fatal("missing Stock Pot Inn Room Key check in after snapshot fixture")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Stock Pot Inn Room Key" {
+			t.Fatalf("unexpected new check in after Anju snapshot fixture: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count across Anju snapshot fixtures: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in after Anju snapshot fixture: %s", name)
+		}
+	}
+}
+
+func TestSnapshotFixtureArcheryPairHasNoMmExtraFlagDelta(t *testing.T) {
+	beforeState := loadSnapshotFixtureState(t, "before-archery-20260501-170932.json")
+	afterState := loadSnapshotFixtureState(t, "after-archery-20260501-171131.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		t.Fatalf("unexpected new check in after Archery snapshot fixture: %s", name)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in after Archery snapshot fixture: %s", name)
+		}
+	}
+}
