@@ -397,6 +397,58 @@ func TestSnapshotFixtureArcheryWeekEventFallback(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureGoronTunicExtraFlagFallback(t *testing.T) {
+	beforeState := loadSnapshotFixtureStateAllowGameNone(t, "before-goron-20260501-185643.json")
+	afterState := loadSnapshotFixtureStateAllowGameNone(t, "after-goron-20260501-185719.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := beforeChecks["Goron City Tunic"]; ok {
+		t.Fatal("unexpected Goron City Tunic check in before Goron snapshot fixture")
+	}
+	if _, ok := afterChecks["Goron City Tunic"]; !ok {
+		t.Fatal("missing Goron City Tunic check in after Goron snapshot fixture")
+	}
+
+	for _, name := range []string{
+		"Fishing Pond Adult",
+		"Fishing Pond Child",
+		"Zora Domain Tunic",
+		"Lake Hylia Fire Arrow",
+		"Treasure Chest Game Buy Key",
+		"Death Mountain Trail Biggoron Sword",
+		"Kakariko Potion Shop Odd Potion",
+	} {
+		if _, ok := beforeChecks[name]; ok {
+			t.Fatalf("unexpected OoT extra-flag fallback check in before Goron snapshot fixture: %s", name)
+		}
+		if _, ok := afterChecks[name]; ok {
+			t.Fatalf("unexpected OoT extra-flag fallback check in after Goron snapshot fixture: %s", name)
+		}
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Goron City Tunic" {
+			t.Fatalf("unexpected new check in after Goron snapshot fixture: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count across Goron snapshot fixtures: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in after Goron snapshot fixture: %s", name)
+		}
+	}
+}
+
 func TestSnapshotFixturesMay20260501ExpandedMmExtraFlagFallbacksStayAbsent(t *testing.T) {
 	fixtures := []string{
 		"before-madame-aroma-20260501-170327.json",

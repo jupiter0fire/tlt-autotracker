@@ -1632,6 +1632,166 @@ func TestExtractChecksIncludesOotGreatFairyExtraFlagChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOotNpcExtraFlagChecks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"CHEST_GAME_KEY":       "Treasure Chest Game Buy Key",
+			"FIRE_ARROW":           "Lake Hylia Fire Arrow",
+			"FISH_ADULT":           "Fishing Pond Adult",
+			"FISH_CHILD":           "Fishing Pond Child",
+			"GORON_LINK_TUNIC":     "Goron City Tunic",
+			"TRADE_BIGGORON_SWORD": "Death Mountain Trail Biggoron Sword",
+			"TRADE_ODD_POTION":     "Kakariko Potion Shop Odd Potion",
+			"ZORA_KING_TUNIC":      "Zora Domain Tunic",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	tests := []struct {
+		name       string
+		bit        int
+		expected   string
+		unexpected []string
+	}{
+		{
+			name:     "child fishing",
+			bit:      ootExtraFlagsFishingChildBit,
+			expected: "Fishing Pond Child",
+			unexpected: []string{
+				"Fishing Pond Adult",
+				"Goron City Tunic",
+				"Death Mountain Trail Biggoron Sword",
+				"Zora Domain Tunic",
+				"Lake Hylia Fire Arrow",
+				"Treasure Chest Game Buy Key",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "adult fishing",
+			bit:      ootExtraFlagsFishingAdultBit,
+			expected: "Fishing Pond Adult",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Goron City Tunic",
+				"Death Mountain Trail Biggoron Sword",
+				"Zora Domain Tunic",
+				"Lake Hylia Fire Arrow",
+				"Treasure Chest Game Buy Key",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "goron tunic",
+			bit:      ootExtraFlagsTunicGoronBit,
+			expected: "Goron City Tunic",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Fishing Pond Adult",
+				"Death Mountain Trail Biggoron Sword",
+				"Zora Domain Tunic",
+				"Lake Hylia Fire Arrow",
+				"Treasure Chest Game Buy Key",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "biggoron sword",
+			bit:      ootExtraFlagsBiggoronBit,
+			expected: "Death Mountain Trail Biggoron Sword",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Fishing Pond Adult",
+				"Goron City Tunic",
+				"Zora Domain Tunic",
+				"Lake Hylia Fire Arrow",
+				"Treasure Chest Game Buy Key",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "zora tunic",
+			bit:      ootExtraFlagsTunicZoraBit,
+			expected: "Zora Domain Tunic",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Fishing Pond Adult",
+				"Goron City Tunic",
+				"Death Mountain Trail Biggoron Sword",
+				"Lake Hylia Fire Arrow",
+				"Treasure Chest Game Buy Key",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "fire arrow",
+			bit:      ootExtraFlagsFireArrowBit,
+			expected: "Lake Hylia Fire Arrow",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Fishing Pond Adult",
+				"Goron City Tunic",
+				"Death Mountain Trail Biggoron Sword",
+				"Zora Domain Tunic",
+				"Treasure Chest Game Buy Key",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "chest game key",
+			bit:      ootExtraFlagsChestGameKeyBit,
+			expected: "Treasure Chest Game Buy Key",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Fishing Pond Adult",
+				"Goron City Tunic",
+				"Death Mountain Trail Biggoron Sword",
+				"Zora Domain Tunic",
+				"Lake Hylia Fire Arrow",
+				"Kakariko Potion Shop Odd Potion",
+			},
+		},
+		{
+			name:     "odd potion",
+			bit:      ootExtraFlagsOddPotionBit,
+			expected: "Kakariko Potion Shop Odd Potion",
+			unexpected: []string{
+				"Fishing Pond Child",
+				"Fishing Pond Adult",
+				"Goron City Tunic",
+				"Death Mountain Trail Biggoron Sword",
+				"Zora Domain Tunic",
+				"Lake Hylia Fire Arrow",
+				"Treasure Chest Game Buy Key",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			state := &GameState{}
+			state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << tc.bit
+
+			checks := checkNameSet(ExtractChecks(state))
+			if _, ok := checks[tc.expected]; !ok {
+				t.Fatalf("missing OoT extra-flag check for %s", tc.expected)
+			}
+			for _, name := range tc.unexpected {
+				if _, ok := checks[name]; ok {
+					t.Fatalf("unexpected OoT extra-flag check for %s", name)
+				}
+			}
+			if len(checks) != 1 {
+				t.Fatalf("unexpected OoT extra-flag check count: got %d, want 1", len(checks))
+			}
+		})
+	}
+}
+
 func TestExtractChecksIncludesMmWeekEventSymbolChecks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

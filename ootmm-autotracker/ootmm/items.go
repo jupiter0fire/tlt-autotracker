@@ -21,6 +21,12 @@ const (
 	sharedOcarinaButtonCLeftMask    = 0x0002
 	sharedOcarinaButtonCUpMask      = 0x0004
 	sharedOcarinaButtonCDownMask    = 0x0008
+	ootExtraFlagsFishingChildBit    = 24
+	ootExtraFlagsFishingAdultBit    = 23
+	ootExtraFlagsTunicGoronBit      = 22
+	ootExtraFlagsBiggoronBit        = 21
+	ootExtraFlagsTunicZoraBit       = 20
+	ootExtraFlagsFireArrowBit       = 19
 	// OotExtraFlags.greatFairies is stored MSB-first in raw bits 25..30.
 	ootExtraFlagsGreatFairyMagicBit   = 25
 	ootExtraFlagsGreatFairyMagic2Bit  = 26
@@ -29,7 +35,9 @@ const (
 	ootExtraFlagsGreatFairyFireBit    = 29
 	ootExtraFlagsGreatFairyLoveBit    = 30
 	ootExtraFlagsChildWalletBit     = 17
+	ootExtraFlagsChestGameKeyBit    = 6
 	ootExtraFlagsBottomlessBit      = 7
+	ootExtraFlagsOddPotionBit       = 2
 	// MmExtraFlags.greatFairies is stored in raw extra-record bits 1..6.
 	mmExtraFlagsGreatFairyTownBit     = 1
 	mmExtraFlagsGreatFairyTownAltBit  = 2
@@ -374,6 +382,14 @@ var ootExtraFlagsSymbolChecks = [...]struct {
 	{ootExtraFlagsGreatFairyWindBit, "FAIRY_SPELL_WIND"},
 	{ootExtraFlagsGreatFairyFireBit, "FAIRY_SPELL_FIRE"},
 	{ootExtraFlagsGreatFairyLoveBit, "FAIRY_SPELL_LOVE"},
+	{ootExtraFlagsFishingChildBit, "FISH_CHILD"},
+	{ootExtraFlagsFishingAdultBit, "FISH_ADULT"},
+	{ootExtraFlagsTunicGoronBit, "GORON_LINK_TUNIC"},
+	{ootExtraFlagsBiggoronBit, "TRADE_BIGGORON_SWORD"},
+	{ootExtraFlagsTunicZoraBit, "ZORA_KING_TUNIC"},
+	{ootExtraFlagsFireArrowBit, "FIRE_ARROW"},
+	{ootExtraFlagsChestGameKeyBit, "CHEST_GAME_KEY"},
+	{ootExtraFlagsOddPotionBit, "TRADE_ODD_POTION"},
 }
 
 // TrackedItem represents a single trackable item with its current quantity.
