@@ -1802,6 +1802,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
+			"ANJU_BOTTLE":         "Kakariko Anju Bottle",
 			"DARUNIA_BRACELET":    "Darunia",
 			"GERUDO_ARCHERY_2":    "Gerudo Fortress Archery Reward 2",
 			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
@@ -1825,7 +1826,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	state.Oot.Entrance = ootEntranceChildArchery
 	state.Oot.SceneID = ootSceneShootingGallerySave
 	state.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] =
-		(1 << (ootEventItemTalonBottle & 0xF)) |
+		(1 << (ootEventItemAnjuBottle & 0xF)) |
+			(1 << (ootEventItemTalonBottle & 0xF)) |
 			(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)) |
 			(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
 			(1 << (ootEventItemGerudoArchery2 & 0xF))
@@ -1840,6 +1842,7 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 
 	checks := checkNameSet(ExtractChecks(state))
 	for _, name := range []string{
+		"Kakariko Anju Bottle",
 		"Darunia",
 		"Gerudo Fortress Archery Reward 2",
 		"Hatch Pocket Cucco",
@@ -1854,6 +1857,57 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	} {
 		if _, ok := checks[name]; !ok {
 			t.Fatalf("missing OoT event-item symbol check: %s", name)
+		}
+	}
+}
+
+func TestExtractChecksIncludesOnlyAnjuBottleFromObservedEventItemDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"ANJU_BOTTLE": "Kakariko Anju Bottle",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeState.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] =
+		(1 << (ootEventItemTalonBottle & 0xF)) |
+			(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF))
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	if _, ok := beforeChecks["Kakariko Anju Bottle"]; ok {
+		t.Fatal("unexpected Kakariko Anju Bottle check before Anju event-item bit is set")
+	}
+
+	afterState := &GameState{}
+	afterState.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] =
+		beforeState.Oot.EventsItem[ootEventItemLostWoodsMemoryOrShootingChild>>4] |
+			(1 << (ootEventItemAnjuBottle & 0xF))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := afterChecks["Kakariko Anju Bottle"]; !ok {
+		t.Fatal("missing Kakariko Anju Bottle check after Anju event-item bit is set")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Kakariko Anju Bottle" {
+			t.Fatalf("unexpected new check from observed Anju event-item delta: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count from observed Anju event-item delta: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check from observed Anju event-item delta: %s", name)
 		}
 	}
 }
