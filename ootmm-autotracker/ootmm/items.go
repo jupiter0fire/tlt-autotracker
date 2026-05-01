@@ -21,6 +21,13 @@ const (
 	sharedOcarinaButtonCLeftMask    = 0x0002
 	sharedOcarinaButtonCUpMask      = 0x0004
 	sharedOcarinaButtonCDownMask    = 0x0008
+	// OotExtraFlags.greatFairies is stored MSB-first in raw bits 25..30.
+	ootExtraFlagsGreatFairyMagicBit   = 25
+	ootExtraFlagsGreatFairyMagic2Bit  = 26
+	ootExtraFlagsGreatFairyDefenseBit = 27
+	ootExtraFlagsGreatFairyWindBit    = 28
+	ootExtraFlagsGreatFairyFireBit    = 29
+	ootExtraFlagsGreatFairyLoveBit    = 30
 	ootExtraFlagsChildWalletBit     = 17
 	ootExtraFlagsBottomlessBit      = 7
 	// MmExtraFlags.greatFairies is stored in raw extra-record bits 1..6.
@@ -349,6 +356,18 @@ var ootChildTradeSymbolChecks = [...]ootTradeSymbolCheck{
 
 var ootQuestSymbolChecks = [...]ootQuestSymbolCheck{
 	{symbol: "GERUDO_CARD", bit: QuestOotGerudoCard},
+}
+
+var ootExtraFlagsSymbolChecks = [...]struct {
+	bit    int
+	symbol string
+}{
+	{ootExtraFlagsGreatFairyMagicBit, "FAIRY_MAGIC_UPGRADE"},
+	{ootExtraFlagsGreatFairyMagic2Bit, "FAIRY_MAGIC_UPGRADE2"},
+	{ootExtraFlagsGreatFairyDefenseBit, "FAIRY_DEFENSE_UPGRADE"},
+	{ootExtraFlagsGreatFairyWindBit, "FAIRY_SPELL_WIND"},
+	{ootExtraFlagsGreatFairyFireBit, "FAIRY_SPELL_FIRE"},
+	{ootExtraFlagsGreatFairyLoveBit, "FAIRY_SPELL_LOVE"},
 }
 
 // TrackedItem represents a single trackable item with its current quantity.
@@ -762,6 +781,16 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
+
+	ootFlags := state.Oot.ExtraRecords[ExtraIdxOotFlags]
+	for _, entry := range ootExtraFlagsSymbolChecks {
+		if ootFlags&(1<<entry.bit) == 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
+			appendCheck("OOT_extra_2_"+itoa(entry.bit), name)
+		}
+	}
 
 	mmFlags := mmExtraFlags(state)
 	for _, entry := range mmExtraFlagsSymbolChecks {

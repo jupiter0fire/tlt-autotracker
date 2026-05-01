@@ -1514,6 +1514,124 @@ func TestExtractChecksIncludesMmGreatFairyExtraFlagChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOotGreatFairyExtraFlagChecks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"FAIRY_MAGIC_UPGRADE":   "Great Fairy Magic Upgrade",
+			"FAIRY_MAGIC_UPGRADE2":  "Great Fairy Magic Upgrade 2",
+			"FAIRY_DEFENSE_UPGRADE": "Great Fairy Defense Upgrade",
+			"FAIRY_SPELL_WIND":      "Great Fairy Farore's Wind",
+			"FAIRY_SPELL_FIRE":      "Great Fairy Din's Fire",
+			"FAIRY_SPELL_LOVE":      "Great Fairy Nayru's Love",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	tests := []struct {
+		name       string
+		bit        int
+		expected   string
+		unexpected []string
+	}{
+		{
+			name:     "magic upgrade",
+			bit:      ootExtraFlagsGreatFairyMagicBit,
+			expected: "Great Fairy Magic Upgrade",
+			unexpected: []string{
+				"Great Fairy Magic Upgrade 2",
+				"Great Fairy Defense Upgrade",
+				"Great Fairy Farore's Wind",
+				"Great Fairy Din's Fire",
+				"Great Fairy Nayru's Love",
+			},
+		},
+		{
+			name:     "magic upgrade 2",
+			bit:      ootExtraFlagsGreatFairyMagic2Bit,
+			expected: "Great Fairy Magic Upgrade 2",
+			unexpected: []string{
+				"Great Fairy Magic Upgrade",
+				"Great Fairy Defense Upgrade",
+				"Great Fairy Farore's Wind",
+				"Great Fairy Din's Fire",
+				"Great Fairy Nayru's Love",
+			},
+		},
+		{
+			name:     "defense upgrade",
+			bit:      ootExtraFlagsGreatFairyDefenseBit,
+			expected: "Great Fairy Defense Upgrade",
+			unexpected: []string{
+				"Great Fairy Magic Upgrade",
+				"Great Fairy Magic Upgrade 2",
+				"Great Fairy Farore's Wind",
+				"Great Fairy Din's Fire",
+				"Great Fairy Nayru's Love",
+			},
+		},
+		{
+			name:     "spell wind",
+			bit:      ootExtraFlagsGreatFairyWindBit,
+			expected: "Great Fairy Farore's Wind",
+			unexpected: []string{
+				"Great Fairy Magic Upgrade",
+				"Great Fairy Magic Upgrade 2",
+				"Great Fairy Defense Upgrade",
+				"Great Fairy Din's Fire",
+				"Great Fairy Nayru's Love",
+			},
+		},
+		{
+			name:     "spell fire",
+			bit:      ootExtraFlagsGreatFairyFireBit,
+			expected: "Great Fairy Din's Fire",
+			unexpected: []string{
+				"Great Fairy Magic Upgrade",
+				"Great Fairy Magic Upgrade 2",
+				"Great Fairy Defense Upgrade",
+				"Great Fairy Farore's Wind",
+				"Great Fairy Nayru's Love",
+			},
+		},
+		{
+			name:     "spell love",
+			bit:      ootExtraFlagsGreatFairyLoveBit,
+			expected: "Great Fairy Nayru's Love",
+			unexpected: []string{
+				"Great Fairy Magic Upgrade",
+				"Great Fairy Magic Upgrade 2",
+				"Great Fairy Defense Upgrade",
+				"Great Fairy Farore's Wind",
+				"Great Fairy Din's Fire",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			state := &GameState{}
+			state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << tc.bit
+
+			checks := checkNameSet(ExtractChecks(state))
+			if _, ok := checks[tc.expected]; !ok {
+				t.Fatalf("missing OoT Great Fairy check for %s", tc.expected)
+			}
+			for _, name := range tc.unexpected {
+				if _, ok := checks[name]; ok {
+					t.Fatalf("unexpected OoT Great Fairy check for %s", name)
+				}
+			}
+			if len(checks) != 1 {
+				t.Fatalf("unexpected OoT Great Fairy check count: got %d, want 1", len(checks))
+			}
+		})
+	}
+}
+
 func TestExtractChecksIncludesMmWeekEventSymbolChecks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
