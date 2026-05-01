@@ -2508,6 +2508,7 @@ func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
+			"GORON_BOMB_BAG":   "Goron City Bomb Bag",
 			"GERUDO_ARCHERY_1": "Gerudo Fortress Archery Reward 1",
 			"DOG_LADY":         "Market Dog Lady HP",
 			"MEDIGORON":        "Goron City Medigoron Giant Knife",
@@ -2519,11 +2520,15 @@ func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
+	state.Oot.EventsMisc[ootEventMiscGoronBombBag>>4] |= 1 << (ootEventMiscGoronBombBag & 0xF)
 	state.Oot.EventsMisc[ootEventMiscGerudoArchery1>>4] |= 1 << (ootEventMiscGerudoArchery1 & 0xF)
 	state.Oot.EventsMisc[ootEventMiscRichardHeartPiece>>4] |= 1 << (ootEventMiscRichardHeartPiece & 0xF)
 	state.Oot.EventsMisc[ootEventMiscMedigoron>>4] = 1 << (ootEventMiscMedigoron & 0xF)
 
 	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Goron City Bomb Bag"]; !ok {
+		t.Fatal("missing OoT event-misc symbol check for Goron City Bomb Bag")
+	}
 	if _, ok := checks["Gerudo Fortress Archery Reward 1"]; !ok {
 		t.Fatal("missing OoT event-misc symbol check for Gerudo Archery Reward 1")
 	}
@@ -2532,6 +2537,52 @@ func TestExtractChecksIncludesOotEventMiscSymbolFallbacks(t *testing.T) {
 	}
 	if _, ok := checks["Goron City Medigoron Giant Knife"]; !ok {
 		t.Fatal("missing OoT event-misc symbol check for Medigoron")
+	}
+}
+
+func TestExtractChecksIncludesOnlyGoronCityBombBagFromObservedEventMiscDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"GORON_BOMB_BAG": "Goron City Bomb Bag",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	if _, ok := beforeChecks["Goron City Bomb Bag"]; ok {
+		t.Fatal("unexpected Goron City Bomb Bag check before observed event-misc bit is set")
+	}
+
+	afterState := &GameState{}
+	afterState.Oot.EventsMisc[ootEventMiscGoronBombBag>>4] = 1 << (ootEventMiscGoronBombBag & 0xF)
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := afterChecks["Goron City Bomb Bag"]; !ok {
+		t.Fatal("missing Goron City Bomb Bag check after observed event-misc bit is set")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Goron City Bomb Bag" {
+			t.Fatalf("unexpected new check from observed Goron City Bomb Bag event-misc delta: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count from observed Goron City Bomb Bag event-misc delta: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check from observed Goron City Bomb Bag event-misc delta: %s", name)
+		}
 	}
 }
 

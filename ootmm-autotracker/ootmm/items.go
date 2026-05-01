@@ -130,6 +130,7 @@ const (
 	ootEventSkulltulaHouse30                   = 0xdc
 	ootEventSkulltulaHouse40                   = 0xdd
 	ootEventSkulltulaHouse50                   = 0xde
+	ootEventMiscGoronBombBag                   = 0x11e
 	ootEventMiscGerudoArchery1                 = 0x190
 	ootEventMiscRichardHeartPiece              = 0x191
 	ootEventMiscMedigoron                      = 0xb2
@@ -353,6 +354,7 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 }
 
 var ootEventMiscSymbolChecks = [...]ootSymbolFlagCheck{
+	{symbol: "GORON_BOMB_BAG", flags: []int{ootEventMiscGoronBombBag}},
 	{symbol: "GERUDO_ARCHERY_1", flags: []int{ootEventMiscGerudoArchery1}},
 	{symbol: "DOG_LADY", flags: []int{ootEventMiscRichardHeartPiece}},
 	{symbol: "MEDIGORON", flags: []int{ootEventMiscMedigoron}},
