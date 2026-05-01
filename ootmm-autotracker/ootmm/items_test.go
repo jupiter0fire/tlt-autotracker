@@ -1474,6 +1474,43 @@ func TestExtractChecksIncludesMmWeekEventSymbolChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmTingleMapWeekEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {},
+		"MM": {
+			"TINGLE_MAP_CLOCK_TOWN":   "Tingle Map Clock Town",
+			"TINGLE_MAP_WOODFALL":     "Tingle Map Woodfall",
+			"TINGLE_MAP_SNOWHEAD":     "Tingle Map Snowhead",
+			"TINGLE_MAP_ROMANI_RANCH": "Tingle Map Ranch",
+			"TINGLE_MAP_GREAT_BAY":    "Tingle Map Great Bay",
+			"TINGLE_MAP_STONE_TOWER":  "Tingle Map Ikana",
+		},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Mm.WeekEventReg[mmWeekEventTingleMapsByte] = mmWeekEventTingleMapClockTownMask | mmWeekEventTingleMapWoodfallMask
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Tingle Map Clock Town"]; !ok {
+		t.Fatal("missing Tingle Map Clock Town check from MM week event fallback")
+	}
+	if _, ok := checks["Tingle Map Woodfall"]; !ok {
+		t.Fatal("missing Tingle Map Woodfall check from MM week event fallback")
+	}
+	for _, name := range []string{"Tingle Map Snowhead", "Tingle Map Ranch", "Tingle Map Great Bay", "Tingle Map Ikana"} {
+		if _, ok := checks[name]; ok {
+			t.Fatalf("unexpected %s check from MM week event fallback", name)
+		}
+	}
+	if len(checks) != 2 {
+		t.Fatalf("unexpected MM Tingle map check count: got %d, want 2", len(checks))
+	}
+}
+
 func TestExtractItemsIncludesMmTownStrayFairyFromExtraFlags2(t *testing.T) {
 	state := &GameState{}
 	state.Mm.ExtraFlags2 = 1 << mmExtraFlags2TownStrayFairy

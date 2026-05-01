@@ -249,3 +249,40 @@ func TestSnapshotFixtureInitialSongOfHealingExtraFlag(t *testing.T) {
 		t.Fatal("missing Initial Song of Healing check from snapshot fixture")
 	}
 }
+
+func TestSnapshotFixtureTingleMapWeekEventFallback(t *testing.T) {
+	beforeState := loadSnapshotFixtureState(t, "before-tingle-20260501-170052.json")
+	afterState := loadSnapshotFixtureState(t, "after-tingle-20260501-170137.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	for _, name := range []string{"Tingle Map Clock Town", "Tingle Map Woodfall"} {
+		if _, ok := beforeChecks[name]; ok {
+			t.Fatalf("unexpected %s check in before snapshot fixture", name)
+		}
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("missing %s check in after snapshot fixture", name)
+		}
+	}
+
+	for _, name := range []string{"Tingle Map Snowhead", "Tingle Map Ranch", "Tingle Map Great Bay", "Tingle Map Ikana"} {
+		if _, ok := afterChecks[name]; ok {
+			t.Fatalf("unexpected %s check in after snapshot fixture", name)
+		}
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Tingle Map Clock Town" && name != "Tingle Map Woodfall" {
+			t.Fatalf("unexpected new check in after snapshot fixture: %s", name)
+		}
+	}
+	if newChecks != 2 {
+		t.Fatalf("unexpected new check count across Tingle snapshot fixtures: got %d, want 2", newChecks)
+	}
+}

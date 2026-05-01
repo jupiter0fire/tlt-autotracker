@@ -39,6 +39,13 @@ const (
 	mmExtraFlags2DekuPlayground                = 20
 	mmExtraFlags2SongHealing                   = 5
 	mmExtraFlags2TownStrayFairy                = 4
+	mmWeekEventTingleMapsByte                  = 0x118 >> 3
+	mmWeekEventTingleMapClockTownMask          = 1 << (0x118 & 7)
+	mmWeekEventTingleMapWoodfallMask           = 1 << (0x119 & 7)
+	mmWeekEventTingleMapSnowheadMask           = 1 << (0x11a & 7)
+	mmWeekEventTingleMapRanchMask              = 1 << (0x11b & 7)
+	mmWeekEventTingleMapGreatBayMask           = 1 << (0x11c & 7)
+	mmWeekEventTingleMapIkanaMask              = 1 << (0x11d & 7)
 	mmWeekEventSwordsmanSchoolByte             = 63
 	mmWeekEventSwordsmanSchoolMask             = 0x20
 	mmOwlGreatBayBit                           = 0
@@ -175,6 +182,12 @@ var mmWeekEventSymbolChecks = [...]struct {
 	mask      uint8
 	symbol    string
 }{
+	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapClockTownMask, "TINGLE_MAP_CLOCK_TOWN"},
+	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapWoodfallMask, "TINGLE_MAP_WOODFALL"},
+	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapSnowheadMask, "TINGLE_MAP_SNOWHEAD"},
+	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapRanchMask, "TINGLE_MAP_ROMANI_RANCH"},
+	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapGreatBayMask, "TINGLE_MAP_GREAT_BAY"},
+	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapIkanaMask, "TINGLE_MAP_STONE_TOWER"},
 	{mmWeekEventSwordsmanSchoolByte, mmWeekEventSwordsmanSchoolMask, "SWORDSMAN_HEART_PIECE"},
 }
 
