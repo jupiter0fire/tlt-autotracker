@@ -1963,6 +1963,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
 			"ANJU_BOTTLE":         "Kakariko Anju Bottle",
+			"BOMBCHU_BOWLING_1":   "Bombchu Bowling Reward 1",
+			"BOMBCHU_BOWLING_2":   "Bombchu Bowling Reward 2",
 			"DARUNIA_BRACELET":    "Darunia",
 			"GERUDO_ARCHERY_2":    "Gerudo Fortress Archery Reward 2",
 			"KAKARIKO_ROOF_MAN":   "Kakariko Man on Roof",
@@ -1993,7 +1995,10 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			(1 << (ootEventItemLostWoodsMemoryOrShootingChild & 0xF)) |
 			(1 << (ootEventItemShootingGalleryAdult & 0xF)) |
 			(1 << (ootEventItemGerudoArchery2 & 0xF))
-	state.Oot.EventsItem[ootEventItemLaboratoryDive>>4] |= 1 << (ootEventItemLaboratoryDive & 0xF)
+	state.Oot.EventsItem[ootEventItemLaboratoryDive>>4] =
+		(1 << (ootEventItemLaboratoryDive & 0xF)) |
+			(1 << (ootEventItemBombchuBowling1 & 0xF)) |
+			(1 << (ootEventItemBombchuBowling2 & 0xF))
 	state.Oot.EventsItem[ootEventItemKakarikoRoofMan>>4] |= 1 << (ootEventItemKakarikoRoofMan & 0xF)
 	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] |= 1 << (ootEventItemLostWoodsTarget & 0xF)
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
@@ -2007,6 +2012,8 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	checks := checkNameSet(ExtractChecks(state))
 	for _, name := range []string{
 		"Kakariko Anju Bottle",
+		"Bombchu Bowling Reward 1",
+		"Bombchu Bowling Reward 2",
 		"Darunia",
 		"Gerudo Fortress Archery Reward 2",
 		"Hatch Pocket Cucco",
@@ -2024,6 +2031,80 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		if _, ok := checks[name]; !ok {
 			t.Fatalf("missing OoT event-item symbol check: %s", name)
 		}
+	}
+}
+
+func TestExtractChecksIncludesOnlyBombchuBowlingRewardsFromObservedEventItemDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"BOMBCHU_BOWLING_1": "Bombchu Bowling Reward 1",
+			"BOMBCHU_BOWLING_2": "Bombchu Bowling Reward 2",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeState.Oot.EventsItem[ootEventItemBombchuBowling1>>4] = 0x1020
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	if _, ok := beforeChecks["Bombchu Bowling Reward 1"]; ok {
+		t.Fatal("unexpected Bombchu Bowling Reward 1 check before Bombchu Bowling event-item bit is set")
+	}
+	if _, ok := beforeChecks["Bombchu Bowling Reward 2"]; ok {
+		t.Fatal("unexpected Bombchu Bowling Reward 2 check before Bombchu Bowling event-item bit is set")
+	}
+
+	afterFirstState := &GameState{}
+	afterFirstState.Oot.EventsItem[ootEventItemBombchuBowling1>>4] = beforeState.Oot.EventsItem[ootEventItemBombchuBowling1>>4] |
+		(1 << (ootEventItemBombchuBowling1 & 0xF))
+	afterFirstChecks := checkNameSet(ExtractChecks(afterFirstState))
+	if _, ok := afterFirstChecks["Bombchu Bowling Reward 1"]; !ok {
+		t.Fatal("missing Bombchu Bowling Reward 1 check after first Bombchu Bowling event-item bit is set")
+	}
+	if _, ok := afterFirstChecks["Bombchu Bowling Reward 2"]; ok {
+		t.Fatal("unexpected Bombchu Bowling Reward 2 check before second Bombchu Bowling event-item bit is set")
+	}
+
+	afterSecondState := &GameState{}
+	afterSecondState.Oot.EventsItem[ootEventItemBombchuBowling2>>4] = afterFirstState.Oot.EventsItem[ootEventItemBombchuBowling2>>4] |
+		(1 << (ootEventItemBombchuBowling2 & 0xF))
+	afterSecondChecks := checkNameSet(ExtractChecks(afterSecondState))
+	if _, ok := afterSecondChecks["Bombchu Bowling Reward 1"]; !ok {
+		t.Fatal("missing Bombchu Bowling Reward 1 check after second Bombchu Bowling event-item bit is set")
+	}
+	if _, ok := afterSecondChecks["Bombchu Bowling Reward 2"]; !ok {
+		t.Fatal("missing Bombchu Bowling Reward 2 check after second Bombchu Bowling event-item bit is set")
+	}
+
+	newFirst := 0
+	for name := range afterFirstChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newFirst++
+		if name != "Bombchu Bowling Reward 1" {
+			t.Fatalf("unexpected new check from first Bombchu Bowling event-item delta: %s", name)
+		}
+	}
+	if newFirst != 1 {
+		t.Fatalf("unexpected new check count from first Bombchu Bowling event-item delta: got %d, want 1", newFirst)
+	}
+
+	newSecond := 0
+	for name := range afterSecondChecks {
+		if _, ok := afterFirstChecks[name]; ok {
+			continue
+		}
+		newSecond++
+		if name != "Bombchu Bowling Reward 2" {
+			t.Fatalf("unexpected new check from second Bombchu Bowling event-item delta: %s", name)
+		}
+	}
+	if newSecond != 1 {
+		t.Fatalf("unexpected new check count from second Bombchu Bowling event-item delta: got %d, want 1", newSecond)
 	}
 }
 

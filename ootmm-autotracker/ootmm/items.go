@@ -104,6 +104,8 @@ const (
 	ootEventItemShootingGalleryAdult           = 0x0e
 	ootEventItemGerudoArchery2                 = 0x0f
 	ootEventItemLaboratoryDive                 = 0x10
+	ootEventItemBombchuBowling1                = 0x11
+	ootEventItemBombchuBowling2                = 0x12
 	ootEventItemKakarikoRoofMan                = 0x15
 	ootEventItemLostWoodsTarget                = 0x1d
 	ootEventItemGoronBracelet                  = 0x20
@@ -335,6 +337,8 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "SHOOTING_GAME_ADULT", flags: []int{ootEventItemShootingGalleryAdult}},
 	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
 	{symbol: "LABORATORY_DIVE", flags: []int{ootEventItemLaboratoryDive}},
+	{symbol: "BOMBCHU_BOWLING_1", flags: []int{ootEventItemBombchuBowling1}},
+	{symbol: "BOMBCHU_BOWLING_2", flags: []int{ootEventItemBombchuBowling2}},
 	{symbol: "KAKARIKO_ROOF_MAN", flags: []int{ootEventItemKakarikoRoofMan}},
 	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
 	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},

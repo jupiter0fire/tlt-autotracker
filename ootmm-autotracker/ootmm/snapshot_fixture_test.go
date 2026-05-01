@@ -397,6 +397,75 @@ func TestSnapshotFixtureArcheryWeekEventFallback(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureBombchuBowlingEventItemFallback(t *testing.T) {
+	beforeState := loadSnapshotFixtureStateAllowGameNone(t, "before-bombchu-bowling-20260501-201613.json")
+	afterFirstState := loadSnapshotFixtureStateAllowGameNone(t, "after-bomchu-1-20260501-201847.json")
+	afterSecondState := loadSnapshotFixtureStateAllowGameNone(t, "after-bombchu-2-20260501-202008.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterFirstChecks := checkNameSet(ExtractChecks(afterFirstState))
+	afterSecondChecks := checkNameSet(ExtractChecks(afterSecondState))
+
+	if _, ok := beforeChecks["Bombchu Bowling Reward 1"]; ok {
+		t.Fatal("unexpected Bombchu Bowling Reward 1 check in before Bombchu Bowling snapshot fixture")
+	}
+	if _, ok := beforeChecks["Bombchu Bowling Reward 2"]; ok {
+		t.Fatal("unexpected Bombchu Bowling Reward 2 check in before Bombchu Bowling snapshot fixture")
+	}
+	if _, ok := afterFirstChecks["Bombchu Bowling Reward 1"]; !ok {
+		t.Fatal("missing Bombchu Bowling Reward 1 check in first Bombchu Bowling snapshot fixture")
+	}
+	if _, ok := afterFirstChecks["Bombchu Bowling Reward 2"]; ok {
+		t.Fatal("unexpected Bombchu Bowling Reward 2 check in first Bombchu Bowling snapshot fixture")
+	}
+	if _, ok := afterSecondChecks["Bombchu Bowling Reward 1"]; !ok {
+		t.Fatal("missing Bombchu Bowling Reward 1 check in second Bombchu Bowling snapshot fixture")
+	}
+	if _, ok := afterSecondChecks["Bombchu Bowling Reward 2"]; !ok {
+		t.Fatal("missing Bombchu Bowling Reward 2 check in second Bombchu Bowling snapshot fixture")
+	}
+
+	newFirst := 0
+	for name := range afterFirstChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newFirst++
+		if name != "Bombchu Bowling Reward 1" {
+			t.Fatalf("unexpected new check in first Bombchu Bowling snapshot fixture: %s", name)
+		}
+	}
+	if newFirst != 1 {
+		t.Fatalf("unexpected new check count in first Bombchu Bowling snapshot fixture: got %d, want 1", newFirst)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterFirstChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in first Bombchu Bowling snapshot fixture: %s", name)
+		}
+	}
+
+	newSecond := 0
+	for name := range afterSecondChecks {
+		if _, ok := afterFirstChecks[name]; ok {
+			continue
+		}
+		newSecond++
+		if name != "Bombchu Bowling Reward 2" {
+			t.Fatalf("unexpected new check in second Bombchu Bowling snapshot fixture: %s", name)
+		}
+	}
+	if newSecond != 1 {
+		t.Fatalf("unexpected new check count in second Bombchu Bowling snapshot fixture: got %d, want 1", newSecond)
+	}
+
+	for name := range afterFirstChecks {
+		if _, ok := afterSecondChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in second Bombchu Bowling snapshot fixture: %s", name)
+		}
+	}
+}
+
 func TestSnapshotFixtureGoronTunicExtraFlagFallback(t *testing.T) {
 	beforeState := loadSnapshotFixtureStateAllowGameNone(t, "before-goron-20260501-185643.json")
 	afterState := loadSnapshotFixtureStateAllowGameNone(t, "after-goron-20260501-185719.json")
