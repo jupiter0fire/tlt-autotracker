@@ -1323,6 +1323,124 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmGreatFairyExtraFlagChecks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {},
+		"MM": {
+			"GREAT_FAIRY_TOWN":      "Clock Town Great Fairy",
+			"GREAT_FAIRY_TOWN_ALT":  "Clock Town Great Fairy Alt",
+			"GREAT_FAIRY_SWAMP":     "Woodfall Great Fairy",
+			"GREAT_FAIRY_MOUNTAIN":  "Snowhead Great Fairy",
+			"GREAT_FAIRY_OCEAN":     "Great Bay Great Fairy",
+			"GREAT_FAIRY_VALLEY":    "Ikana Great Fairy",
+		},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	tests := []struct {
+		name       string
+		bit        int
+		expected   string
+		unexpected []string
+	}{
+		{
+			name:     "town",
+			bit:      mmExtraFlagsGreatFairyTownBit,
+			expected: "Clock Town Great Fairy",
+			unexpected: []string{
+				"Clock Town Great Fairy Alt",
+				"Woodfall Great Fairy",
+				"Snowhead Great Fairy",
+				"Great Bay Great Fairy",
+				"Ikana Great Fairy",
+			},
+		},
+		{
+			name:     "town alt",
+			bit:      mmExtraFlagsGreatFairyTownAltBit,
+			expected: "Clock Town Great Fairy Alt",
+			unexpected: []string{
+				"Clock Town Great Fairy",
+				"Woodfall Great Fairy",
+				"Snowhead Great Fairy",
+				"Great Bay Great Fairy",
+				"Ikana Great Fairy",
+			},
+		},
+		{
+			name:     "swamp",
+			bit:      mmExtraFlagsGreatFairySwampBit,
+			expected: "Woodfall Great Fairy",
+			unexpected: []string{
+				"Clock Town Great Fairy",
+				"Clock Town Great Fairy Alt",
+				"Snowhead Great Fairy",
+				"Great Bay Great Fairy",
+				"Ikana Great Fairy",
+			},
+		},
+		{
+			name:     "mountain",
+			bit:      mmExtraFlagsGreatFairyMountainBit,
+			expected: "Snowhead Great Fairy",
+			unexpected: []string{
+				"Clock Town Great Fairy",
+				"Clock Town Great Fairy Alt",
+				"Woodfall Great Fairy",
+				"Great Bay Great Fairy",
+				"Ikana Great Fairy",
+			},
+		},
+		{
+			name:     "ocean",
+			bit:      mmExtraFlagsGreatFairyOceanBit,
+			expected: "Great Bay Great Fairy",
+			unexpected: []string{
+				"Clock Town Great Fairy",
+				"Clock Town Great Fairy Alt",
+				"Woodfall Great Fairy",
+				"Snowhead Great Fairy",
+				"Ikana Great Fairy",
+			},
+		},
+		{
+			name:     "valley",
+			bit:      mmExtraFlagsGreatFairyValleyBit,
+			expected: "Ikana Great Fairy",
+			unexpected: []string{
+				"Clock Town Great Fairy",
+				"Clock Town Great Fairy Alt",
+				"Woodfall Great Fairy",
+				"Snowhead Great Fairy",
+				"Great Bay Great Fairy",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			state := &GameState{}
+			state.Oot.ExtraRecords[ExtraIdxMmFlags] = 1 << tc.bit
+
+			checks := checkNameSet(ExtractChecks(state))
+			if _, ok := checks[tc.expected]; !ok {
+				t.Fatalf("missing MM Great Fairy check for %s", tc.expected)
+			}
+			for _, name := range tc.unexpected {
+				if _, ok := checks[name]; ok {
+					t.Fatalf("unexpected MM Great Fairy check for %s", name)
+				}
+			}
+			if len(checks) != 1 {
+				t.Fatalf("unexpected MM Great Fairy check count: got %d, want 1", len(checks))
+			}
+		})
+	}
+}
+
 func TestExtractChecksIncludesMmWeekEventSymbolChecks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

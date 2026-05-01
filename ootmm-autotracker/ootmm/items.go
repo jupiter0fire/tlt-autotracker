@@ -23,6 +23,13 @@ const (
 	sharedOcarinaButtonCDownMask    = 0x0008
 	ootExtraFlagsChildWalletBit     = 17
 	ootExtraFlagsBottomlessBit      = 7
+	// MmExtraFlags.greatFairies is stored in raw extra-record bits 1..6.
+	mmExtraFlagsGreatFairyTownBit     = 1
+	mmExtraFlagsGreatFairyTownAltBit  = 2
+	mmExtraFlagsGreatFairySwampBit    = 3
+	mmExtraFlagsGreatFairyMountainBit = 4
+	mmExtraFlagsGreatFairyOceanBit    = 5
+	mmExtraFlagsGreatFairyValleyBit   = 6
 	// OoT/MM extra-record bitfields are stored MSB-first on N64.
 	mmExtraFlags2ChildWalletBit                = 31
 	mmExtraFlags3BottomlessBit                 = 31
@@ -139,7 +146,19 @@ var mmOwlCheckSymbols = [...]struct {
 	{"OWL_STONE_TOWER", mmOwlStoneTowerBit},
 }
 
-var mmExtraSymbolChecks = [...]struct {
+var mmExtraFlagsSymbolChecks = [...]struct {
+	bit    int
+	symbol string
+}{
+	{mmExtraFlagsGreatFairyTownBit, "GREAT_FAIRY_TOWN"},
+	{mmExtraFlagsGreatFairyTownAltBit, "GREAT_FAIRY_TOWN_ALT"},
+	{mmExtraFlagsGreatFairySwampBit, "GREAT_FAIRY_SWAMP"},
+	{mmExtraFlagsGreatFairyMountainBit, "GREAT_FAIRY_MOUNTAIN"},
+	{mmExtraFlagsGreatFairyOceanBit, "GREAT_FAIRY_OCEAN"},
+	{mmExtraFlagsGreatFairyValleyBit, "GREAT_FAIRY_VALLEY"},
+}
+
+var mmExtraFlags2SymbolChecks = [...]struct {
 	bit    int
 	symbol string
 }{
@@ -314,6 +333,13 @@ func mmExtraFlags2(state *GameState) uint32 {
 		return state.Mm.ExtraFlags2
 	}
 	return state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+}
+
+func mmExtraFlags(state *GameState) uint32 {
+	if state == nil {
+		return 0
+	}
+	return state.Oot.ExtraRecords[ExtraIdxMmFlags]
 }
 
 func mmTownStrayFairyCollected(state *GameState) bool {
@@ -670,8 +696,17 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
 
+	mmFlags := mmExtraFlags(state)
+	for _, entry := range mmExtraFlagsSymbolChecks {
+		if mmFlags&(1<<entry.bit) == 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
+			appendCheck("MM_extra_6_"+itoa(entry.bit), name)
+		}
+	}
 	mmFlags2 := mmExtraFlags2(state)
-	for _, entry := range mmExtraSymbolChecks {
+	for _, entry := range mmExtraFlags2SymbolChecks {
 		if mmFlags2&(1<<entry.bit) == 0 {
 			continue
 		}
