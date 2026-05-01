@@ -33,6 +33,7 @@ const (
 	// OoT/MM extra-record bitfields are stored MSB-first on N64.
 	mmExtraFlags2ChildWalletBit                = 31
 	mmExtraFlags3BottomlessBit                 = 31
+	mmExtraFlags2MaskKafei                     = 28
 	mmExtraFlags2HoneyDarling                  = 27
 	mmExtraFlags2Notebook                      = 22
 	mmExtraFlags2MaskBlast                     = 21
@@ -169,6 +170,7 @@ var mmExtraFlags2SymbolChecks = [...]struct {
 	bit    int
 	symbol string
 }{
+	{mmExtraFlags2MaskKafei, "MASK_KAFEI"},
 	{mmExtraFlags2HoneyDarling, "HONEY_DARLING_1"},
 	{mmExtraFlags2Notebook, "BOMBER_NOTEBOOK"},
 	{mmExtraFlags2MaskBlast, "MASK_BLAST"},

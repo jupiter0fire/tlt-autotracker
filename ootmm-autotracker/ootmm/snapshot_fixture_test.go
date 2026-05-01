@@ -286,3 +286,38 @@ func TestSnapshotFixtureTingleMapWeekEventFallback(t *testing.T) {
 		t.Fatalf("unexpected new check count across Tingle snapshot fixtures: got %d, want 2", newChecks)
 	}
 }
+
+func TestSnapshotFixtureMadameAromaMaskKafeiFallback(t *testing.T) {
+	beforeState := loadSnapshotFixtureState(t, "before-madame-aroma-20260501-170327.json")
+	afterState := loadSnapshotFixtureState(t, "after-madame-aroma-20260501-170357.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := beforeChecks["Mayor's Office Kafei's Mask"]; ok {
+		t.Fatal("unexpected Mayor's Office Kafei's Mask check in before snapshot fixture")
+	}
+	if _, ok := afterChecks["Mayor's Office Kafei's Mask"]; !ok {
+		t.Fatal("missing Mayor's Office Kafei's Mask check in after snapshot fixture")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Mayor's Office Kafei's Mask" {
+			t.Fatalf("unexpected new check in after Madame Aroma snapshot fixture: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count across Madame Aroma snapshot fixtures: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in after Madame Aroma snapshot fixture: %s", name)
+		}
+	}
+}
