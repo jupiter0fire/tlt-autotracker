@@ -1920,8 +1920,9 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	})
 
 	state := &GameState{}
-	state.Oot.EventsChk[ootEventSongSariaVanilla>>4] = 1 << (ootEventSongSariaVanilla & 0xF)
-	state.Oot.EventsChk[ootEventSongSunCustom>>4] = 1 << (ootEventSongSunCustom & 0xF)
+	state.Oot.EventsChk[ootEventSongSariaCustom>>4] =
+		(1 << (ootEventSongSariaCustom & 0xF)) |
+		(1 << (ootEventSongSunCustom & 0xF))
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Saria's Song"]; !ok {
@@ -1929,6 +1930,31 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	}
 	if _, ok := checks["Graveyard Royal Tomb Song"]; !ok {
 		t.Fatal("missing OoT Royal Tomb Song check from event fallback")
+	}
+}
+
+func TestExtractChecksIncludesOotZoraDivingGameEventFallback(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"SARIA_SONG":       "Saria's Song",
+			"ZORA_DIVING_GAME": "Zora Domain Diving Game",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[ootEventZoraDivingGame>>4] = 1 << (ootEventZoraDivingGame & 0xF)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Zora Domain Diving Game"]; !ok {
+		t.Fatal("missing OoT Zora Diving Game check from event fallback")
+	}
+	if _, ok := checks["Saria's Song"]; ok {
+		t.Fatal("unexpected OoT Saria song check from Zora Diving Game event fallback")
 	}
 }
 

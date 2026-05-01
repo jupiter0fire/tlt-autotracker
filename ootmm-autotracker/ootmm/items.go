@@ -95,7 +95,7 @@ const (
 	mmOwlIkanaCanyonBit                        = 8
 	mmOwlStoneTowerBit                         = 9
 	mmOwlHiddenBit                             = 15
-	ootEventSongSariaVanilla                   = 0x38
+	ootEventZoraDivingGame                     = 0x38
 	ootEventSongSariaCustom                    = 0x58
 	ootEventItemAnjuBottle                     = 0x0c
 	ootEventItemTalonBottle                    = 0x02
@@ -312,7 +312,8 @@ var ootEventSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "FROGS_SUNS", flags: []int{ootEventFrogsSun}},
 	{symbol: "FROGS_SOT", flags: []int{ootEventFrogsSongOfTime}},
 	{symbol: "FROGS_STORMS", flags: []int{ootEventFrogsStorms}},
-	{symbol: "SARIA_SONG", flags: []int{ootEventSongSariaVanilla, ootEventSongSariaCustom}},
+	{symbol: "SARIA_SONG", flags: []int{ootEventSongSariaCustom}},
+	{symbol: "ZORA_DIVING_GAME", flags: []int{ootEventZoraDivingGame}},
 	{symbol: "GS_10", flags: []int{ootEventSkulltulaHouse10}},
 	{symbol: "GS_20", flags: []int{ootEventSkulltulaHouse20}},
 	{symbol: "GS_30", flags: []int{ootEventSkulltulaHouse30}},

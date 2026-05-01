@@ -466,6 +466,41 @@ func TestSnapshotFixtureBombchuBowlingEventItemFallback(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureZoraDivingGameEventFallback(t *testing.T) {
+	beforeState := loadSnapshotFixtureState(t, "before-diving-game-20260501-205252.json")
+	afterState := loadSnapshotFixtureState(t, "after-diving-game-20260501-205332.json")
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := beforeChecks["Zora Domain Diving Game"]; ok {
+		t.Fatal("unexpected Zora Domain Diving Game check in before diving-game snapshot fixture")
+	}
+	if _, ok := afterChecks["Zora Domain Diving Game"]; !ok {
+		t.Fatal("missing Zora Domain Diving Game check in after diving-game snapshot fixture")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Zora Domain Diving Game" {
+			t.Fatalf("unexpected new check in after diving-game snapshot fixture: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count across diving-game snapshot fixtures: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check in after diving-game snapshot fixture: %s", name)
+		}
+	}
+}
+
 func TestSnapshotFixtureGoronTunicExtraFlagFallback(t *testing.T) {
 	beforeState := loadSnapshotFixtureStateAllowGameNone(t, "before-goron-20260501-185643.json")
 	afterState := loadSnapshotFixtureStateAllowGameNone(t, "after-goron-20260501-185719.json")
