@@ -2337,6 +2337,97 @@ func TestExtractChecksIncludesOotPocketEggTradeFallback(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOnlyKakarikoAnjuEggFromObservedPocketEggEventDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"POCKET_EGG":               "Hatch Pocket Cucco",
+			"TRADE_POCKET_EGG":         "Kakariko Anju Egg",
+			"TRADE_COJIRO":             "Kakariko Anju Cojiro",
+			"TRADE_ODD_MUSHROOM":       "Lost Woods Odd Mushroom",
+			"TRADE_POACHER_SAW":        "Lost Woods Poacher's Saw",
+			"TRADE_BROKEN_GORON_SWORD": "Gerudo Valley Broken Goron Sword",
+			"TRADE_PRESCRIPTION":       "Death Mountain Trail Prescription",
+			"TRADE_EYEBALL_FROG":       "Zora Domain Eyeball Frog",
+			"TRADE_EYE_DROPS":          "Laboratory Eye Drops",
+			"TRADE_CLAIM_CHECK":        "Death Mountain Trail Claim Check",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeState.Oot.ExtraRecords[ExtraIdxOotTradeSave] = 1 << (ootAdultTradePocketEggBit + 3)
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	if _, ok := beforeChecks["Hatch Pocket Cucco"]; !ok {
+		t.Fatal("missing Pocket Cucco check from persistent adult trade progression")
+	}
+	if _, ok := beforeChecks["Kakariko Anju Egg"]; ok {
+		t.Fatal("unexpected Kakariko Anju Egg check before Pocket Egg event-item bit is set")
+	}
+	for _, name := range []string{
+		"Kakariko Anju Cojiro",
+		"Lost Woods Odd Mushroom",
+		"Lost Woods Poacher's Saw",
+		"Gerudo Valley Broken Goron Sword",
+		"Death Mountain Trail Prescription",
+		"Zora Domain Eyeball Frog",
+		"Laboratory Eye Drops",
+		"Death Mountain Trail Claim Check",
+	} {
+		if _, ok := beforeChecks[name]; ok {
+			t.Fatalf("unexpected trade-location check before Pocket Egg event-item bit is set: %s", name)
+		}
+	}
+
+	afterState := &GameState{}
+	afterState.Oot.ExtraRecords[ExtraIdxOotTradeSave] = beforeState.Oot.ExtraRecords[ExtraIdxOotTradeSave]
+	afterState.Oot.EventsItem[ootEventItemPocketEgg>>4] = 1 << (ootEventItemPocketEgg & 0xF)
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := afterChecks["Kakariko Anju Egg"]; !ok {
+		t.Fatal("missing Kakariko Anju Egg check after Pocket Egg event-item bit is set")
+	}
+	if _, ok := afterChecks["Hatch Pocket Cucco"]; !ok {
+		t.Fatal("missing Pocket Cucco check after Pocket Egg event-item bit is set")
+	}
+	for _, name := range []string{
+		"Kakariko Anju Cojiro",
+		"Lost Woods Odd Mushroom",
+		"Lost Woods Poacher's Saw",
+		"Gerudo Valley Broken Goron Sword",
+		"Death Mountain Trail Prescription",
+		"Zora Domain Eyeball Frog",
+		"Laboratory Eye Drops",
+		"Death Mountain Trail Claim Check",
+	} {
+		if _, ok := afterChecks[name]; ok {
+			t.Fatalf("unexpected trade-location check from Pocket Egg event-item bit: %s", name)
+		}
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Kakariko Anju Egg" {
+			t.Fatalf("unexpected new check from observed Pocket Egg event-item delta: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count from observed Pocket Egg event-item delta: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check from observed Pocket Egg event-item delta: %s", name)
+		}
+	}
+}
+
 func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

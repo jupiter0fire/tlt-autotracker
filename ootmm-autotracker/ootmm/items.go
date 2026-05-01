@@ -346,6 +346,7 @@ var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
 	{symbol: "KAKARIKO_ROOF_MAN", flags: []int{ootEventItemKakarikoRoofMan}},
 	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
 	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},
+	{symbol: "TRADE_POCKET_EGG", flags: []int{ootEventItemPocketEgg}},
 	{symbol: "POCKET_EGG", flags: []int{ootEventItemPocketEgg}},
 	{symbol: "MASK_SELL_KEATON", flags: []int{ootEventItemMaskSellKeaton}},
 	{symbol: "MASK_SELL_SKULL", flags: []int{ootEventItemMaskSellSkull}},
