@@ -1958,6 +1958,30 @@ func TestExtractChecksIncludesOotZoraDivingGameEventFallback(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesLakeHyliaUnderwaterBottleEventFallback(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"RUTO_LETTER": "Lake Hylia Underwater Bottle",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsChk[ootEventRutoLetter>>4] = 1 << (ootEventRutoLetter & 0xF)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Lake Hylia Underwater Bottle"]; !ok {
+		t.Fatal("missing Lake Hylia Underwater Bottle check from OoT event fallback")
+	}
+	if len(checks) != 1 {
+		t.Fatalf("unexpected OoT event fallback check count: got %d, want 1", len(checks))
+	}
+}
+
 func TestExtractChecksIncludesOotMalonEventFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
