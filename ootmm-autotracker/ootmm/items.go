@@ -64,6 +64,9 @@ const (
 	mmWeekEventTingleMapRanchMask              = 1 << (0x11b & 7)
 	mmWeekEventTingleMapGreatBayMask           = 1 << (0x11c & 7)
 	mmWeekEventTingleMapIkanaMask              = 1 << (0x11d & 7)
+	mmWeekEventArcheryByte                     = 59
+	mmWeekEventArcherySwampReward1Mask         = 0x10
+	mmWeekEventArcheryTownReward1Mask          = 0x20
 	mmWeekEventSwordsmanSchoolByte             = 63
 	mmWeekEventSwordsmanSchoolMask             = 0x20
 	mmOwlGreatBayBit                           = 0
@@ -230,6 +233,8 @@ var mmWeekEventSymbolChecks = [...]struct {
 	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapRanchMask, "TINGLE_MAP_ROMANI_RANCH"},
 	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapGreatBayMask, "TINGLE_MAP_GREAT_BAY"},
 	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapIkanaMask, "TINGLE_MAP_STONE_TOWER"},
+	{mmWeekEventArcheryByte, mmWeekEventArcherySwampReward1Mask, "SHOOTING_GAME_SWAMP_1"},
+	{mmWeekEventArcheryByte, mmWeekEventArcheryTownReward1Mask, "SHOOTING_GAME_TOWN_1"},
 	{mmWeekEventSwordsmanSchoolByte, mmWeekEventSwordsmanSchoolMask, "SWORDSMAN_HEART_PIECE"},
 }
 

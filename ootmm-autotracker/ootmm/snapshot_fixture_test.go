@@ -357,18 +357,37 @@ func TestSnapshotFixtureAnjuRoomKeyFallback(t *testing.T) {
 	}
 }
 
-func TestSnapshotFixtureArcheryPairHasNoMmExtraFlagDelta(t *testing.T) {
+func TestSnapshotFixtureArcheryWeekEventFallback(t *testing.T) {
 	beforeState := loadSnapshotFixtureState(t, "before-archery-20260501-170932.json")
 	afterState := loadSnapshotFixtureState(t, "after-archery-20260501-171131.json")
 
 	beforeChecks := checkNameSet(ExtractChecks(beforeState))
 	afterChecks := checkNameSet(ExtractChecks(afterState))
 
+	if _, ok := beforeChecks["Town Archery Reward 1"]; ok {
+		t.Fatal("unexpected Town Archery Reward 1 check in before Archery snapshot fixture")
+	}
+	if _, ok := afterChecks["Town Archery Reward 1"]; !ok {
+		t.Fatal("missing Town Archery Reward 1 check in after Archery snapshot fixture")
+	}
+	for _, name := range []string{"Town Archery Reward 2", "Swamp Archery Reward 1", "Swamp Archery Reward 2"} {
+		if _, ok := afterChecks[name]; ok {
+			t.Fatalf("unexpected %s check in after Archery snapshot fixture", name)
+		}
+	}
+
+	newChecks := 0
 	for name := range afterChecks {
 		if _, ok := beforeChecks[name]; ok {
 			continue
 		}
-		t.Fatalf("unexpected new check in after Archery snapshot fixture: %s", name)
+		newChecks++
+		if name != "Town Archery Reward 1" {
+			t.Fatalf("unexpected new check in after Archery snapshot fixture: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count across Archery snapshot fixtures: got %d, want 1", newChecks)
 	}
 
 	for name := range beforeChecks {

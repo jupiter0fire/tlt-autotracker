@@ -1584,6 +1584,40 @@ func TestExtractChecksIncludesMmTingleMapWeekEventFallbacks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmArcheryWeekEventFallbacks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {},
+		"MM": {
+			"SHOOTING_GAME_TOWN_1":  "Town Archery Reward 1",
+			"SHOOTING_GAME_TOWN_2":  "Town Archery Reward 2",
+			"SHOOTING_GAME_SWAMP_1": "Swamp Archery Reward 1",
+			"SHOOTING_GAME_SWAMP_2": "Swamp Archery Reward 2",
+		},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Mm.WeekEventReg[mmWeekEventArcheryByte] = mmWeekEventArcherySwampReward1Mask | mmWeekEventArcheryTownReward1Mask
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{"Town Archery Reward 1", "Swamp Archery Reward 1"} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing %s check from MM archery week event fallback", name)
+		}
+	}
+	for _, name := range []string{"Town Archery Reward 2", "Swamp Archery Reward 2"} {
+		if _, ok := checks[name]; ok {
+			t.Fatalf("unexpected %s check from MM archery week event fallback", name)
+		}
+	}
+	if len(checks) != 2 {
+		t.Fatalf("unexpected MM archery week event check count: got %d, want 2", len(checks))
+	}
+}
+
 func TestExtractItemsIncludesMmTownStrayFairyFromExtraFlags2(t *testing.T) {
 	state := &GameState{}
 	state.Mm.ExtraFlags2 = 1 << mmExtraFlags2TownStrayFairy
