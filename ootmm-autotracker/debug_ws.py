@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
 	parser.add_argument(
 		"--features",
 		default="items,checks,gps",
-		help="Comma-separated Magpie feature list to advertise in the handshake",
+		help="Comma-separated feature list to advertise in the handshake",
 	)
 	parser.add_argument(
 		"--send-full",

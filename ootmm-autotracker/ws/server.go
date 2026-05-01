@@ -321,8 +321,6 @@ func (s *Server) sendToClients(conns []*websocket.Conn, msg interface{}) {
 	}
 }
 
-// Message types matching the Magpie protocol.
-
 type ItemMessage struct {
 	Type    string             `json:"type"`
 	Diff    bool               `json:"diff"`
