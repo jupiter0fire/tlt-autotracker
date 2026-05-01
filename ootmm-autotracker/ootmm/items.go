@@ -43,8 +43,20 @@ const (
 	mmExtraFlags2MaskBlast                     = 21
 	mmExtraFlags2DekuPlayground                = 20
 	mmExtraFlags2MaskCouple                    = 19
+	mmExtraFlags2MaskPostman                   = 17
+	mmExtraFlags2MaskTroupeLeader              = 16
+	mmExtraFlags2MaskFierceDeity               = 15
+	mmExtraFlags2Ocarina                       = 14
+	mmExtraFlags2SongOath                      = 13
+	mmExtraFlags2MaskBremen                    = 10
+	mmExtraFlags2MaskScents                    = 9
+	mmExtraFlags2MaskKamaro                    = 8
+	mmExtraFlags2MoonTear                      = 6
 	mmExtraFlags2SongHealing                   = 5
 	mmExtraFlags2TownStrayFairy                = 4
+	mmExtraFlags3Lottery1                      = 29
+	mmExtraFlags3Lottery2                      = 28
+	mmExtraFlags3Lottery3                      = 27
 	mmWeekEventTingleMapsByte                  = 0x118 >> 3
 	mmWeekEventTingleMapClockTownMask          = 1 << (0x118 & 7)
 	mmWeekEventTingleMapWoodfallMask           = 1 << (0x119 & 7)
@@ -185,8 +197,26 @@ var mmExtraFlags2SymbolChecks = [...]struct {
 	{mmExtraFlags2MaskBlast, "MASK_BLAST"},
 	{mmExtraFlags2DekuPlayground, "DEKU_PLAYGROUND_1"},
 	{mmExtraFlags2MaskCouple, "MASK_COUPLE"},
+	{mmExtraFlags2MaskPostman, "MASK_POSTMAN"},
+	{mmExtraFlags2MaskTroupeLeader, "MASK_TROUPE_LEADER"},
+	{mmExtraFlags2MaskFierceDeity, "MASK_FIERCE_DEITY"},
+	{mmExtraFlags2Ocarina, "SKULL_KID_OCARINA"},
+	{mmExtraFlags2SongOath, "SONG_ORDER"},
+	{mmExtraFlags2MaskBremen, "MASK_BREMEN"},
+	{mmExtraFlags2MaskScents, "MASK_SCENTS"},
+	{mmExtraFlags2MaskKamaro, "MASK_KAMARO"},
+	{mmExtraFlags2MoonTear, "MOON_TEAR"},
 	{mmExtraFlags2SongHealing, "SONG_HEALING"},
 	{mmExtraFlags2TownStrayFairy, "STRAY_FAIRY_TOWN"},
+}
+
+var mmExtraFlags3SymbolChecks = [...]struct {
+	bit    int
+	symbol string
+}{
+	{mmExtraFlags3Lottery1, "LOTTERY_NIGHT_1"},
+	{mmExtraFlags3Lottery2, "LOTTERY_NIGHT_2"},
+	{mmExtraFlags3Lottery3, "LOTTERY_NIGHT_3"},
 }
 
 var mmWeekEventSymbolChecks = [...]struct {
@@ -358,6 +388,13 @@ func mmExtraFlags2(state *GameState) uint32 {
 		return state.Mm.ExtraFlags2
 	}
 	return state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+}
+
+func mmExtraFlags3(state *GameState) uint32 {
+	if state == nil {
+		return 0
+	}
+	return state.Oot.ExtraRecords[ExtraIdxMmFlags3]
 }
 
 func mmExtraFlags(state *GameState) uint32 {
@@ -737,6 +774,15 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 		}
 		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
 			appendCheck("MM_extra_"+itoa(entry.bit), name)
+		}
+	}
+	mmFlags3 := mmExtraFlags3(state)
+	for _, entry := range mmExtraFlags3SymbolChecks {
+		if mmFlags3&(1<<entry.bit) == 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
+			appendCheck("MM_extra_13_"+itoa(entry.bit), name)
 		}
 	}
 	for _, entry := range mmWeekEventSymbolChecks {

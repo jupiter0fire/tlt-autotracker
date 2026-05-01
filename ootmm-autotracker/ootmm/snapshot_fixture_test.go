@@ -377,3 +377,37 @@ func TestSnapshotFixtureArcheryPairHasNoMmExtraFlagDelta(t *testing.T) {
 		}
 	}
 }
+
+func TestSnapshotFixturesMay20260501ExpandedMmExtraFlagFallbacksStayAbsent(t *testing.T) {
+	fixtures := []string{
+		"before-madame-aroma-20260501-170327.json",
+		"after-madame-aroma-20260501-170357.json",
+		"before-anju-key-20260501-170709.json",
+		"after-anju-key-20260501-170751.json",
+	}
+	blocked := []string{
+		"Clock Town Postman Hat",
+		"Milk Bar Troupe Leader Mask",
+		"Moon Fierce Deity Mask",
+		"Clock Tower Roof Skull Kid Ocarina",
+		"Oath to Order",
+		"Clock Town Guru-Guru Mask Bremen",
+		"Deku Shrine Mask of Scents",
+		"Termina Field Kamaro Mask",
+		"Astral Observatory Moon Tear",
+		"Lottery Prize Night 1",
+		"Lottery Prize Night 2",
+		"Lottery Prize Night 3",
+	}
+
+	for _, fixture := range fixtures {
+		t.Run(fixture, func(t *testing.T) {
+			checks := checkNameSet(ExtractChecks(loadSnapshotFixtureStateAllowGameNone(t, fixture)))
+			for _, name := range blocked {
+				if _, ok := checks[name]; ok {
+					t.Fatalf("unexpected new MM extra-flag fallback check in fixture %s: %s", fixture, name)
+				}
+			}
+		})
+	}
+}
