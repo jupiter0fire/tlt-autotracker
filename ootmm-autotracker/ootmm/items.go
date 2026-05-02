@@ -148,19 +148,25 @@ const (
 	mmItemRutoLetter                           = 0xb6
 )
 
-type ootSymbolFlagCheck struct {
-	symbol string
-	flags  []int
-}
+type ootSymbolCheckSource uint8
 
-type ootTradeSymbolCheck struct {
-	symbol string
-	mask   uint16
-}
+const (
+	ootSymbolCheckSourceExtraFlags ootSymbolCheckSource = iota
+	ootSymbolCheckSourceQuest
+	ootSymbolCheckSourceChildTrade
+	ootSymbolCheckSourceTrade
+	ootSymbolCheckSourceEvent
+	ootSymbolCheckSourceEventItem
+	ootSymbolCheckSourceEventMisc
+)
 
-type ootQuestSymbolCheck struct {
-	symbol string
-	bit    int
+type ootSymbolCheck struct {
+	source    ootSymbolCheckSource
+	symbol    string
+	keyPrefix string
+	flags     []int
+	mask      uint16
+	bit       int
 }
 
 var mmOwlItems = [...]struct {
@@ -299,107 +305,94 @@ var ootSilverRupeeItemIDs = [...][2]string{
 	{"OOT_RUPEE_SILVER_GANON_FOREST", "OOT_RUPEE_SILVER_GANON_FOREST"},
 }
 
-var ootEventSymbolChecks = [...]ootSymbolFlagCheck{
-	{symbol: "MALON_EGG", flags: []int{ootEventMalonEgg}},
-	{symbol: "MALON_SONG", flags: []int{ootEventSongEpona}},
-	{symbol: "MASTER_SWORD", flags: []int{0x4f}},
-	{symbol: "LIGHT_MEDALLION", flags: []int{0x45}},
-	{symbol: "OCARINA_TIME_ITEM", flags: []int{0x43}},
-	{symbol: "OCARINA_TIME_SONG", flags: []int{0xa9}},
-	{symbol: "ROYAL_TOMB_SONG", flags: []int{ootEventSongSunCustom}},
-	{symbol: "RUTO_LETTER", flags: []int{ootEventRutoLetter}},
-	{symbol: "FROGS_GAME", flags: []int{ootEventFrogsGame}},
-	{symbol: "FROGS_ZL", flags: []int{ootEventFrogsZelda}},
-	{symbol: "FROGS_EPONA", flags: []int{ootEventFrogsEpona}},
-	{symbol: "FROGS_SARIA", flags: []int{ootEventFrogsSaria}},
-	{symbol: "FROGS_SUNS", flags: []int{ootEventFrogsSun}},
-	{symbol: "FROGS_SOT", flags: []int{ootEventFrogsSongOfTime}},
-	{symbol: "FROGS_STORMS", flags: []int{ootEventFrogsStorms}},
-	{symbol: "SARIA_SONG", flags: []int{ootEventSongSariaCustom}},
-	{symbol: "ZORA_DIVING_GAME", flags: []int{ootEventZoraDivingGame}},
-	{symbol: "GS_10", flags: []int{ootEventSkulltulaHouse10}},
-	{symbol: "GS_20", flags: []int{ootEventSkulltulaHouse20}},
-	{symbol: "GS_30", flags: []int{ootEventSkulltulaHouse30}},
-	{symbol: "GS_40", flags: []int{ootEventSkulltulaHouse40}},
-	{symbol: "GS_50", flags: []int{ootEventSkulltulaHouse50}},
-	{symbol: "SARIA_OCARINA", flags: []int{0xc1}},
-	{symbol: "SHEIK_FOREST", flags: []int{0x50}},
-	{symbol: "SHEIK_FIRE", flags: []int{0x51}},
-	{symbol: "SHEIK_WATER", flags: []int{0x52}},
-	{symbol: "SHEIK_SHADOW", flags: []int{0x54}},
-	{symbol: "SHEIK_LIGHT", flags: []int{0x55}},
-	{symbol: "SHEIK_SPIRIT", flags: []int{0xac}},
-	{symbol: "SONG_STORMS", flags: []int{0x5b}},
-	{symbol: "ZELDA_LETTER", flags: []int{0x40}},
-	{symbol: "ZELDA_LIGHT_ARROW", flags: []int{0xc4}},
-	{symbol: "ZELDA_SONG", flags: []int{0x59}},
-}
+// OoT NPC symbol checks all resolve through the same npc.yml symbols in OoTMM;
+// only the backing save source differs.
+var ootSymbolChecks = [...]ootSymbolCheck{
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsGreatFairyMagicBit, symbol: "FAIRY_MAGIC_UPGRADE"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsGreatFairyMagic2Bit, symbol: "FAIRY_MAGIC_UPGRADE2"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsGreatFairyDefenseBit, symbol: "FAIRY_DEFENSE_UPGRADE"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsGreatFairyWindBit, symbol: "FAIRY_SPELL_WIND"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsGreatFairyFireBit, symbol: "FAIRY_SPELL_FIRE"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsGreatFairyLoveBit, symbol: "FAIRY_SPELL_LOVE"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsFishingChildBit, symbol: "FISH_CHILD"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsFishingAdultBit, symbol: "FISH_ADULT"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsTunicGoronBit, symbol: "GORON_LINK_TUNIC"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsBiggoronBit, symbol: "TRADE_BIGGORON_SWORD"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsTunicZoraBit, symbol: "ZORA_KING_TUNIC"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsFireArrowBit, symbol: "FIRE_ARROW"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsChestGameKeyBit, symbol: "CHEST_GAME_KEY"},
+	{source: ootSymbolCheckSourceExtraFlags, keyPrefix: "OOT_extra_2_", bit: ootExtraFlagsOddPotionBit, symbol: "TRADE_ODD_POTION"},
 
-var ootEventItemSymbolChecks = [...]ootSymbolFlagCheck{
-	{symbol: "ANJU_BOTTLE", flags: []int{ootEventItemAnjuBottle}},
-	{symbol: "TALON_BOTTLE", flags: []int{ootEventItemTalonBottle}},
-	{symbol: "SHOOTING_GAME_ADULT", flags: []int{ootEventItemShootingGalleryAdult}},
-	{symbol: "GERUDO_ARCHERY_2", flags: []int{ootEventItemGerudoArchery2}},
-	{symbol: "LABORATORY_DIVE", flags: []int{ootEventItemLaboratoryDive}},
-	{symbol: "BOMBCHU_BOWLING_1", flags: []int{ootEventItemBombchuBowling1}},
-	{symbol: "BOMBCHU_BOWLING_2", flags: []int{ootEventItemBombchuBowling2}},
-	{symbol: "KAKARIKO_ROOF_MAN", flags: []int{ootEventItemKakarikoRoofMan}},
-	{symbol: "LOST_WOODS_TARGET", flags: []int{ootEventItemLostWoodsTarget}},
-	{symbol: "DARUNIA_BRACELET", flags: []int{ootEventItemGoronBracelet}},
-	{symbol: "TRADE_POCKET_EGG", flags: []int{ootEventItemPocketEgg}},
-	{symbol: "POCKET_EGG", flags: []int{ootEventItemPocketEgg}},
-	{symbol: "MASK_SELL_KEATON", flags: []int{ootEventItemMaskSellKeaton}},
-	{symbol: "MASK_SELL_SKULL", flags: []int{ootEventItemMaskSellSkull}},
-	{symbol: "MASK_SELL_SPOOKY", flags: []int{ootEventItemMaskSellSpooky}},
-	{symbol: "MASK_SELL_BUNNY", flags: []int{ootEventItemMaskSellBunny}},
-}
+	{source: ootSymbolCheckSourceQuest, keyPrefix: "OOT_quest_", bit: QuestOotGerudoCard, symbol: "GERUDO_CARD"},
 
-var ootEventMiscSymbolChecks = [...]ootSymbolFlagCheck{
-	{symbol: "GORON_BOMB_BAG", flags: []int{ootEventMiscGoronBombBag}},
-	{symbol: "GERUDO_ARCHERY_1", flags: []int{ootEventMiscGerudoArchery1}},
-	{symbol: "DOG_LADY", flags: []int{ootEventMiscRichardHeartPiece}},
-	{symbol: "MEDIGORON", flags: []int{ootEventMiscMedigoron}},
-}
-
-var ootTradeSymbolChecks = [...]ootTradeSymbolCheck{
-	// OoTMM persists obtained adult-trade items in ExtraIdxOotTradeSave.
-	// Pocket Cucco itself is unreliable as a standalone save bit in live files,
-	// but any adult-trade progress beyond the initial Pocket Egg implies the egg
-	// has already hatched.
-	{symbol: "POCKET_EGG", mask: ootAdultTradePocketCuccoMask},
-}
-
-var ootChildTradeSymbolChecks = [...]ootTradeSymbolCheck{
 	// Child trade progression is also persisted in ExtraIdxOotTradeSave. As
 	// with Pocket Egg, later persistent progression implies the earlier checks
 	// have already been completed even when the corresponding event bit is not
 	// present in a live save snapshot.
-	{symbol: "WEIRD_EGG", mask: ootChildTradeHatchMask},
-	{symbol: "ZELDA_LETTER", mask: ootChildTradeLetterMask},
-}
+	{source: ootSymbolCheckSourceChildTrade, keyPrefix: "OOT_child_trade_", mask: ootChildTradeHatchMask, symbol: "WEIRD_EGG"},
+	{source: ootSymbolCheckSourceChildTrade, keyPrefix: "OOT_child_trade_", mask: ootChildTradeLetterMask, symbol: "ZELDA_LETTER"},
 
-var ootQuestSymbolChecks = [...]ootQuestSymbolCheck{
-	{symbol: "GERUDO_CARD", bit: QuestOotGerudoCard},
-}
+	// OoTMM persists obtained adult-trade items in ExtraIdxOotTradeSave.
+	// Pocket Cucco itself is unreliable as a standalone save bit in live files,
+	// but any adult-trade progress beyond the initial Pocket Egg implies the egg
+	// has already hatched.
+	{source: ootSymbolCheckSourceTrade, keyPrefix: "OOT_trade_", mask: ootAdultTradePocketCuccoMask, symbol: "POCKET_EGG"},
 
-var ootExtraFlagsSymbolChecks = [...]struct {
-	bit    int
-	symbol string
-}{
-	{ootExtraFlagsGreatFairyMagicBit, "FAIRY_MAGIC_UPGRADE"},
-	{ootExtraFlagsGreatFairyMagic2Bit, "FAIRY_MAGIC_UPGRADE2"},
-	{ootExtraFlagsGreatFairyDefenseBit, "FAIRY_DEFENSE_UPGRADE"},
-	{ootExtraFlagsGreatFairyWindBit, "FAIRY_SPELL_WIND"},
-	{ootExtraFlagsGreatFairyFireBit, "FAIRY_SPELL_FIRE"},
-	{ootExtraFlagsGreatFairyLoveBit, "FAIRY_SPELL_LOVE"},
-	{ootExtraFlagsFishingChildBit, "FISH_CHILD"},
-	{ootExtraFlagsFishingAdultBit, "FISH_ADULT"},
-	{ootExtraFlagsTunicGoronBit, "GORON_LINK_TUNIC"},
-	{ootExtraFlagsBiggoronBit, "TRADE_BIGGORON_SWORD"},
-	{ootExtraFlagsTunicZoraBit, "ZORA_KING_TUNIC"},
-	{ootExtraFlagsFireArrowBit, "FIRE_ARROW"},
-	{ootExtraFlagsChestGameKeyBit, "CHEST_GAME_KEY"},
-	{ootExtraFlagsOddPotionBit, "TRADE_ODD_POTION"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventMalonEgg}, symbol: "MALON_EGG"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSongEpona}, symbol: "MALON_SONG"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x4f}, symbol: "MASTER_SWORD"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x45}, symbol: "LIGHT_MEDALLION"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x43}, symbol: "OCARINA_TIME_ITEM"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0xa9}, symbol: "OCARINA_TIME_SONG"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSongSunCustom}, symbol: "ROYAL_TOMB_SONG"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventRutoLetter}, symbol: "RUTO_LETTER"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsGame}, symbol: "FROGS_GAME"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsZelda}, symbol: "FROGS_ZL"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsEpona}, symbol: "FROGS_EPONA"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsSaria}, symbol: "FROGS_SARIA"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsSun}, symbol: "FROGS_SUNS"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsSongOfTime}, symbol: "FROGS_SOT"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventFrogsStorms}, symbol: "FROGS_STORMS"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSongSariaCustom}, symbol: "SARIA_SONG"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventZoraDivingGame}, symbol: "ZORA_DIVING_GAME"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSkulltulaHouse10}, symbol: "GS_10"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSkulltulaHouse20}, symbol: "GS_20"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSkulltulaHouse30}, symbol: "GS_30"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSkulltulaHouse40}, symbol: "GS_40"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{ootEventSkulltulaHouse50}, symbol: "GS_50"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0xc1}, symbol: "SARIA_OCARINA"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x50}, symbol: "SHEIK_FOREST"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x51}, symbol: "SHEIK_FIRE"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x52}, symbol: "SHEIK_WATER"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x54}, symbol: "SHEIK_SHADOW"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x55}, symbol: "SHEIK_LIGHT"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0xac}, symbol: "SHEIK_SPIRIT"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x5b}, symbol: "SONG_STORMS"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x40}, symbol: "ZELDA_LETTER"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0xc4}, symbol: "ZELDA_LIGHT_ARROW"},
+	{source: ootSymbolCheckSourceEvent, keyPrefix: "OOT_event_", flags: []int{0x59}, symbol: "ZELDA_SONG"},
+
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemAnjuBottle}, symbol: "ANJU_BOTTLE"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemTalonBottle}, symbol: "TALON_BOTTLE"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemShootingGalleryAdult}, symbol: "SHOOTING_GAME_ADULT"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemGerudoArchery2}, symbol: "GERUDO_ARCHERY_2"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemLaboratoryDive}, symbol: "LABORATORY_DIVE"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemBombchuBowling1}, symbol: "BOMBCHU_BOWLING_1"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemBombchuBowling2}, symbol: "BOMBCHU_BOWLING_2"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemKakarikoRoofMan}, symbol: "KAKARIKO_ROOF_MAN"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemLostWoodsTarget}, symbol: "LOST_WOODS_TARGET"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemGoronBracelet}, symbol: "DARUNIA_BRACELET"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemPocketEgg}, symbol: "TRADE_POCKET_EGG"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemPocketEgg}, symbol: "POCKET_EGG"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemMaskSellKeaton}, symbol: "MASK_SELL_KEATON"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemMaskSellSkull}, symbol: "MASK_SELL_SKULL"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemMaskSellSpooky}, symbol: "MASK_SELL_SPOOKY"},
+	{source: ootSymbolCheckSourceEventItem, keyPrefix: "OOT_event_item_", flags: []int{ootEventItemMaskSellBunny}, symbol: "MASK_SELL_BUNNY"},
+
+	{source: ootSymbolCheckSourceEventMisc, keyPrefix: "OOT_event_misc_", flags: []int{ootEventMiscGoronBombBag}, symbol: "GORON_BOMB_BAG"},
+	{source: ootSymbolCheckSourceEventMisc, keyPrefix: "OOT_event_misc_", flags: []int{ootEventMiscGerudoArchery1}, symbol: "GERUDO_ARCHERY_1"},
+	{source: ootSymbolCheckSourceEventMisc, keyPrefix: "OOT_event_misc_", flags: []int{ootEventMiscRichardHeartPiece}, symbol: "DOG_LADY"},
+	{source: ootSymbolCheckSourceEventMisc, keyPrefix: "OOT_event_misc_", flags: []int{ootEventMiscMedigoron}, symbol: "MEDIGORON"},
 }
 
 // TrackedItem represents a single trackable item with its current quantity.
@@ -814,15 +807,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
 
-	ootFlags := state.Oot.ExtraRecords[ExtraIdxOotFlags]
-	for _, entry := range ootExtraFlagsSymbolChecks {
-		if ootFlags&(1<<entry.bit) == 0 {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
-			appendCheck("OOT_extra_2_"+itoa(entry.bit), name)
-		}
-	}
+	appendOotSymbolChecks(state, ootSymbolChecks[:], appendCheck)
 
 	mmFlags := mmExtraFlags(state)
 	for _, entry := range mmExtraFlagsSymbolChecks {
@@ -867,58 +852,24 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			appendCheck("MM_owl_activation_"+owl.symbol, name)
 		}
 	}
-	appendOotQuestSymbolChecks(state, appendCheck)
-	appendOotChildTradeSymbolChecks(state, appendCheck)
-	appendOotTradeSymbolChecks(state, appendCheck)
-	appendOotEventSymbolChecks(state, appendCheck)
-	appendOotEventItemSymbolChecks(state, appendCheck)
 	appendOotAmbiguousEventItemChecks(state, appendCheck)
-	appendOotEventMiscSymbolChecks(state, appendCheck)
 
 	return checks
 }
 
-func appendOotQuestSymbolChecks(state *GameState, appendCheck func(string, string)) {
-	for _, entry := range ootQuestSymbolChecks {
-		if !HasQuestBit(state.Oot.QuestItems, entry.bit) {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
-			appendCheck("OOT_quest_"+entry.symbol, name)
-		}
-	}
-}
-
-func appendOotEventSymbolChecks(state *GameState, appendCheck func(string, string)) {
-	appendOotSymbolChecksFromFlags(state, ootEventSymbolChecks[:], hasOotEventCheck, "OOT_event_", appendCheck)
-}
-
-func appendOotChildTradeSymbolChecks(state *GameState, appendCheck func(string, string)) {
+func appendOotSymbolChecks(state *GameState, entries []ootSymbolCheck, appendCheck func(string, string)) {
 	childTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] >> 16)
-	for _, entry := range ootChildTradeSymbolChecks {
-		if childTradeSave&entry.mask == 0 {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
-			appendCheck("OOT_child_trade_"+entry.symbol, name)
-		}
-	}
-}
-
-func appendOotTradeSymbolChecks(state *GameState, appendCheck func(string, string)) {
 	adultTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] & 0xffff)
-	for _, entry := range ootTradeSymbolChecks {
-		if adultTradeSave&entry.mask == 0 {
+	ootFlags := state.Oot.ExtraRecords[ExtraIdxOotFlags]
+
+	for _, entry := range entries {
+		if !ootSymbolCheckMatches(state, entry, childTradeSave, adultTradeSave, ootFlags) {
 			continue
 		}
 		if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
-			appendCheck("OOT_trade_"+entry.symbol, name)
+			appendCheck(ootSymbolCheckKey(entry), name)
 		}
 	}
-}
-
-func appendOotEventItemSymbolChecks(state *GameState, appendCheck func(string, string)) {
-	appendOotSymbolChecksFromFlags(state, ootEventItemSymbolChecks[:], hasOotEventItemCheck, "OOT_event_item_", appendCheck)
 }
 
 func appendOotAmbiguousEventItemChecks(state *GameState, appendCheck func(string, string)) {
@@ -943,10 +894,6 @@ func ootHasLostWoodsMemoryGameProgress(state *GameState) bool {
 	return state.Oot.OcarinaGameRound > 0
 }
 
-func appendOotEventMiscSymbolChecks(state *GameState, appendCheck func(string, string)) {
-	appendOotSymbolChecksFromFlags(state, ootEventMiscSymbolChecks[:], hasOotEventMiscCheck, "OOT_event_misc_", appendCheck)
-}
-
 func ootCurrentSceneID(state *GameState) uint16 {
 	if state == nil {
 		return 0xffff
@@ -957,18 +904,41 @@ func ootCurrentSceneID(state *GameState) uint16 {
 	return state.Oot.SceneID
 }
 
-func appendOotSymbolChecksFromFlags(state *GameState, entries []ootSymbolFlagCheck, hasFlag func(*GameState, int) bool, keyPrefix string, appendCheck func(string, string)) {
-	for _, entry := range entries {
-		for _, flag := range entry.flags {
-			if !hasFlag(state, flag) {
-				continue
-			}
-			if name, ok := npcSymbolCheckName("OOT", entry.symbol); ok {
-				appendCheck(keyPrefix+entry.symbol, name)
-			}
-			break
+func ootSymbolCheckMatches(state *GameState, entry ootSymbolCheck, childTradeSave uint16, adultTradeSave uint16, ootFlags uint32) bool {
+	switch entry.source {
+	case ootSymbolCheckSourceExtraFlags:
+		return ootFlags&(1<<entry.bit) != 0
+	case ootSymbolCheckSourceQuest:
+		return HasQuestBit(state.Oot.QuestItems, entry.bit)
+	case ootSymbolCheckSourceChildTrade:
+		return childTradeSave&entry.mask != 0
+	case ootSymbolCheckSourceTrade:
+		return adultTradeSave&entry.mask != 0
+	case ootSymbolCheckSourceEvent:
+		return ootSymbolFlagSet(state, entry.flags, hasOotEventCheck)
+	case ootSymbolCheckSourceEventItem:
+		return ootSymbolFlagSet(state, entry.flags, hasOotEventItemCheck)
+	case ootSymbolCheckSourceEventMisc:
+		return ootSymbolFlagSet(state, entry.flags, hasOotEventMiscCheck)
+	default:
+		return false
+	}
+}
+
+func ootSymbolCheckKey(entry ootSymbolCheck) string {
+	if entry.source == ootSymbolCheckSourceExtraFlags {
+		return entry.keyPrefix + itoa(entry.bit)
+	}
+	return entry.keyPrefix + entry.symbol
+}
+
+func ootSymbolFlagSet(state *GameState, flags []int, hasFlag func(*GameState, int) bool) bool {
+	for _, flag := range flags {
+		if hasFlag(state, flag) {
+			return true
 		}
 	}
+	return false
 }
 
 func hasOotEventCheck(state *GameState, flag int) bool {

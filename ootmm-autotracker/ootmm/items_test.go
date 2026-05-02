@@ -2467,6 +2467,41 @@ func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksPreservesGroupedOotSymbolCheckKeys(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"FIRE_ARROW":   "Lake Hylia Fire Arrow",
+			"POCKET_EGG":   "Hatch Pocket Cucco",
+			"ZELDA_LETTER": "Zelda's Letter",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << ootExtraFlagsFireArrowBit
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] =
+		(1 << (ootAdultTradePocketEggBit + 3)) |
+		uint32(1<<(16+ootChildTradeWeirdEggBit)) |
+		uint32(1<<(16+2))
+	state.Oot.EventsItem[ootEventItemPocketEgg>>4] = 1 << (ootEventItemPocketEgg & 0xF)
+	state.Oot.EventsChk[0x40>>4] = 1 << (0x40 & 0xF)
+
+	checks := ExtractChecks(state)
+	if got, ok := checkKeyByName(checks, "Lake Hylia Fire Arrow"); !ok || got != "OOT_extra_2_19" {
+		t.Fatalf("Lake Hylia Fire Arrow key = %q, want %q", got, "OOT_extra_2_19")
+	}
+	if got, ok := checkKeyByName(checks, "Hatch Pocket Cucco"); !ok || got != "OOT_trade_POCKET_EGG" {
+		t.Fatalf("Hatch Pocket Cucco key = %q, want %q", got, "OOT_trade_POCKET_EGG")
+	}
+	if got, ok := checkKeyByName(checks, "Zelda's Letter"); !ok || got != "OOT_child_trade_ZELDA_LETTER" {
+		t.Fatalf("Zelda's Letter key = %q, want %q", got, "OOT_child_trade_ZELDA_LETTER")
+	}
+}
+
 func TestExtractChecksIncludesOotFrogSongEventFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
@@ -2683,6 +2718,15 @@ func checkNameSet(checks []TrackedCheck) map[string]struct{} {
 		result[check.Name] = struct{}{}
 	}
 	return result
+}
+
+func checkKeyByName(checks []TrackedCheck, name string) (string, bool) {
+	for _, check := range checks {
+		if check.Name == name {
+			return check.Key, true
+		}
+	}
+	return "", false
 }
 
 func TestExtractChecksIncludesMmCycleFlagCollectible(t *testing.T) {
