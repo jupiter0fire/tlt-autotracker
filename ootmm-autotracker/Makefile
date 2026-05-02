@@ -5,7 +5,7 @@ GO?=go
 BUILD_FLAGS?=-trimpath -buildvcs=false
 LDFLAGS?=-s -w
 
-.PHONY: all build build-all clean deps generate-slot-mapping generate-location-mapping
+.PHONY: all build build-all clean deps generate-slot-mapping generate-location-mapping generate-special-locations
 
 all: build
 
@@ -17,6 +17,9 @@ generate-slot-mapping:
 
 generate-location-mapping:
 	python3 tools/generate_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/locations.json
+
+generate-special-locations:
+	python3 tools/generate_special_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/special_locations.json
 
 build: deps
 	$(GO) build $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) .

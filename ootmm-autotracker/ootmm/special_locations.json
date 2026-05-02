@@ -10,7 +10,12 @@
       }
     ],
     "note": "received red potion for Koume",
-    "name": "Swamp Potion Shop Kotake"
+    "name": "Swamp Potion Shop Kotake",
+    "bits": [
+      678
+    ],
+    "byteIndex": 84,
+    "mask": 64
   },
   {
     "code": "0x01",
@@ -52,7 +57,10 @@
       }
     ],
     "note": "Goron Mask check",
-    "name": "Goron Graveyard Mask"
+    "name": "Goron Graveyard Mask",
+    "bits": [
+      21
+    ]
   },
   {
     "code": "0x04",
@@ -65,7 +73,10 @@
       }
     ],
     "note": "Goron Lullaby Intro / half-lullaby check",
-    "name": "Goron Elder"
+    "name": "Goron Elder",
+    "bits": [
+      13
+    ]
   },
   {
     "code": "0x05",
@@ -78,7 +89,10 @@
       }
     ],
     "note": "full Goron Lullaby check",
-    "name": "Goron Baby"
+    "name": "Goron Baby",
+    "bits": [
+      12
+    ]
   },
   {
     "code": "0x06",
@@ -91,7 +105,10 @@
       }
     ],
     "note": "Powder Keg check",
-    "name": "Goron Powder Keg"
+    "name": "Goron Powder Keg",
+    "bits": [
+      11
+    ]
   },
   {
     "code": "0x07",
@@ -104,7 +121,10 @@
       }
     ],
     "note": "location gate; song also exists in quest bits",
-    "name": "Romani Ranch Epona Song"
+    "name": "Romani Ranch Epona Song",
+    "bits": [
+      28
+    ]
   },
   {
     "code": "0x08",
@@ -117,7 +137,10 @@
       }
     ],
     "note": "Zora Mask check",
-    "name": "Great Bay Coast Zora Mask"
+    "name": "Great Bay Coast Zora Mask",
+    "bits": [
+      25
+    ]
   },
   {
     "code": "0x09",
@@ -130,7 +153,12 @@
       }
     ],
     "note": "seahorse heart piece",
-    "name": "Pinnacle Rock HP"
+    "name": "Pinnacle Rock HP",
+    "bits": [
+      256
+    ],
+    "byteIndex": 32,
+    "mask": 1
   },
   {
     "code": "0x0a",
@@ -156,7 +184,10 @@
       }
     ],
     "note": "Stone Mask check",
-    "name": "Road to Ikana Stone Mask"
+    "name": "Road to Ikana Stone Mask",
+    "bits": [
+      10
+    ]
   },
   {
     "code": "0x0c",
@@ -169,7 +200,10 @@
       }
     ],
     "note": "Garo Mask check",
-    "name": "Gorman Track Garo Mask"
+    "name": "Gorman Track Garo Mask",
+    "bits": [
+      26
+    ]
   },
   {
     "code": "0x0d",
@@ -182,7 +216,10 @@
       }
     ],
     "note": "location gate; song also exists in quest bits",
-    "name": "Beneath The Graveyard Song of Storms"
+    "name": "Beneath The Graveyard Song of Storms",
+    "bits": [
+      9
+    ]
   },
   {
     "code": "0x0e",
@@ -195,7 +232,10 @@
       }
     ],
     "note": "Gibdo Mask check",
-    "name": "Music Box House Gibdo Mask"
+    "name": "Music Box House Gibdo Mask",
+    "bits": [
+      7
+    ]
   },
   {
     "code": "0x0f",
@@ -224,7 +264,10 @@
       }
     ],
     "note": "location gate; song also exists in quest bits",
-    "name": "Ancient Castle of Ikana Song Emptiness"
+    "name": "Ancient Castle of Ikana Song Emptiness",
+    "bits": [
+      8
+    ]
   },
   {
     "code": "0x11",
@@ -366,10 +409,10 @@
     ],
     "note": "town shooting gallery quiver reward",
     "name": "Town Archery Reward 1",
-    "byteIndex": 59,
     "bits": [
       477
     ],
+    "byteIndex": 59,
     "mask": 32
   },
   {
@@ -383,7 +426,12 @@
       }
     ],
     "note": "town shooting gallery heart piece",
-    "name": "Town Archery Reward 2"
+    "name": "Town Archery Reward 2",
+    "bits": [
+      258
+    ],
+    "byteIndex": 32,
+    "mask": 4
   },
   {
     "code": "0x1b",
@@ -397,10 +445,10 @@
     ],
     "note": "swamp shooting gallery quiver reward",
     "name": "Swamp Archery Reward 1",
-    "byteIndex": 59,
     "bits": [
       476
     ],
+    "byteIndex": 59,
     "mask": 16
   },
   {
@@ -414,7 +462,12 @@
       }
     ],
     "note": "swamp shooting gallery heart piece",
-    "name": "Swamp Archery Reward 2"
+    "name": "Swamp Archery Reward 2",
+    "bits": [
+      257
+    ],
+    "byteIndex": 32,
+    "mask": 2
   },
   {
     "code": "0x1d",
@@ -427,7 +480,12 @@
       }
     ],
     "note": "boat house heart piece",
-    "name": "Tourist Information Boat Archery"
+    "name": "Tourist Information Boat Archery",
+    "bits": [
+      214
+    ],
+    "byteIndex": 26,
+    "mask": 64
   },
   {
     "code": "0x1e",
@@ -445,7 +503,13 @@
       }
     ],
     "note": "OoTMM collapses two En_Shn heart-piece branches into one NPC code",
-    "name": "Tourist Information Tingle Picture"
+    "name": "Tourist Information Tingle Picture",
+    "bits": [
+      698,
+      699
+    ],
+    "byteIndex": 87,
+    "mask": 4
   },
   {
     "code": "0x1f",
@@ -458,7 +522,10 @@
       }
     ],
     "note": "Mask of Truth reward",
-    "name": "Swamp Spider House Mask of Truth"
+    "name": "Swamp Spider House Mask of Truth",
+    "bits": [
+      7
+    ]
   },
   {
     "code": "0x20",
@@ -471,7 +538,12 @@
       }
     ],
     "note": "Oceanside Spider House reward flag",
-    "name": "Ocean Spider House Wallet"
+    "name": "Ocean Spider House Wallet",
+    "bits": [
+      111
+    ],
+    "byteIndex": 13,
+    "mask": 128
   },
   {
     "code": "0x21",
@@ -484,7 +556,10 @@
       }
     ],
     "note": "location gate; song also exists in quest bits",
-    "name": "Southern Swamp Song of Soaring"
+    "name": "Southern Swamp Song of Soaring",
+    "bits": [
+      30
+    ]
   },
   {
     "code": "0x22",
@@ -497,7 +572,7 @@
       }
     ],
     "note": "Bremen Mask check",
-    "name": "Clock Town Guru-Guru Mask Bremen",
+    "name": "Clock Town Guru Guru Mask Bremen",
     "bits": [
       10
     ]
@@ -513,7 +588,10 @@
       }
     ],
     "note": "Bunny Hood check",
-    "name": "Cucco Shack Bunny Mask"
+    "name": "Cucco Shack Bunny Mask",
+    "bits": [
+      29
+    ]
   },
   {
     "code": "0x24",
@@ -526,7 +604,12 @@
       }
     ],
     "note": "dog race heart piece",
-    "name": "Doggy Racetrack HP"
+    "name": "Doggy Racetrack HP",
+    "bits": [
+      69
+    ],
+    "byteIndex": 8,
+    "mask": 32
   },
   {
     "code": "0x25",
@@ -539,7 +622,12 @@
       }
     ],
     "note": "aliens bottle reward",
-    "name": "Romani Ranch Aliens"
+    "name": "Romani Ranch Aliens",
+    "bits": [
+      177
+    ],
+    "byteIndex": 22,
+    "mask": 2
   },
   {
     "code": "0x26",
@@ -552,7 +640,10 @@
       }
     ],
     "note": "Cremia escort reward state; shared underlying Romani's Mask reward flag",
-    "name": "Romani Ranch Cremia Escort"
+    "name": "Romani Ranch Cremia Escort",
+    "bits": [
+      27
+    ]
   },
   {
     "code": "0x27",
@@ -565,7 +656,12 @@
       }
     ],
     "note": "fisherman jumping game heart piece",
-    "name": "Great Bay Coast Fisherman HP"
+    "name": "Great Bay Coast Fisherman HP",
+    "bits": [
+      660
+    ],
+    "byteIndex": 82,
+    "mask": 16
   },
   {
     "code": "0x28",
@@ -578,7 +674,12 @@
       }
     ],
     "note": "first beaver reward, bottle",
-    "name": "Waterfall Rapids Beaver Race 1"
+    "name": "Waterfall Rapids Beaver Race 1",
+    "bits": [
+      191
+    ],
+    "byteIndex": 23,
+    "mask": 128
   },
   {
     "code": "0x29",
@@ -591,7 +692,12 @@
       }
     ],
     "note": "second beaver reward, heart piece",
-    "name": "Waterfall Rapids Beaver Race 2"
+    "name": "Waterfall Rapids Beaver Race 2",
+    "bits": [
+      200
+    ],
+    "byteIndex": 25,
+    "mask": 1
   },
   {
     "code": "0x2a",
@@ -604,7 +710,12 @@
       }
     ],
     "note": "marine lab fish heart piece",
-    "name": "Laboratory Fish HP"
+    "name": "Laboratory Fish HP",
+    "bits": [
+      449
+    ],
+    "byteIndex": 56,
+    "mask": 2
   },
   {
     "code": "0x2b",
@@ -617,7 +728,12 @@
       }
     ],
     "note": "Goron Race bottle / gold dust reward",
-    "name": "Goron Race Reward"
+    "name": "Goron Race Reward",
+    "bits": [
+      331
+    ],
+    "byteIndex": 41,
+    "mask": 8
   },
   {
     "code": "0x2c",
@@ -630,7 +746,10 @@
       }
     ],
     "note": "Don Gero's Mask check",
-    "name": "Mountain Village Don Gero Mask"
+    "name": "Mountain Village Don Gero Mask",
+    "bits": [
+      24
+    ]
   },
   {
     "code": "0x2d",
@@ -643,7 +762,10 @@
       }
     ],
     "note": "Razor Sword check",
-    "name": "Blacksmith Razor Blade"
+    "name": "Blacksmith Razor Blade",
+    "bits": [
+      23
+    ]
   },
   {
     "code": "0x2e",
@@ -656,7 +778,10 @@
       }
     ],
     "note": "Gilded Sword check",
-    "name": "Blacksmith Gilded Sword"
+    "name": "Blacksmith Gilded Sword",
+    "bits": [
+      22
+    ]
   },
   {
     "code": "0x2f",
@@ -669,7 +794,12 @@
       }
     ],
     "note": "frog choir heart piece",
-    "name": "Mountain Village Frog Choir HP"
+    "name": "Mountain Village Frog Choir HP",
+    "bits": [
+      287
+    ],
+    "byteIndex": 35,
+    "mask": 128
   },
   {
     "code": "0x30",
@@ -698,7 +828,12 @@
       }
     ],
     "note": "Evan heart piece",
-    "name": "Zora Hall Evan HP"
+    "name": "Zora Hall Evan HP",
+    "bits": [
+      317
+    ],
+    "byteIndex": 39,
+    "mask": 32
   },
   {
     "code": "0x32",
@@ -711,7 +846,10 @@
       }
     ],
     "note": "Zora Hall lights check",
-    "name": "Zora Hall Scene Lights"
+    "name": "Zora Hall Scene Lights",
+    "bits": [
+      14
+    ]
   },
   {
     "code": "0x33",
@@ -724,7 +862,12 @@
       }
     ],
     "note": "Ghost Hut / Spirit House heart piece",
-    "name": "Ghost Hut HP"
+    "name": "Ghost Hut HP",
+    "bits": [
+      438
+    ],
+    "byteIndex": 54,
+    "mask": 64
   },
   {
     "code": "0x34",
@@ -833,7 +976,10 @@
       }
     ],
     "note": "bank threshold 200",
-    "name": "Clock Town Bank Reward 1"
+    "name": "Clock Town Bank Reward 1",
+    "bits": [
+      2
+    ]
   },
   {
     "code": "0x3b",
@@ -846,7 +992,10 @@
       }
     ],
     "note": "bank threshold 500",
-    "name": "Clock Town Bank Reward 2"
+    "name": "Clock Town Bank Reward 2",
+    "bits": [
+      3
+    ]
   },
   {
     "code": "0x3c",
@@ -859,7 +1008,10 @@
       }
     ],
     "note": "bank threshold 1000",
-    "name": "Clock Town Bank Reward 3"
+    "name": "Clock Town Bank Reward 3",
+    "bits": [
+      4
+    ]
   },
   {
     "code": "0x3d",
@@ -872,7 +1024,12 @@
       }
     ],
     "note": "postman heart piece",
-    "name": "Post Office HP"
+    "name": "Post Office HP",
+    "bits": [
+      571
+    ],
+    "byteIndex": 71,
+    "mask": 8
   },
   {
     "code": "0x3e",
@@ -885,7 +1042,12 @@
       }
     ],
     "note": "Rosa Sisters heart piece",
-    "name": "Clock Town Rosa Sisters HP"
+    "name": "Clock Town Rosa Sisters HP",
+    "bits": [
+      607
+    ],
+    "byteIndex": 75,
+    "mask": 128
   },
   {
     "code": "0x3f",
@@ -899,10 +1061,10 @@
     ],
     "note": "swordsman heart piece",
     "name": "Swordsman School HP",
-    "byteIndex": 63,
     "bits": [
       509
     ],
+    "byteIndex": 63,
     "mask": 32
   },
   {
@@ -932,7 +1094,12 @@
       }
     ],
     "note": "treasure chest shop heart piece",
-    "name": "Chest Game HP"
+    "name": "Chest Game HP",
+    "bits": [
+      125
+    ],
+    "byteIndex": 15,
+    "mask": 32
   },
   {
     "code": "0x42",
@@ -961,7 +1128,12 @@
       }
     ],
     "note": "Honey and Darling heart piece",
-    "name": "Honey & Darling Reward All Days"
+    "name": "Honey & Darling Reward All Days",
+    "bits": [
+      183
+    ],
+    "byteIndex": 22,
+    "mask": 128
   },
   {
     "code": "0x44",
@@ -1022,7 +1194,12 @@
       }
     ],
     "note": "Curiosity Shop first reward",
-    "name": "Kafei Hideout Owner Reward 1"
+    "name": "Kafei Hideout Owner Reward 1",
+    "bits": [
+      266
+    ],
+    "byteIndex": 33,
+    "mask": 4
   },
   {
     "code": "0x48",
@@ -1083,7 +1260,12 @@
       }
     ],
     "note": "Keaton quiz heart piece",
-    "name": "Clock Town Keaton HP"
+    "name": "Clock Town Keaton HP",
+    "bits": [
+      639
+    ],
+    "byteIndex": 79,
+    "mask": 128
   },
   {
     "code": "0x4c",
@@ -1112,7 +1294,12 @@
       }
     ],
     "note": "Deku Playground heart piece",
-    "name": "Deku Playground Reward All Days"
+    "name": "Deku Playground Reward All Days",
+    "bits": [
+      119
+    ],
+    "byteIndex": 14,
+    "mask": 128
   },
   {
     "code": "0x4e",
@@ -1141,7 +1328,12 @@
       }
     ],
     "note": "grandma short story heart piece",
-    "name": "Stock Pot Inn Grandma HP 1"
+    "name": "Stock Pot Inn Grandma HP 1",
+    "bits": [
+      569
+    ],
+    "byteIndex": 71,
+    "mask": 2
   },
   {
     "code": "0x50",
@@ -1154,7 +1346,12 @@
       }
     ],
     "note": "grandma long story heart piece",
-    "name": "Stock Pot Inn Grandma HP 2"
+    "name": "Stock Pot Inn Grandma HP 2",
+    "bits": [
+      570
+    ],
+    "byteIndex": 71,
+    "mask": 4
   },
   {
     "code": "0x51",
@@ -1167,7 +1364,12 @@
       }
     ],
     "note": "toilet hand heart piece",
-    "name": "Stock Pot Inn ??? HP"
+    "name": "Stock Pot Inn ??? HP",
+    "bits": [
+      568
+    ],
+    "byteIndex": 71,
+    "mask": 1
   },
   {
     "code": "0x52",
@@ -1228,7 +1430,12 @@
       }
     ],
     "note": "Madame Aroma bottle reward, not the Milk Bar sale",
-    "name": "Milk Bar Madame Aroma Bottle"
+    "name": "Milk Bar Madame Aroma Bottle",
+    "bits": [
+      459
+    ],
+    "byteIndex": 57,
+    "mask": 8
   },
   {
     "code": "0x56",
@@ -1241,7 +1448,12 @@
       }
     ],
     "note": "mayor heart piece",
-    "name": "Mayor's Office HP"
+    "name": "Mayor's Office HP",
+    "bits": [
+      484
+    ],
+    "byteIndex": 60,
+    "mask": 16
   },
   {
     "code": "0x57",
@@ -1254,7 +1466,12 @@
       }
     ],
     "note": "postbox heart piece",
-    "name": "Clock Town Post Box"
+    "name": "Clock Town Post Box",
+    "bits": [
+      651
+    ],
+    "byteIndex": 81,
+    "mask": 8
   },
   {
     "code": "0x58",
@@ -1267,7 +1484,12 @@
       }
     ],
     "note": "observatory business scrub heart piece",
-    "name": "Termina Field Scrub"
+    "name": "Termina Field Scrub",
+    "bits": [
+      425
+    ],
+    "byteIndex": 53,
+    "mask": 2
   },
   {
     "code": "0x59",
@@ -1280,7 +1502,12 @@
       }
     ],
     "note": "gossip stone grotto heart piece",
-    "name": "Termina Field Gossip Stones HP"
+    "name": "Termina Field Gossip Stones HP",
+    "bits": [
+      724
+    ],
+    "byteIndex": 90,
+    "mask": 16
   },
   {
     "code": "0x5a",
@@ -1407,10 +1634,10 @@
     ],
     "note": "Tingle map",
     "name": "Tingle Map Clock Town",
-    "byteIndex": 35,
     "bits": [
-      224
+      280
     ],
+    "byteIndex": 35,
     "mask": 1
   },
   {
@@ -1425,10 +1652,10 @@
     ],
     "note": "Tingle map",
     "name": "Tingle Map Woodfall",
-    "byteIndex": 35,
     "bits": [
-      225
+      281
     ],
+    "byteIndex": 35,
     "mask": 2
   },
   {
@@ -1443,10 +1670,10 @@
     ],
     "note": "Tingle map",
     "name": "Tingle Map Snowhead",
-    "byteIndex": 35,
     "bits": [
-      226
+      282
     ],
+    "byteIndex": 35,
     "mask": 4
   },
   {
@@ -1461,10 +1688,10 @@
     ],
     "note": "Tingle map",
     "name": "Tingle Map Ranch",
-    "byteIndex": 35,
     "bits": [
-      227
+      283
     ],
+    "byteIndex": 35,
     "mask": 8
   },
   {
@@ -1479,10 +1706,10 @@
     ],
     "note": "Tingle map",
     "name": "Tingle Map Great Bay",
-    "byteIndex": 35,
     "bits": [
-      228
+      284
     ],
+    "byteIndex": 35,
     "mask": 16
   },
   {
@@ -1497,10 +1724,10 @@
     ],
     "note": "Tingle map",
     "name": "Tingle Map Ikana",
-    "byteIndex": 35,
     "bits": [
-      229
+      285
     ],
+    "byteIndex": 35,
     "mask": 32
   },
   {
@@ -1674,7 +1901,10 @@
       }
     ],
     "note": "scrub shop beans",
-    "name": "Southern Swamp Scrub Shop"
+    "name": "Southern Swamp Scrub Shop",
+    "bits": [
+      30
+    ]
   },
   {
     "code": "0x73",
@@ -1687,7 +1917,10 @@
       }
     ],
     "note": "scrub shop green potion",
-    "name": "Zora Hall Scrub Shop"
+    "name": "Zora Hall Scrub Shop",
+    "bits": [
+      29
+    ]
   },
   {
     "code": "0x74",
@@ -1700,7 +1933,10 @@
       }
     ],
     "note": "scrub shop blue potion",
-    "name": "Ikana Valley Scrub Shop"
+    "name": "Ikana Valley Scrub Shop",
+    "bits": [
+      3
+    ]
   },
   {
     "code": "0x75",
@@ -1713,7 +1949,10 @@
       }
     ],
     "note": "Gorman Bros milk sale",
-    "name": "Gorman Track Milk Purchase"
+    "name": "Gorman Track Milk Purchase",
+    "bits": [
+      2
+    ]
   },
   {
     "code": "0x76",
@@ -1726,7 +1965,10 @@
       }
     ],
     "note": "Milk Bar milk sale",
-    "name": "Milk Bar Purchase Milk"
+    "name": "Milk Bar Purchase Milk",
+    "bits": [
+      1
+    ]
   },
   {
     "code": "0x77",
@@ -1739,7 +1981,10 @@
       }
     ],
     "note": "Milk Bar Chateau sale",
-    "name": "Milk Bar Purchase Chateau"
+    "name": "Milk Bar Purchase Chateau",
+    "bits": [
+      0
+    ]
   },
   {
     "code": "0x78",
@@ -1751,7 +1996,10 @@
         "mask": "0x8000"
       }
     ],
-    "note": "hidden owl, owl id 15"
+    "note": "hidden owl, owl id 15",
+    "bits": [
+      15
+    ]
   },
   {
     "code": "0x79",
@@ -1763,7 +2011,10 @@
         "mask": "0x00100000"
       }
     ],
-    "note": "custom Majora clear / reward flag"
+    "note": "custom Majora clear / reward flag",
+    "bits": [
+      11
+    ]
   },
   {
     "code": "0x7a",

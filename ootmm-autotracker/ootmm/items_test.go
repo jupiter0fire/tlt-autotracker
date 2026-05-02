@@ -1333,7 +1333,7 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	if _, ok := checks["Oath to Order"]; !ok {
 		t.Fatal("missing MM extra-flag check for Oath to Order")
 	}
-	if _, ok := checks["Clock Town Guru-Guru Mask Bremen"]; !ok {
+	if _, ok := checks["Clock Town Guru Guru Mask Bremen"]; !ok {
 		t.Fatal("missing MM extra-flag check for Bremen Mask")
 	}
 	if _, ok := checks["Deku Shrine Mask of Scents"]; !ok {
@@ -1903,7 +1903,7 @@ func TestExtractChecksIncludesOotSongEventFallbacks(t *testing.T) {
 	state := &GameState{}
 	state.Oot.EventsChk[ootEventSongSariaCustom>>4] =
 		(1 << (ootEventSongSariaCustom & 0xF)) |
-		(1 << (ootEventSongSunCustom & 0xF))
+			(1 << (ootEventSongSunCustom & 0xF))
 
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Saria's Song"]; !ok {
@@ -2466,8 +2466,8 @@ func TestExtractChecksPreservesGroupedOotSymbolCheckKeys(t *testing.T) {
 	state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << ootExtraFlagsFireArrowBit
 	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] =
 		(1 << (ootAdultTradePocketEggBit + 3)) |
-		uint32(1<<(16+ootChildTradeWeirdEggBit)) |
-		uint32(1<<(16+2))
+			uint32(1<<(16+ootChildTradeWeirdEggBit)) |
+			uint32(1<<(16+2))
 	state.Oot.EventsItem[ootEventItemPocketEgg>>4] = 1 << (ootEventItemPocketEgg & 0xF)
 	state.Oot.EventsChk[0x40>>4] = 1 << (0x40 & 0xF)
 

@@ -4,16 +4,17 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 type specialLocationEntry struct {
-	Symbol    string                      `json:"symbol"`
-	Name      string                      `json:"name"`
+	Symbol    string                       `json:"symbol"`
+	Name      string                       `json:"name"`
 	Sources   []specialLocationSourceEntry `json:"sources"`
-	Bits      []int                       `json:"bits"`
-	ByteIndex int                         `json:"byteIndex"`
-	Mask      uint8                       `json:"mask"`
+	Bits      []int                        `json:"bits"`
+	ByteIndex int                          `json:"byteIndex"`
+	Mask      uint8                        `json:"mask"`
 }
 
 type specialLocationSourceEntry struct {
@@ -74,19 +75,48 @@ func loadMmSymbolChecks() []mmSymbolCheck {
 
 			switch source {
 			case mmSymbolCheckSourceWeekEvent:
-				if entry.ByteIndex > 0 {
-					check.byteIndex = entry.ByteIndex
-					check.mask = entry.Mask
+				if byteIndex, mask, ok := parseWeekEventSource(entry, src); ok {
+					check.byteIndex = byteIndex
+					check.mask = mask
+				} else {
+					continue
 				}
 			default:
-				if len(entry.Bits) > 0 {
-					check.bit = entry.Bits[0]
+				if len(entry.Bits) == 0 {
+					continue
 				}
+				check.bit = entry.Bits[0]
 			}
 
 			result = append(result, check)
-			break
 		}
 	}
 	return result
+}
+
+func parseWeekEventSource(entry specialLocationEntry, src specialLocationSourceEntry) (int, uint8, bool) {
+	byteIndex := entry.ByteIndex
+	mask := entry.Mask
+	hasByteIndex := entry.Mask != 0
+
+	if src.Field != "" {
+		if start := strings.LastIndex(src.Field, "["); start >= 0 {
+			if end := strings.LastIndex(src.Field, "]"); end > start {
+				if value, err := strconv.Atoi(src.Field[start+1 : end]); err == nil {
+					byteIndex = value
+					hasByteIndex = true
+				}
+			}
+		}
+	}
+	if src.Mask != "" {
+		if value, err := strconv.ParseUint(src.Mask, 0, 8); err == nil {
+			mask = uint8(value)
+		}
+	}
+
+	if !hasByteIndex || byteIndex < 0 || mask == 0 {
+		return 0, 0, false
+	}
+	return byteIndex, mask, true
 }
