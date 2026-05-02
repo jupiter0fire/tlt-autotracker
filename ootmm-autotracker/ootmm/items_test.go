@@ -1283,40 +1283,6 @@ func TestExtractChecksIncludesScrubAndSilverRupeeBitmapChecks(t *testing.T) {
 }
 
 func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
-	originalSymbols := npcSymbolTables
-	npcSymbolTables = map[string]map[string]string{
-		"OOT": {},
-		"MM": {
-			"MASK_KAFEI":         "Mayor's Office Kafei's Mask",
-			"HONEY_DARLING_1":   "Honey & Darling Reward Any Day",
-			"ROOM_KEY":          "Stock Pot Inn Room Key",
-			"LETTER_TO_KAFEI":   "Stock Pot Inn Letter to Kafei",
-			"PENDANT_OF_MEMORIES": "Kafei Hideout Pendant of Memories",
-			"LETTER_TO_MAMA":    "Kafei Hideout Owner Reward 2",
-			"MASK_BLAST":        "Clock Town Blast Mask",
-			"BOMBER_NOTEBOOK":   "Clock Town Bomber Notebook",
-			"DEKU_PLAYGROUND_1": "Deku Playground Reward Any Day",
-			"MASK_COUPLE":       "Stock Pot Inn Couple's Mask",
-			"MASK_POSTMAN":      "Clock Town Postman Hat",
-			"MASK_TROUPE_LEADER": "Milk Bar Troupe Leader Mask",
-			"MASK_FIERCE_DEITY": "Moon Fierce Deity Mask",
-			"SKULL_KID_OCARINA": "Clock Tower Roof Skull Kid Ocarina",
-			"SONG_ORDER":        "Oath to Order",
-			"MASK_BREMEN":       "Clock Town Guru-Guru Mask Bremen",
-			"MASK_SCENTS":       "Deku Shrine Mask of Scents",
-			"MASK_KAMARO":       "Termina Field Kamaro Mask",
-			"MOON_TEAR":         "Astral Observatory Moon Tear",
-			"LOTTERY_NIGHT_1":   "Lottery Prize Night 1",
-			"LOTTERY_NIGHT_2":   "Lottery Prize Night 2",
-			"LOTTERY_NIGHT_3":   "Lottery Prize Night 3",
-			"SONG_HEALING":      "Initial Song of Healing",
-			"STRAY_FAIRY_TOWN":  "Clock Town Stray Fairy",
-		},
-	}
-	t.Cleanup(func() {
-		npcSymbolTables = originalSymbols
-	})
-
 	state := &GameState{}
 	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = (1 << mmExtraFlags2MaskKafei) | (1 << mmExtraFlags2HoneyDarling) | (1 << mmExtraFlags2RoomKey) | (1 << mmExtraFlags2LetterKafei) | (1 << mmExtraFlags2Pendant) | (1 << mmExtraFlags2LetterMama) | (1 << mmExtraFlags2Notebook) | (1 << mmExtraFlags2MaskBlast) | (1 << mmExtraFlags2DekuPlayground) | (1 << mmExtraFlags2MaskCouple) | (1 << mmExtraFlags2MaskPostman) | (1 << mmExtraFlags2MaskTroupeLeader) | (1 << mmExtraFlags2MaskFierceDeity) | (1 << mmExtraFlags2Ocarina) | (1 << mmExtraFlags2SongOath) | (1 << mmExtraFlags2MaskBremen) | (1 << mmExtraFlags2MaskScents) | (1 << mmExtraFlags2MaskKamaro) | (1 << mmExtraFlags2MoonTear) | (1 << mmExtraFlags2SongHealing) | (1 << mmExtraFlags2TownStrayFairy)
 	state.Oot.ExtraRecords[ExtraIdxMmFlags3] = (1 << mmExtraFlags3Lottery1) | (1 << mmExtraFlags3Lottery2) | (1 << mmExtraFlags3Lottery3)
@@ -1397,22 +1363,6 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 }
 
 func TestExtractChecksIncludesMmGreatFairyExtraFlagChecks(t *testing.T) {
-	originalSymbols := npcSymbolTables
-	npcSymbolTables = map[string]map[string]string{
-		"OOT": {},
-		"MM": {
-			"GREAT_FAIRY_TOWN":      "Clock Town Great Fairy",
-			"GREAT_FAIRY_TOWN_ALT":  "Clock Town Great Fairy Alt",
-			"GREAT_FAIRY_SWAMP":     "Woodfall Great Fairy",
-			"GREAT_FAIRY_MOUNTAIN":  "Snowhead Great Fairy",
-			"GREAT_FAIRY_OCEAN":     "Great Bay Great Fairy",
-			"GREAT_FAIRY_VALLEY":    "Ikana Great Fairy",
-		},
-	}
-	t.Cleanup(func() {
-		npcSymbolTables = originalSymbols
-	})
-
 	tests := []struct {
 		name       string
 		bit        int
@@ -1515,23 +1465,6 @@ func TestExtractChecksIncludesMmGreatFairyExtraFlagChecks(t *testing.T) {
 }
 
 func TestExtractChecksIncludesMmNpcExtraFlagChecks(t *testing.T) {
-	originalSymbols := npcSymbolTables
-	npcSymbolTables = map[string]map[string]string{
-		"OOT": {},
-		"MM": {
-			"KOUME_PICTOGRAPH_BOX": "Tourist Information Pictobox",
-			"SCRUB_BOMB_BAG":      "Goron Village Scrub Bomb Bag",
-			"SCRUB_LAND":          "Clock Town Business Scrub",
-			"SCRUB_MOUNTAIN":      "Goron Village Scrub Deed",
-			"SCRUB_OCEAN":         "Zora Hall Scrub Deed",
-			"SCRUB_SWAMP":         "Southern Swamp Scrub Deed",
-			"SCRUB_VALLEY":        "Ikana Valley Scrub Rupee",
-		},
-	}
-	t.Cleanup(func() {
-		npcSymbolTables = originalSymbols
-	})
-
 	tests := []struct {
 		name     string
 		bit      int

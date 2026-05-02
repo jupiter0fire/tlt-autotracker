@@ -189,6 +189,7 @@ const (
 type mmSymbolCheck struct {
 	source    mmSymbolCheckSource
 	symbol    string
+	name      string
 	keyPrefix string
 	bit       int
 	byteIndex int
@@ -212,69 +213,11 @@ var mmOwlItems = [...]struct {
 	{"MM_OWL_HIDDEN", mmOwlHiddenBit},
 }
 
-// MM symbol-based checks all resolve through the same npc.yml symbols;
-// only the backing save source differs.
-var mmSymbolChecks = [...]mmSymbolCheck{
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsPictoboxBit, symbol: "KOUME_PICTOGRAPH_BOX"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubTownBit, symbol: "SCRUB_LAND"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubSwampBit, symbol: "SCRUB_SWAMP"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubMountainBit, symbol: "SCRUB_MOUNTAIN"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubOceanBit, symbol: "SCRUB_OCEAN"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubValleyBit, symbol: "SCRUB_VALLEY"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubBombBagBit, symbol: "SCRUB_BOMB_BAG"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyTownBit, symbol: "GREAT_FAIRY_TOWN"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyTownAltBit, symbol: "GREAT_FAIRY_TOWN_ALT"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairySwampBit, symbol: "GREAT_FAIRY_SWAMP"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyMountainBit, symbol: "GREAT_FAIRY_MOUNTAIN"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyOceanBit, symbol: "GREAT_FAIRY_OCEAN"},
-	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyValleyBit, symbol: "GREAT_FAIRY_VALLEY"},
+// mmSymbolChecks is loaded from special_locations.json at init time.
+var mmSymbolChecks []mmSymbolCheck
 
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskKafei, symbol: "MASK_KAFEI"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2HoneyDarling, symbol: "HONEY_DARLING_1"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2RoomKey, symbol: "ROOM_KEY"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2LetterKafei, symbol: "LETTER_TO_KAFEI"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2Pendant, symbol: "PENDANT_OF_MEMORIES"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2LetterMama, symbol: "LETTER_TO_MAMA"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2Notebook, symbol: "BOMBER_NOTEBOOK"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskBlast, symbol: "MASK_BLAST"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2DekuPlayground, symbol: "DEKU_PLAYGROUND_1"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskCouple, symbol: "MASK_COUPLE"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskPostman, symbol: "MASK_POSTMAN"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskTroupeLeader, symbol: "MASK_TROUPE_LEADER"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskFierceDeity, symbol: "MASK_FIERCE_DEITY"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2Ocarina, symbol: "SKULL_KID_OCARINA"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2SongOath, symbol: "SONG_ORDER"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskBremen, symbol: "MASK_BREMEN"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskScents, symbol: "MASK_SCENTS"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskKamaro, symbol: "MASK_KAMARO"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MoonTear, symbol: "MOON_TEAR"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2SongHealing, symbol: "SONG_HEALING"},
-	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2TownStrayFairy, symbol: "STRAY_FAIRY_TOWN"},
-
-	{source: mmSymbolCheckSourceExtraFlags3, keyPrefix: "MM_extra_13_", bit: mmExtraFlags3Lottery1, symbol: "LOTTERY_NIGHT_1"},
-	{source: mmSymbolCheckSourceExtraFlags3, keyPrefix: "MM_extra_13_", bit: mmExtraFlags3Lottery2, symbol: "LOTTERY_NIGHT_2"},
-	{source: mmSymbolCheckSourceExtraFlags3, keyPrefix: "MM_extra_13_", bit: mmExtraFlags3Lottery3, symbol: "LOTTERY_NIGHT_3"},
-
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapClockTownMask, symbol: "TINGLE_MAP_CLOCK_TOWN"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapWoodfallMask, symbol: "TINGLE_MAP_WOODFALL"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapSnowheadMask, symbol: "TINGLE_MAP_SNOWHEAD"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapRanchMask, symbol: "TINGLE_MAP_ROMANI_RANCH"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapGreatBayMask, symbol: "TINGLE_MAP_GREAT_BAY"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapIkanaMask, symbol: "TINGLE_MAP_STONE_TOWER"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventArcheryByte, mask: mmWeekEventArcherySwampReward1Mask, symbol: "SHOOTING_GAME_SWAMP_1"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventArcheryByte, mask: mmWeekEventArcheryTownReward1Mask, symbol: "SHOOTING_GAME_TOWN_1"},
-	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventSwordsmanSchoolByte, mask: mmWeekEventSwordsmanSchoolMask, symbol: "SWORDSMAN_HEART_PIECE"},
-
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlGreatBayBit, symbol: "OWL_GREAT_BAY"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlZoraCapeBit, symbol: "OWL_ZORA_CAPE"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlSnowheadBit, symbol: "OWL_SNOWHEAD"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlMountainVillageBit, symbol: "OWL_MOUNTAIN_VILLAGE"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlClockTownBit, symbol: "OWL_CLOCK_TOWN"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlMilkRoadBit, symbol: "OWL_MILK_ROAD"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlWoodfallBit, symbol: "OWL_WOODFALL"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlSouthernSwampBit, symbol: "OWL_SOUTHERN_SWAMP"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlIkanaCanyonBit, symbol: "OWL_IKANA_CANYON"},
-	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlStoneTowerBit, symbol: "OWL_STONE_TOWER"},
+func init() {
+	mmSymbolChecks = loadMmSymbolChecks()
 }
 
 var sharedOcarinaButtons = [...]struct {
@@ -837,8 +780,8 @@ func appendMmSymbolChecks(state *GameState, entries []mmSymbolCheck, appendCheck
 		if !mmSymbolCheckMatches(state, entry, mmFlags, mmFlags2, mmFlags3) {
 			continue
 		}
-		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
-			appendCheck(mmSymbolCheckKey(entry), name)
+		if entry.name != "" {
+			appendCheck(mmSymbolCheckKey(entry), entry.name)
 		}
 	}
 }

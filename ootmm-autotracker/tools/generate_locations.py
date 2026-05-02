@@ -368,9 +368,11 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                 "mq": mq_names,
             }
         )
+    # Only include OOT symbols; MM symbols now come from special_locations.json
     symbol_checks = [
         {"game": game, "symbol": symbol, "name": name}
         for (game, symbol), name in sorted(symbol_checks_raw.items())
+        if game == "OOT"
     ]
 
     return {
