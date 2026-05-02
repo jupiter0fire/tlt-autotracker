@@ -34,10 +34,10 @@ const (
 	ootExtraFlagsGreatFairyWindBit    = 28
 	ootExtraFlagsGreatFairyFireBit    = 29
 	ootExtraFlagsGreatFairyLoveBit    = 30
-	ootExtraFlagsChildWalletBit     = 17
-	ootExtraFlagsChestGameKeyBit    = 6
-	ootExtraFlagsBottomlessBit      = 7
-	ootExtraFlagsOddPotionBit       = 2
+	ootExtraFlagsChildWalletBit       = 17
+	ootExtraFlagsChestGameKeyBit      = 6
+	ootExtraFlagsBottomlessBit        = 7
+	ootExtraFlagsOddPotionBit         = 2
 	// MmExtraFlags.greatFairies is stored in raw extra-record bits 1..6.
 	mmExtraFlagsGreatFairyTownBit     = 1
 	mmExtraFlagsGreatFairyTownAltBit  = 2
@@ -102,7 +102,7 @@ const (
 	mmOwlIkanaCanyonBit                        = 8
 	mmOwlStoneTowerBit                         = 9
 	mmOwlHiddenBit                             = 15
-	ootEventRutoLetter                       = 0x31
+	ootEventRutoLetter                         = 0x31
 	ootEventZoraDivingGame                     = 0x38
 	ootEventSongSariaCustom                    = 0x58
 	ootEventItemAnjuBottle                     = 0x0c
@@ -176,6 +176,25 @@ type ootSymbolCheck struct {
 	bit       int
 }
 
+type mmSymbolCheckSource uint8
+
+const (
+	mmSymbolCheckSourceExtraFlags mmSymbolCheckSource = iota
+	mmSymbolCheckSourceExtraFlags2
+	mmSymbolCheckSourceExtraFlags3
+	mmSymbolCheckSourceWeekEvent
+	mmSymbolCheckSourceOwlActivation
+)
+
+type mmSymbolCheck struct {
+	source    mmSymbolCheckSource
+	symbol    string
+	keyPrefix string
+	bit       int
+	byteIndex int
+	mask      uint8
+}
+
 var mmOwlItems = [...]struct {
 	itemID string
 	bit    uint
@@ -193,91 +212,69 @@ var mmOwlItems = [...]struct {
 	{"MM_OWL_HIDDEN", mmOwlHiddenBit},
 }
 
-var mmOwlCheckSymbols = [...]struct {
-	symbol string
-	bit    uint
-}{
-	{"OWL_GREAT_BAY", mmOwlGreatBayBit},
-	{"OWL_ZORA_CAPE", mmOwlZoraCapeBit},
-	{"OWL_SNOWHEAD", mmOwlSnowheadBit},
-	{"OWL_MOUNTAIN_VILLAGE", mmOwlMountainVillageBit},
-	{"OWL_CLOCK_TOWN", mmOwlClockTownBit},
-	{"OWL_MILK_ROAD", mmOwlMilkRoadBit},
-	{"OWL_WOODFALL", mmOwlWoodfallBit},
-	{"OWL_SOUTHERN_SWAMP", mmOwlSouthernSwampBit},
-	{"OWL_IKANA_CANYON", mmOwlIkanaCanyonBit},
-	{"OWL_STONE_TOWER", mmOwlStoneTowerBit},
-}
+// MM symbol-based checks all resolve through the same npc.yml symbols;
+// only the backing save source differs.
+var mmSymbolChecks = [...]mmSymbolCheck{
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsPictoboxBit, symbol: "KOUME_PICTOGRAPH_BOX"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubTownBit, symbol: "SCRUB_LAND"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubSwampBit, symbol: "SCRUB_SWAMP"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubMountainBit, symbol: "SCRUB_MOUNTAIN"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubOceanBit, symbol: "SCRUB_OCEAN"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubValleyBit, symbol: "SCRUB_VALLEY"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsScrubBombBagBit, symbol: "SCRUB_BOMB_BAG"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyTownBit, symbol: "GREAT_FAIRY_TOWN"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyTownAltBit, symbol: "GREAT_FAIRY_TOWN_ALT"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairySwampBit, symbol: "GREAT_FAIRY_SWAMP"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyMountainBit, symbol: "GREAT_FAIRY_MOUNTAIN"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyOceanBit, symbol: "GREAT_FAIRY_OCEAN"},
+	{source: mmSymbolCheckSourceExtraFlags, keyPrefix: "MM_extra_6_", bit: mmExtraFlagsGreatFairyValleyBit, symbol: "GREAT_FAIRY_VALLEY"},
 
-var mmExtraFlagsSymbolChecks = [...]struct {
-	bit    int
-	symbol string
-}{
-	{mmExtraFlagsPictoboxBit, "KOUME_PICTOGRAPH_BOX"},
-	{mmExtraFlagsScrubTownBit, "SCRUB_LAND"},
-	{mmExtraFlagsScrubSwampBit, "SCRUB_SWAMP"},
-	{mmExtraFlagsScrubMountainBit, "SCRUB_MOUNTAIN"},
-	{mmExtraFlagsScrubOceanBit, "SCRUB_OCEAN"},
-	{mmExtraFlagsScrubValleyBit, "SCRUB_VALLEY"},
-	{mmExtraFlagsScrubBombBagBit, "SCRUB_BOMB_BAG"},
-	{mmExtraFlagsGreatFairyTownBit, "GREAT_FAIRY_TOWN"},
-	{mmExtraFlagsGreatFairyTownAltBit, "GREAT_FAIRY_TOWN_ALT"},
-	{mmExtraFlagsGreatFairySwampBit, "GREAT_FAIRY_SWAMP"},
-	{mmExtraFlagsGreatFairyMountainBit, "GREAT_FAIRY_MOUNTAIN"},
-	{mmExtraFlagsGreatFairyOceanBit, "GREAT_FAIRY_OCEAN"},
-	{mmExtraFlagsGreatFairyValleyBit, "GREAT_FAIRY_VALLEY"},
-}
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskKafei, symbol: "MASK_KAFEI"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2HoneyDarling, symbol: "HONEY_DARLING_1"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2RoomKey, symbol: "ROOM_KEY"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2LetterKafei, symbol: "LETTER_TO_KAFEI"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2Pendant, symbol: "PENDANT_OF_MEMORIES"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2LetterMama, symbol: "LETTER_TO_MAMA"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2Notebook, symbol: "BOMBER_NOTEBOOK"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskBlast, symbol: "MASK_BLAST"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2DekuPlayground, symbol: "DEKU_PLAYGROUND_1"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskCouple, symbol: "MASK_COUPLE"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskPostman, symbol: "MASK_POSTMAN"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskTroupeLeader, symbol: "MASK_TROUPE_LEADER"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskFierceDeity, symbol: "MASK_FIERCE_DEITY"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2Ocarina, symbol: "SKULL_KID_OCARINA"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2SongOath, symbol: "SONG_ORDER"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskBremen, symbol: "MASK_BREMEN"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskScents, symbol: "MASK_SCENTS"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MaskKamaro, symbol: "MASK_KAMARO"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2MoonTear, symbol: "MOON_TEAR"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2SongHealing, symbol: "SONG_HEALING"},
+	{source: mmSymbolCheckSourceExtraFlags2, keyPrefix: "MM_extra_", bit: mmExtraFlags2TownStrayFairy, symbol: "STRAY_FAIRY_TOWN"},
 
-var mmExtraFlags2SymbolChecks = [...]struct {
-	bit    int
-	symbol string
-}{
-	{mmExtraFlags2MaskKafei, "MASK_KAFEI"},
-	{mmExtraFlags2HoneyDarling, "HONEY_DARLING_1"},
-	{mmExtraFlags2RoomKey, "ROOM_KEY"},
-	{mmExtraFlags2LetterKafei, "LETTER_TO_KAFEI"},
-	{mmExtraFlags2Pendant, "PENDANT_OF_MEMORIES"},
-	{mmExtraFlags2LetterMama, "LETTER_TO_MAMA"},
-	{mmExtraFlags2Notebook, "BOMBER_NOTEBOOK"},
-	{mmExtraFlags2MaskBlast, "MASK_BLAST"},
-	{mmExtraFlags2DekuPlayground, "DEKU_PLAYGROUND_1"},
-	{mmExtraFlags2MaskCouple, "MASK_COUPLE"},
-	{mmExtraFlags2MaskPostman, "MASK_POSTMAN"},
-	{mmExtraFlags2MaskTroupeLeader, "MASK_TROUPE_LEADER"},
-	{mmExtraFlags2MaskFierceDeity, "MASK_FIERCE_DEITY"},
-	{mmExtraFlags2Ocarina, "SKULL_KID_OCARINA"},
-	{mmExtraFlags2SongOath, "SONG_ORDER"},
-	{mmExtraFlags2MaskBremen, "MASK_BREMEN"},
-	{mmExtraFlags2MaskScents, "MASK_SCENTS"},
-	{mmExtraFlags2MaskKamaro, "MASK_KAMARO"},
-	{mmExtraFlags2MoonTear, "MOON_TEAR"},
-	{mmExtraFlags2SongHealing, "SONG_HEALING"},
-	{mmExtraFlags2TownStrayFairy, "STRAY_FAIRY_TOWN"},
-}
+	{source: mmSymbolCheckSourceExtraFlags3, keyPrefix: "MM_extra_13_", bit: mmExtraFlags3Lottery1, symbol: "LOTTERY_NIGHT_1"},
+	{source: mmSymbolCheckSourceExtraFlags3, keyPrefix: "MM_extra_13_", bit: mmExtraFlags3Lottery2, symbol: "LOTTERY_NIGHT_2"},
+	{source: mmSymbolCheckSourceExtraFlags3, keyPrefix: "MM_extra_13_", bit: mmExtraFlags3Lottery3, symbol: "LOTTERY_NIGHT_3"},
 
-var mmExtraFlags3SymbolChecks = [...]struct {
-	bit    int
-	symbol string
-}{
-	{mmExtraFlags3Lottery1, "LOTTERY_NIGHT_1"},
-	{mmExtraFlags3Lottery2, "LOTTERY_NIGHT_2"},
-	{mmExtraFlags3Lottery3, "LOTTERY_NIGHT_3"},
-}
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapClockTownMask, symbol: "TINGLE_MAP_CLOCK_TOWN"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapWoodfallMask, symbol: "TINGLE_MAP_WOODFALL"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapSnowheadMask, symbol: "TINGLE_MAP_SNOWHEAD"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapRanchMask, symbol: "TINGLE_MAP_ROMANI_RANCH"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapGreatBayMask, symbol: "TINGLE_MAP_GREAT_BAY"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventTingleMapsByte, mask: mmWeekEventTingleMapIkanaMask, symbol: "TINGLE_MAP_STONE_TOWER"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventArcheryByte, mask: mmWeekEventArcherySwampReward1Mask, symbol: "SHOOTING_GAME_SWAMP_1"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventArcheryByte, mask: mmWeekEventArcheryTownReward1Mask, symbol: "SHOOTING_GAME_TOWN_1"},
+	{source: mmSymbolCheckSourceWeekEvent, keyPrefix: "MM_week_event_", byteIndex: mmWeekEventSwordsmanSchoolByte, mask: mmWeekEventSwordsmanSchoolMask, symbol: "SWORDSMAN_HEART_PIECE"},
 
-var mmWeekEventSymbolChecks = [...]struct {
-	byteIndex int
-	mask      uint8
-	symbol    string
-}{
-	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapClockTownMask, "TINGLE_MAP_CLOCK_TOWN"},
-	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapWoodfallMask, "TINGLE_MAP_WOODFALL"},
-	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapSnowheadMask, "TINGLE_MAP_SNOWHEAD"},
-	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapRanchMask, "TINGLE_MAP_ROMANI_RANCH"},
-	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapGreatBayMask, "TINGLE_MAP_GREAT_BAY"},
-	{mmWeekEventTingleMapsByte, mmWeekEventTingleMapIkanaMask, "TINGLE_MAP_STONE_TOWER"},
-	{mmWeekEventArcheryByte, mmWeekEventArcherySwampReward1Mask, "SHOOTING_GAME_SWAMP_1"},
-	{mmWeekEventArcheryByte, mmWeekEventArcheryTownReward1Mask, "SHOOTING_GAME_TOWN_1"},
-	{mmWeekEventSwordsmanSchoolByte, mmWeekEventSwordsmanSchoolMask, "SWORDSMAN_HEART_PIECE"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlGreatBayBit, symbol: "OWL_GREAT_BAY"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlZoraCapeBit, symbol: "OWL_ZORA_CAPE"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlSnowheadBit, symbol: "OWL_SNOWHEAD"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlMountainVillageBit, symbol: "OWL_MOUNTAIN_VILLAGE"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlClockTownBit, symbol: "OWL_CLOCK_TOWN"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlMilkRoadBit, symbol: "OWL_MILK_ROAD"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlWoodfallBit, symbol: "OWL_WOODFALL"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlSouthernSwampBit, symbol: "OWL_SOUTHERN_SWAMP"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlIkanaCanyonBit, symbol: "OWL_IKANA_CANYON"},
+	{source: mmSymbolCheckSourceOwlActivation, keyPrefix: "MM_owl_activation_", bit: mmOwlStoneTowerBit, symbol: "OWL_STONE_TOWER"},
 }
 
 var sharedOcarinaButtons = [...]struct {
@@ -822,53 +819,28 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
 
 	appendOotSymbolChecks(state, ootSymbolChecks[:], appendCheck)
-
-	mmFlags := mmExtraFlags(state)
-	for _, entry := range mmExtraFlagsSymbolChecks {
-		if mmFlags&(1<<entry.bit) == 0 {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
-			appendCheck("MM_extra_6_"+itoa(entry.bit), name)
-		}
-	}
-	mmFlags2 := mmExtraFlags2(state)
-	for _, entry := range mmExtraFlags2SymbolChecks {
-		if mmFlags2&(1<<entry.bit) == 0 {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
-			appendCheck("MM_extra_"+itoa(entry.bit), name)
-		}
-	}
-	mmFlags3 := mmExtraFlags3(state)
-	for _, entry := range mmExtraFlags3SymbolChecks {
-		if mmFlags3&(1<<entry.bit) == 0 {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
-			appendCheck("MM_extra_13_"+itoa(entry.bit), name)
-		}
-	}
-	for _, entry := range mmWeekEventSymbolChecks {
-		if !hasMmWeekEventBit(state, entry.byteIndex, entry.mask) {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
-			appendCheck("MM_week_event_"+itoa(entry.byteIndex)+"_"+itoa(int(entry.mask)), name)
-		}
-	}
-	for _, owl := range mmOwlCheckSymbols {
-		if state.Mm.OwlActivationFlags&(1<<owl.bit) == 0 {
-			continue
-		}
-		if name, ok := npcSymbolCheckName("MM", owl.symbol); ok {
-			appendCheck("MM_owl_activation_"+owl.symbol, name)
-		}
-	}
+	appendMmSymbolChecks(state, mmSymbolChecks[:], appendCheck)
 	appendOotAmbiguousEventItemChecks(state, appendCheck)
 
 	return checks
+}
+
+func appendMmSymbolChecks(state *GameState, entries []mmSymbolCheck, appendCheck func(string, string)) {
+	if state == nil {
+		return
+	}
+	mmFlags := mmExtraFlags(state)
+	mmFlags2 := mmExtraFlags2(state)
+	mmFlags3 := mmExtraFlags3(state)
+
+	for _, entry := range entries {
+		if !mmSymbolCheckMatches(state, entry, mmFlags, mmFlags2, mmFlags3) {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
+			appendCheck(mmSymbolCheckKey(entry), name)
+		}
+	}
 }
 
 func appendOotSymbolChecks(state *GameState, entries []ootSymbolCheck, appendCheck func(string, string)) {
@@ -916,6 +888,34 @@ func ootCurrentSceneID(state *GameState) uint16 {
 		return state.Oot.LiveSceneID
 	}
 	return state.Oot.SceneID
+}
+
+func mmSymbolCheckMatches(state *GameState, entry mmSymbolCheck, mmFlags uint32, mmFlags2 uint32, mmFlags3 uint32) bool {
+	switch entry.source {
+	case mmSymbolCheckSourceExtraFlags:
+		return mmFlags&(1<<entry.bit) != 0
+	case mmSymbolCheckSourceExtraFlags2:
+		return mmFlags2&(1<<entry.bit) != 0
+	case mmSymbolCheckSourceExtraFlags3:
+		return mmFlags3&(1<<entry.bit) != 0
+	case mmSymbolCheckSourceWeekEvent:
+		return hasMmWeekEventBit(state, entry.byteIndex, entry.mask)
+	case mmSymbolCheckSourceOwlActivation:
+		return state.Mm.OwlActivationFlags&(1<<uint(entry.bit)) != 0
+	default:
+		return false
+	}
+}
+
+func mmSymbolCheckKey(entry mmSymbolCheck) string {
+	switch entry.source {
+	case mmSymbolCheckSourceExtraFlags, mmSymbolCheckSourceExtraFlags2, mmSymbolCheckSourceExtraFlags3:
+		return entry.keyPrefix + itoa(entry.bit)
+	case mmSymbolCheckSourceWeekEvent:
+		return entry.keyPrefix + itoa(entry.byteIndex) + "_" + itoa(int(entry.mask))
+	default:
+		return entry.keyPrefix + entry.symbol
+	}
 }
 
 func ootSymbolCheckMatches(state *GameState, entry ootSymbolCheck, childTradeSave uint16, adultTradeSave uint16, ootFlags uint32) bool {
