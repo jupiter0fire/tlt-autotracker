@@ -42,6 +42,45 @@ func getSourceInfo(group string) (mmSymbolCheckSource, string) {
 //go:embed special_locations.json
 var embeddedSpecialLocations []byte
 
+//go:embed oot_special_locations.json
+var embeddedOotSpecialLocations []byte
+
+type ootSpecialLocationEntry struct {
+	Symbol  string                       `json:"symbol"`
+	Name    string                       `json:"name"`
+	Sources []ootSpecialLocationSourceEntry `json:"sources"`
+	Note    string                       `json:"note"`
+}
+
+type ootSpecialLocationSourceEntry struct {
+	Group string `json:"group"`
+	Field string `json:"field"`
+	Bit   int    `json:"bit"`
+	Flag  int    `json:"flag"`
+	Mask  string `json:"mask"`
+}
+
+func getOotSourceInfo(group string, field string) (ootSymbolCheckSource, string) {
+	switch group {
+	case "gOotExtraFlags":
+		return ootSymbolCheckSourceExtraFlags, "OOT_extra_2_"
+	case "inventoryQuest":
+		return ootSymbolCheckSourceQuest, "OOT_quest_"
+	case "gOotTradeSave":
+		if strings.Contains(field, "child") {
+			return ootSymbolCheckSourceChildTrade, "OOT_child_trade_"
+		}
+		return ootSymbolCheckSourceTrade, "OOT_trade_"
+	case "eventsChk":
+		return ootSymbolCheckSourceEvent, "OOT_event_"
+	case "eventsItem":
+		return ootSymbolCheckSourceEventItem, "OOT_event_item_"
+	case "eventsMisc":
+		return ootSymbolCheckSourceEventMisc, "OOT_event_misc_"
+	}
+	return 0, ""
+}
+
 // loadMmSymbolChecks parses special_locations.json and builds the mmSymbolChecks slice.
 func loadMmSymbolChecks() []mmSymbolCheck {
 	var entries []specialLocationEntry
@@ -119,4 +158,53 @@ func parseWeekEventSource(entry specialLocationEntry, src specialLocationSourceE
 		return 0, 0, false
 	}
 	return byteIndex, mask, true
+}
+
+// loadOotSymbolChecks parses oot_special_locations.json and builds the ootSymbolChecks slice.
+func loadOotSymbolChecks() []ootSymbolCheck {
+	var entries []ootSpecialLocationEntry
+	if err := json.Unmarshal(embeddedOotSpecialLocations, &entries); err != nil {
+		panic(fmt.Sprintf("parse embedded OoT special locations: %v", err))
+	}
+
+	var result []ootSymbolCheck
+	for _, entry := range entries {
+		if entry.Symbol == "" {
+			continue
+		}
+
+		for _, src := range entry.Sources {
+			source, keyPrefix := getOotSourceInfo(src.Group, src.Field)
+			if keyPrefix == "" {
+				continue
+			}
+
+			check := ootSymbolCheck{
+				source:    source,
+				symbol:    entry.Symbol,
+				keyPrefix: keyPrefix,
+				bit:       0,
+				flags:     nil,
+				mask:      0,
+			}
+
+			switch source {
+			case ootSymbolCheckSourceExtraFlags:
+				check.bit = src.Bit
+			case ootSymbolCheckSourceQuest:
+				check.bit = src.Bit
+			case ootSymbolCheckSourceChildTrade, ootSymbolCheckSourceTrade:
+				if src.Mask != "" {
+					if value, err := strconv.ParseUint(src.Mask, 0, 16); err == nil {
+						check.mask = uint16(value)
+					}
+				}
+			case ootSymbolCheckSourceEvent, ootSymbolCheckSourceEventItem, ootSymbolCheckSourceEventMisc:
+				check.flags = []int{src.Flag}
+			}
+
+			result = append(result, check)
+		}
+	}
+	return result
 }
