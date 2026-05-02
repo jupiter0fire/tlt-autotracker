@@ -23,7 +23,10 @@
       }
     ],
     "note": "pictograph box check",
-    "name": "Tourist Information Pictobox"
+    "name": "Tourist Information Pictobox",
+    "bits": [
+      31
+    ]
   },
   {
     "code": "0x02",
@@ -205,7 +208,10 @@
       }
     ],
     "note": "Mask of Scents check",
-    "name": "Deku Shrine Mask of Scents"
+    "name": "Deku Shrine Mask of Scents",
+    "bits": [
+      9
+    ]
   },
   {
     "code": "0x10",
@@ -231,7 +237,10 @@
       }
     ],
     "note": "Song of Order check; owned song also lands in quest bits",
-    "name": "Oath to Order"
+    "name": "Oath to Order",
+    "bits": [
+      13
+    ]
   },
   {
     "code": "0x12",
@@ -244,7 +253,10 @@
       }
     ],
     "note": "Moon's Tear check",
-    "name": "Astral Observatory Moon Tear"
+    "name": "Astral Observatory Moon Tear",
+    "bits": [
+      6
+    ]
   },
   {
     "code": "0x13",
@@ -257,7 +269,10 @@
       }
     ],
     "note": "Kamaro's Mask check",
-    "name": "Termina Field Kamaro Mask"
+    "name": "Termina Field Kamaro Mask",
+    "bits": [
+      8
+    ]
   },
   {
     "code": "0x14",
@@ -270,7 +285,10 @@
       }
     ],
     "note": "land deed scrub",
-    "name": "Clock Town Business Scrub"
+    "name": "Clock Town Business Scrub",
+    "bits": [
+      20
+    ]
   },
   {
     "code": "0x15",
@@ -283,7 +301,10 @@
       }
     ],
     "note": "swamp deed scrub",
-    "name": "Southern Swamp Scrub Deed"
+    "name": "Southern Swamp Scrub Deed",
+    "bits": [
+      19
+    ]
   },
   {
     "code": "0x16",
@@ -296,7 +317,10 @@
       }
     ],
     "note": "mountain deed scrub",
-    "name": "Goron Village Scrub Deed"
+    "name": "Goron Village Scrub Deed",
+    "bits": [
+      18
+    ]
   },
   {
     "code": "0x17",
@@ -309,7 +333,10 @@
       }
     ],
     "note": "ocean deed scrub",
-    "name": "Zora Hall Scrub Deed"
+    "name": "Zora Hall Scrub Deed",
+    "bits": [
+      17
+    ]
   },
   {
     "code": "0x18",
@@ -322,7 +349,10 @@
       }
     ],
     "note": "valley deed scrub",
-    "name": "Ikana Valley Scrub Rupee"
+    "name": "Ikana Valley Scrub Rupee",
+    "bits": [
+      16
+    ]
   },
   {
     "code": "0x19",
@@ -335,7 +365,12 @@
       }
     ],
     "note": "town shooting gallery quiver reward",
-    "name": "Town Archery Reward 1"
+    "name": "Town Archery Reward 1",
+    "byteIndex": 59,
+    "bits": [
+      477
+    ],
+    "mask": 32
   },
   {
     "code": "0x1a",
@@ -361,7 +396,12 @@
       }
     ],
     "note": "swamp shooting gallery quiver reward",
-    "name": "Swamp Archery Reward 1"
+    "name": "Swamp Archery Reward 1",
+    "byteIndex": 59,
+    "bits": [
+      476
+    ],
+    "mask": 16
   },
   {
     "code": "0x1c",
@@ -457,7 +497,10 @@
       }
     ],
     "note": "Bremen Mask check",
-    "name": "Clock Town Guru-Guru Mask Bremen"
+    "name": "Clock Town Guru-Guru Mask Bremen",
+    "bits": [
+      10
+    ]
   },
   {
     "code": "0x23",
@@ -639,7 +682,10 @@
       }
     ],
     "note": "bomb bag scrub",
-    "name": "Goron Village Scrub Bomb Bag"
+    "name": "Goron Village Scrub Bomb Bag",
+    "bits": [
+      15
+    ]
   },
   {
     "code": "0x31",
@@ -691,7 +737,10 @@
       }
     ],
     "note": "greatFairies bit 0",
-    "name": "Clock Town Great Fairy"
+    "name": "Clock Town Great Fairy",
+    "bits": [
+      1
+    ]
   },
   {
     "code": "0x35",
@@ -704,7 +753,10 @@
       }
     ],
     "note": "greatFairies bit 1",
-    "name": "Clock Town Great Fairy Alt"
+    "name": "Clock Town Great Fairy Alt",
+    "bits": [
+      2
+    ]
   },
   {
     "code": "0x36",
@@ -717,7 +769,10 @@
       }
     ],
     "note": "greatFairies bit 2",
-    "name": "Woodfall Great Fairy"
+    "name": "Woodfall Great Fairy",
+    "bits": [
+      3
+    ]
   },
   {
     "code": "0x37",
@@ -730,7 +785,10 @@
       }
     ],
     "note": "greatFairies bit 3",
-    "name": "Snowhead Great Fairy"
+    "name": "Snowhead Great Fairy",
+    "bits": [
+      4
+    ]
   },
   {
     "code": "0x38",
@@ -743,7 +801,10 @@
       }
     ],
     "note": "greatFairies bit 4",
-    "name": "Great Bay Great Fairy"
+    "name": "Great Bay Great Fairy",
+    "bits": [
+      5
+    ]
   },
   {
     "code": "0x39",
@@ -756,7 +817,10 @@
       }
     ],
     "note": "greatFairies bit 5",
-    "name": "Ikana Great Fairy"
+    "name": "Ikana Great Fairy",
+    "bits": [
+      6
+    ]
   },
   {
     "code": "0x3a",
@@ -834,7 +898,12 @@
       }
     ],
     "note": "swordsman heart piece",
-    "name": "Swordsman School HP"
+    "name": "Swordsman School HP",
+    "byteIndex": 63,
+    "bits": [
+      509
+    ],
+    "mask": 32
   },
   {
     "code": "0x40",
@@ -847,7 +916,10 @@
       }
     ],
     "note": "Kafei's Mask check",
-    "name": "Mayor's Office Kafei's Mask"
+    "name": "Mayor's Office Kafei's Mask",
+    "bits": [
+      28
+    ]
   },
   {
     "code": "0x41",
@@ -873,7 +945,10 @@
       }
     ],
     "note": "first Honey and Darling reward",
-    "name": "Honey & Darling Reward Any Day"
+    "name": "Honey & Darling Reward Any Day",
+    "bits": [
+      27
+    ]
   },
   {
     "code": "0x43",
@@ -899,7 +974,10 @@
       }
     ],
     "note": "Room Key check",
-    "name": "Stock Pot Inn Room Key"
+    "name": "Stock Pot Inn Room Key",
+    "bits": [
+      26
+    ]
   },
   {
     "code": "0x45",
@@ -912,7 +990,10 @@
       }
     ],
     "note": "Letter to Kafei check",
-    "name": "Stock Pot Inn Letter to Kafei"
+    "name": "Stock Pot Inn Letter to Kafei",
+    "bits": [
+      25
+    ]
   },
   {
     "code": "0x46",
@@ -925,7 +1006,10 @@
       }
     ],
     "note": "Pendant of Memories check",
-    "name": "Kafei Hideout Pendant of Memories"
+    "name": "Kafei Hideout Pendant of Memories",
+    "bits": [
+      24
+    ]
   },
   {
     "code": "0x47",
@@ -951,7 +1035,10 @@
       }
     ],
     "note": "second Curiosity Shop reward",
-    "name": "Kafei Hideout Owner Reward 2"
+    "name": "Kafei Hideout Owner Reward 2",
+    "bits": [
+      23
+    ]
   },
   {
     "code": "0x49",
@@ -964,7 +1051,10 @@
       }
     ],
     "note": "Bombers' Notebook check; item also exists in quest bits",
-    "name": "Clock Town Bomber Notebook"
+    "name": "Clock Town Bomber Notebook",
+    "bits": [
+      22
+    ]
   },
   {
     "code": "0x4a",
@@ -977,7 +1067,10 @@
       }
     ],
     "note": "Blast Mask check",
-    "name": "Clock Town Blast Mask"
+    "name": "Clock Town Blast Mask",
+    "bits": [
+      21
+    ]
   },
   {
     "code": "0x4b",
@@ -1003,7 +1096,10 @@
       }
     ],
     "note": "first Deku Playground reward",
-    "name": "Deku Playground Reward Any Day"
+    "name": "Deku Playground Reward Any Day",
+    "bits": [
+      20
+    ]
   },
   {
     "code": "0x4d",
@@ -1029,7 +1125,10 @@
       }
     ],
     "note": "Couple's Mask check",
-    "name": "Stock Pot Inn Couple's Mask"
+    "name": "Stock Pot Inn Couple's Mask",
+    "bits": [
+      19
+    ]
   },
   {
     "code": "0x4f",
@@ -1081,7 +1180,10 @@
       }
     ],
     "note": "Postman's Hat check",
-    "name": "Clock Town Postman Hat"
+    "name": "Clock Town Postman Hat",
+    "bits": [
+      17
+    ]
   },
   {
     "code": "0x53",
@@ -1094,7 +1196,10 @@
       }
     ],
     "note": "Circus Leader's Mask check",
-    "name": "Milk Bar Troupe Leader Mask"
+    "name": "Milk Bar Troupe Leader Mask",
+    "bits": [
+      16
+    ]
   },
   {
     "code": "0x54",
@@ -1107,7 +1212,10 @@
       }
     ],
     "note": "Fierce Deity Mask check",
-    "name": "Moon Fierce Deity Mask"
+    "name": "Moon Fierce Deity Mask",
+    "bits": [
+      15
+    ]
   },
   {
     "code": "0x55",
@@ -1185,7 +1293,10 @@
       }
     ],
     "note": "first Skull Kid reward",
-    "name": "Clock Tower Roof Skull Kid Ocarina"
+    "name": "Clock Tower Roof Skull Kid Ocarina",
+    "bits": [
+      14
+    ]
   },
   {
     "code": "0x5b",
@@ -1263,7 +1374,10 @@
       }
     ],
     "note": "location gate; owned song also exists in quest bits",
-    "name": "Initial Song of Healing"
+    "name": "Initial Song of Healing",
+    "bits": [
+      5
+    ]
   },
   {
     "code": "0x61",
@@ -1276,7 +1390,10 @@
       }
     ],
     "note": "Clock Town stray fairy",
-    "name": "Clock Town Stray Fairy"
+    "name": "Clock Town Stray Fairy",
+    "bits": [
+      4
+    ]
   },
   {
     "code": "0x62",
@@ -1289,7 +1406,12 @@
       }
     ],
     "note": "Tingle map",
-    "name": "Tingle Map Clock Town"
+    "name": "Tingle Map Clock Town",
+    "byteIndex": 35,
+    "bits": [
+      224
+    ],
+    "mask": 1
   },
   {
     "code": "0x63",
@@ -1302,7 +1424,12 @@
       }
     ],
     "note": "Tingle map",
-    "name": "Tingle Map Woodfall"
+    "name": "Tingle Map Woodfall",
+    "byteIndex": 35,
+    "bits": [
+      225
+    ],
+    "mask": 2
   },
   {
     "code": "0x64",
@@ -1315,7 +1442,12 @@
       }
     ],
     "note": "Tingle map",
-    "name": "Tingle Map Snowhead"
+    "name": "Tingle Map Snowhead",
+    "byteIndex": 35,
+    "bits": [
+      226
+    ],
+    "mask": 4
   },
   {
     "code": "0x65",
@@ -1328,7 +1460,12 @@
       }
     ],
     "note": "Tingle map",
-    "name": "Tingle Map Ranch"
+    "name": "Tingle Map Ranch",
+    "byteIndex": 35,
+    "bits": [
+      227
+    ],
+    "mask": 8
   },
   {
     "code": "0x66",
@@ -1341,7 +1478,12 @@
       }
     ],
     "note": "Tingle map",
-    "name": "Tingle Map Great Bay"
+    "name": "Tingle Map Great Bay",
+    "byteIndex": 35,
+    "bits": [
+      228
+    ],
+    "mask": 16
   },
   {
     "code": "0x67",
@@ -1354,7 +1496,12 @@
       }
     ],
     "note": "Tingle map",
-    "name": "Tingle Map Ikana"
+    "name": "Tingle Map Ikana",
+    "byteIndex": 35,
+    "bits": [
+      229
+    ],
+    "mask": 32
   },
   {
     "code": "0x68",
@@ -1367,7 +1514,10 @@
       }
     ],
     "note": "owl id 0",
-    "name": "Great Bay Coast Owl Statue"
+    "name": "Great Bay Coast Owl Statue",
+    "bits": [
+      0
+    ]
   },
   {
     "code": "0x69",
@@ -1380,7 +1530,10 @@
       }
     ],
     "note": "owl id 1",
-    "name": "Zora Cape Owl Statue"
+    "name": "Zora Cape Owl Statue",
+    "bits": [
+      1
+    ]
   },
   {
     "code": "0x6a",
@@ -1393,7 +1546,10 @@
       }
     ],
     "note": "owl id 2",
-    "name": "Snowhead Owl Statue"
+    "name": "Snowhead Owl Statue",
+    "bits": [
+      2
+    ]
   },
   {
     "code": "0x6b",
@@ -1406,7 +1562,10 @@
       }
     ],
     "note": "owl id 3",
-    "name": "Mountain Village Owl Statue"
+    "name": "Mountain Village Owl Statue",
+    "bits": [
+      3
+    ]
   },
   {
     "code": "0x6c",
@@ -1419,7 +1578,10 @@
       }
     ],
     "note": "owl id 4",
-    "name": "Clock Town Owl Statue"
+    "name": "Clock Town Owl Statue",
+    "bits": [
+      4
+    ]
   },
   {
     "code": "0x6d",
@@ -1432,7 +1594,10 @@
       }
     ],
     "note": "owl id 5",
-    "name": "Milk Road Owl Statue"
+    "name": "Milk Road Owl Statue",
+    "bits": [
+      5
+    ]
   },
   {
     "code": "0x6e",
@@ -1445,7 +1610,10 @@
       }
     ],
     "note": "owl id 6",
-    "name": "Woodfall Owl Statue"
+    "name": "Woodfall Owl Statue",
+    "bits": [
+      6
+    ]
   },
   {
     "code": "0x6f",
@@ -1458,7 +1626,10 @@
       }
     ],
     "note": "owl id 7",
-    "name": "Southern Swamp Owl Statue"
+    "name": "Southern Swamp Owl Statue",
+    "bits": [
+      7
+    ]
   },
   {
     "code": "0x70",
@@ -1471,7 +1642,10 @@
       }
     ],
     "note": "owl id 8",
-    "name": "Ikana Canyon Owl Statue"
+    "name": "Ikana Canyon Owl Statue",
+    "bits": [
+      8
+    ]
   },
   {
     "code": "0x71",
@@ -1484,7 +1658,10 @@
       }
     ],
     "note": "owl id 9",
-    "name": "Stone Tower Owl Statue"
+    "name": "Stone Tower Owl Statue",
+    "bits": [
+      9
+    ]
   },
   {
     "code": "0x72",
@@ -1599,7 +1776,10 @@
       }
     ],
     "note": "day 1 lottery reward",
-    "name": "Lottery Prize Night 1"
+    "name": "Lottery Prize Night 1",
+    "bits": [
+      29
+    ]
   },
   {
     "code": "0x7b",
@@ -1612,7 +1792,10 @@
       }
     ],
     "note": "day 2 lottery reward",
-    "name": "Lottery Prize Night 2"
+    "name": "Lottery Prize Night 2",
+    "bits": [
+      28
+    ]
   },
   {
     "code": "0x7c",
@@ -1625,6 +1808,9 @@
       }
     ],
     "note": "day 3 lottery reward",
-    "name": "Lottery Prize Night 3"
+    "name": "Lottery Prize Night 3",
+    "bits": [
+      27
+    ]
   }
 ]

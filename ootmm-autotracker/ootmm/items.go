@@ -780,7 +780,9 @@ func appendMmSymbolChecks(state *GameState, entries []mmSymbolCheck, appendCheck
 		if !mmSymbolCheckMatches(state, entry, mmFlags, mmFlags2, mmFlags3) {
 			continue
 		}
-		if entry.name != "" {
+		if name, ok := npcSymbolCheckName("MM", entry.symbol); ok {
+			appendCheck(mmSymbolCheckKey(entry), name)
+		} else if entry.name != "" {
 			appendCheck(mmSymbolCheckKey(entry), entry.name)
 		}
 	}
