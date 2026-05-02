@@ -1514,6 +1514,54 @@ func TestExtractChecksIncludesMmGreatFairyExtraFlagChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmNpcExtraFlagChecks(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {},
+		"MM": {
+			"KOUME_PICTOGRAPH_BOX": "Tourist Information Pictobox",
+			"SCRUB_BOMB_BAG":      "Goron Village Scrub Bomb Bag",
+			"SCRUB_LAND":          "Clock Town Business Scrub",
+			"SCRUB_MOUNTAIN":      "Goron Village Scrub Deed",
+			"SCRUB_OCEAN":         "Zora Hall Scrub Deed",
+			"SCRUB_SWAMP":         "Southern Swamp Scrub Deed",
+			"SCRUB_VALLEY":        "Ikana Valley Scrub Rupee",
+		},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	tests := []struct {
+		name     string
+		bit      int
+		expected string
+	}{
+		{name: "pictobox", bit: mmExtraFlagsPictoboxBit, expected: "Tourist Information Pictobox"},
+		{name: "scrub town", bit: mmExtraFlagsScrubTownBit, expected: "Clock Town Business Scrub"},
+		{name: "scrub swamp", bit: mmExtraFlagsScrubSwampBit, expected: "Southern Swamp Scrub Deed"},
+		{name: "scrub mountain", bit: mmExtraFlagsScrubMountainBit, expected: "Goron Village Scrub Deed"},
+		{name: "scrub ocean", bit: mmExtraFlagsScrubOceanBit, expected: "Zora Hall Scrub Deed"},
+		{name: "scrub valley", bit: mmExtraFlagsScrubValleyBit, expected: "Ikana Valley Scrub Rupee"},
+		{name: "scrub bomb bag", bit: mmExtraFlagsScrubBombBagBit, expected: "Goron Village Scrub Bomb Bag"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			state := &GameState{}
+			state.Oot.ExtraRecords[ExtraIdxMmFlags] = 1 << tc.bit
+
+			checks := checkNameSet(ExtractChecks(state))
+			if _, ok := checks[tc.expected]; !ok {
+				t.Fatalf("missing MM extra-flag check for %s", tc.expected)
+			}
+			if len(checks) != 1 {
+				t.Fatalf("unexpected MM extra-flag check count: got %d, want 1", len(checks))
+			}
+		})
+	}
+}
+
 func TestExtractChecksIncludesOotGreatFairyExtraFlagChecks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

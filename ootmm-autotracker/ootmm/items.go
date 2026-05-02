@@ -45,6 +45,13 @@ const (
 	mmExtraFlagsGreatFairyMountainBit = 4
 	mmExtraFlagsGreatFairyOceanBit    = 5
 	mmExtraFlagsGreatFairyValleyBit   = 6
+	mmExtraFlagsPictoboxBit           = 31
+	mmExtraFlagsScrubTownBit          = 20
+	mmExtraFlagsScrubSwampBit         = 19
+	mmExtraFlagsScrubMountainBit      = 18
+	mmExtraFlagsScrubOceanBit         = 17
+	mmExtraFlagsScrubValleyBit        = 16
+	mmExtraFlagsScrubBombBagBit       = 15
 	// OoT/MM extra-record bitfields are stored MSB-first on N64.
 	mmExtraFlags2ChildWalletBit                = 31
 	mmExtraFlags3BottomlessBit                 = 31
@@ -206,6 +213,13 @@ var mmExtraFlagsSymbolChecks = [...]struct {
 	bit    int
 	symbol string
 }{
+	{mmExtraFlagsPictoboxBit, "KOUME_PICTOGRAPH_BOX"},
+	{mmExtraFlagsScrubTownBit, "SCRUB_LAND"},
+	{mmExtraFlagsScrubSwampBit, "SCRUB_SWAMP"},
+	{mmExtraFlagsScrubMountainBit, "SCRUB_MOUNTAIN"},
+	{mmExtraFlagsScrubOceanBit, "SCRUB_OCEAN"},
+	{mmExtraFlagsScrubValleyBit, "SCRUB_VALLEY"},
+	{mmExtraFlagsScrubBombBagBit, "SCRUB_BOMB_BAG"},
 	{mmExtraFlagsGreatFairyTownBit, "GREAT_FAIRY_TOWN"},
 	{mmExtraFlagsGreatFairyTownAltBit, "GREAT_FAIRY_TOWN_ALT"},
 	{mmExtraFlagsGreatFairySwampBit, "GREAT_FAIRY_SWAMP"},
