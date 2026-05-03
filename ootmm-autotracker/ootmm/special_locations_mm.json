@@ -1530,13 +1530,16 @@
     "symbol": "MM_SKULL_KID_SONG",
     "sources": [
       {
-        "group": "inventoryQuest",
-        "field": "gMmSave.info.inventory.quest.value",
-        "mask": "0x00080000"
+        "group": "gMmExtraFlags2",
+        "field": "gMmExtraFlags2.ocarina",
+        "mask": "0x00020000"
       }
     ],
-    "note": "second Skull Kid reward; Song of Time owned bit",
-    "name": "Clock Tower Roof Skull Kid Song of Time"
+    "note": "second Skull Kid reward; mirrored to ocarina flag",
+    "name": "Clock Tower Roof Skull Kid Song of Time",
+    "bits": [
+      14
+    ]
   },
   {
     "code": "0x5c",
