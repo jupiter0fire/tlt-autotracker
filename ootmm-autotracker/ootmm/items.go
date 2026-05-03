@@ -472,7 +472,12 @@ func ExtractItems(state *GameState) []TrackedItem {
 		if keys < 0 {
 			keys = 0
 		}
-		items = append(items, TrackedItem{keyID, int(keys)})
+		// dungeonKeys is current held amount; dungeonItems.maxKeys is persistent acquired amount in save data.
+		qty := int(keys)
+		if maxKeys := dungeonMaxKeys(oot.DungeonItems[i]); maxKeys > qty {
+			qty = maxKeys
+		}
+		items = append(items, TrackedItem{keyID, qty})
 	}
 	items = appendOotSilverRupeeItems(items, oot)
 
@@ -569,7 +574,12 @@ func ExtractItems(state *GameState) []TrackedItem {
 		if keys < 0 {
 			keys = 0
 		}
-		items = append(items, TrackedItem{keyID, int(keys)})
+		// dungeonKeys is current held amount; dungeonItems.maxKeys is persistent acquired amount in save data.
+		qty := int(keys)
+		if maxKeys := dungeonMaxKeys(mm.DungeonItems[i]); maxKeys > qty {
+			qty = maxKeys
+		}
+		items = append(items, TrackedItem{keyID, qty})
 	}
 
 	// MM Stray Fairies

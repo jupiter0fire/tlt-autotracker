@@ -306,6 +306,32 @@ func TestExtractItemsUsesOfficialMmDungeonItemIDs(t *testing.T) {
 	}
 }
 
+func TestExtractItemsUsesPersistentOotMaxSmallKeysFromSave(t *testing.T) {
+	state := &GameState{}
+	// Current held keys dropped after use; savegame maxKeys still tracks 5 acquired keys.
+	state.Oot.DungeonKeys[3] = 4
+	state.Oot.DungeonItems[3] = uint8(5 << 3)
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SMALL_KEY_FOREST"]; got != 5 {
+		t.Fatalf("OOT_SMALL_KEY_FOREST = %d, want 5", got)
+	}
+}
+
+func TestExtractItemsUsesPersistentMmMaxSmallKeysFromSave(t *testing.T) {
+	state := &GameState{}
+	// Current held keys dropped after use; savegame maxKeys still tracks 3 acquired keys.
+	state.Mm.DungeonKeys[0] = 2
+	state.Mm.DungeonItems[0] = uint8(3 << 3)
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_SMALL_KEY_WF"]; got != 3 {
+		t.Fatalf("MM_SMALL_KEY_WF = %d, want 3", got)
+	}
+}
+
 func TestExtractItemsIncludesSoulBitmaps(t *testing.T) {
 	state := &GameState{}
 	ootSoul := mustCatalogItemSource("OOT_SOUL_ENEMY_STALFOS")
