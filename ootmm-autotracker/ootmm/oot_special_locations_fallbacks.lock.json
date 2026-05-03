@@ -280,6 +280,14 @@
     }
   },
   {
+    "symbol": "LOST_WOODS_SKULL_KID",
+    "source": {
+      "group": "eventsItem",
+      "field": "gOotSave.context.eventsItem",
+      "flag": 22
+    }
+  },
+  {
     "symbol": "LOST_WOODS_TARGET",
     "source": {
       "group": "eventsItem",
@@ -365,30 +373,6 @@
       "group": "eventsChk",
       "field": "gOotSave.context.eventsChk",
       "flag": 169
-    }
-  },
-  {
-    "symbol": "POCKET_EGG",
-    "source": {
-      "group": "eventsItem",
-      "field": "gOotSave.context.eventsItem",
-      "flag": 44
-    }
-  },
-  {
-    "symbol": "POCKET_EGG",
-    "source": {
-      "group": "gOotTradeSave",
-      "field": "gOotTradeSave.adult",
-      "mask": "0x07FE"
-    }
-  },
-  {
-    "symbol": "POCKET_EGG_EVENT",
-    "source": {
-      "group": "eventsItem",
-      "field": "gOotSave.context.eventsItem",
-      "flag": 44
     }
   },
   {
@@ -480,6 +464,14 @@
     }
   },
   {
+    "symbol": "SHOOTING_GAME_CHILD",
+    "source": {
+      "group": "eventsItem",
+      "field": "gOotSave.context.eventsItem",
+      "flag": 13
+    }
+  },
+  {
     "symbol": "SONG_STORMS",
     "source": {
       "group": "eventsChk",
@@ -493,6 +485,22 @@
       "group": "eventsItem",
       "field": "gOotSave.context.eventsItem",
       "flag": 2
+    }
+  },
+  {
+    "symbol": "THEATER_NUTS",
+    "source": {
+      "group": "eventsItem",
+      "field": "gOotSave.context.eventsItem",
+      "flag": 31
+    }
+  },
+  {
+    "symbol": "THEATER_STICKS",
+    "source": {
+      "group": "eventsItem",
+      "field": "gOotSave.context.eventsItem",
+      "flag": 30
     }
   },
   {
