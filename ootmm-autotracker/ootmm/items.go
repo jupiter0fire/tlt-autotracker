@@ -142,8 +142,6 @@ const (
 	ootEventMiscRichardHeartPiece              = 0x191
 	ootEventMiscMedigoron                      = 0xb2
 	ootChildTradeWeirdEggBit                   = 0
-	ootChildTradeHatchMask                     = 0x1ffe
-	ootChildTradeLetterMask                    = 0x1ffc
 	ootAdultTradePocketEggBit                  = 0
 	ootAdultTradeOddPotionBit                  = 4
 	ootSceneShootingGallery                    = 0x42
@@ -694,6 +692,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 
 	appendOotSymbolChecks(state, ootSymbolChecks, appendCheck)
 	appendOotAdultTradeConsumptionFallbacks(state, appendCheck)
+	appendOotChildTradeConsumptionFallbacks(state, appendCheck)
 	appendMmSymbolChecks(state, mmSymbolChecks[:], appendCheck)
 	appendOotAmbiguousEventItemChecks(state, appendCheck)
 
@@ -761,6 +760,22 @@ func appendOotAdultTradeConsumptionFallbacks(state *GameState, appendCheck func(
 		if name, ok := npcSymbolCheckName("OOT", fallback.symbol); ok {
 			appendCheck("OOT_trade_"+fallback.symbol, name)
 		}
+	}
+}
+
+func appendOotChildTradeConsumptionFallbacks(state *GameState, appendCheck func(string, string)) {
+	if state == nil {
+		return
+	}
+
+	childTrade := uint16(state.Oot.ExtraRecords[ExtraIdxOotTrade] >> 16)
+	childTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] >> 16)
+	mask := uint16(1 << ootChildTradeWeirdEggBit)
+	if childTradeSave&mask == 0 || childTrade&mask != 0 {
+		return
+	}
+	if name, ok := npcSymbolCheckName("OOT", "WEIRD_EGG"); ok {
+		appendCheck("OOT_child_trade_WEIRD_EGG", name)
 	}
 }
 

@@ -165,28 +165,6 @@
     "note": "Gerudo Card quest item"
   },
   {
-    "symbol": "WEIRD_EGG",
-    "sources": [
-      {
-        "group": "gOotTradeSave",
-        "field": "gOotTradeSave.child",
-        "mask": "0x1FFE"
-      }
-    ],
-    "note": "Weird Egg child trade progression"
-  },
-  {
-    "symbol": "ZELDA_LETTER",
-    "sources": [
-      {
-        "group": "gOotTradeSave",
-        "field": "gOotTradeSave.child",
-        "mask": "0x1FFC"
-      }
-    ],
-    "note": "Zelda's Letter child trade progression"
-  },
-  {
     "symbol": "MALON_EGG",
     "sources": [
       {
@@ -517,7 +495,7 @@
     "note": "Song of Storms learned"
   },
   {
-    "symbol": "ZELDA_LETTER_EVENT",
+    "symbol": "ZELDA_LETTER",
     "sources": [
       {
         "group": "eventsChk",
