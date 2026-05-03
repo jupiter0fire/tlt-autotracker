@@ -2463,6 +2463,29 @@ func TestExtractChecksIncludesNoChecksFromObservedPocketEggConsumptionDelta(t *t
 	}
 }
 
+func TestExtractChecksIncludesHatchPocketCuccoFromConsumptionFallback(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"POCKET_EGG": "Hatch Pocket Cucco",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	// Pocket Egg was obtained (save bit) but is no longer in current trade (consumed)
+	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] = 1 << ootAdultTradePocketEggBit
+	state.Oot.ExtraRecords[ExtraIdxOotTrade] = 0
+
+	checks := ExtractChecks(state)
+	if got, ok := checkKeyByName(checks, "Hatch Pocket Cucco"); !ok || got != "OOT_trade_POCKET_EGG" {
+		t.Fatalf("Hatch Pocket Cucco key = %q, want %q", got, "OOT_trade_POCKET_EGG")
+	}
+}
+
 func TestExtractChecksIncludesKakarikoAnjuEggFromPocketEggEventItem(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{

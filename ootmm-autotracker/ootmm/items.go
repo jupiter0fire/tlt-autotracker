@@ -218,6 +218,7 @@ var mmOwlItems = [...]struct {
 }
 
 var ootAdultTradeConsumptionFallbacks = [...]ootAdultTradeConsumptionFallback{
+	{consumedBit: 0, symbol: "POCKET_EGG"},
 	{consumedBit: 1, symbol: "TRADE_COJIRO"},
 	{consumedBit: 2, symbol: "TRADE_ODD_MUSHROOM"},
 	{consumedBit: 3, symbol: "TRADE_ODD_POTION"},
