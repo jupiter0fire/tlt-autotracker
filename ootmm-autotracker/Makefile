@@ -5,7 +5,7 @@ GO?=go
 BUILD_FLAGS?=-trimpath -buildvcs=false
 LDFLAGS?=-s -w
 
-.PHONY: all build build-all clean deps generate-slot-mapping generate-location-mapping generate-special-locations
+.PHONY: all build build-all clean deps generate-slot-mapping generate-location-mapping generate-special-locations update-special-location-fallback-baselines
 
 all: build
 
@@ -19,7 +19,21 @@ generate-location-mapping:
 	python3 tools/generate_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/locations.json
 
 generate-special-locations:
-	python3 tools/generate_special_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/special_locations.json --oot-output ootmm/oot_special_locations.json
+	python3 tools/generate_special_locations.py \
+		--ootmm-repo $(OOTMM_REPO) \
+		--output ootmm/special_locations.json \
+		--oot-output ootmm/oot_special_locations.json \
+		--fallback-baseline ootmm/special_locations_fallbacks.lock.json \
+		--oot-fallback-baseline ootmm/oot_special_locations_fallbacks.lock.json
+
+update-special-location-fallback-baselines:
+	python3 tools/generate_special_locations.py \
+		--ootmm-repo $(OOTMM_REPO) \
+		--output ootmm/special_locations.json \
+		--oot-output ootmm/oot_special_locations.json \
+		--fallback-baseline ootmm/special_locations_fallbacks.lock.json \
+		--oot-fallback-baseline ootmm/oot_special_locations_fallbacks.lock.json \
+		--update-fallback-baseline
 
 build: deps
 	$(GO) build $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) .

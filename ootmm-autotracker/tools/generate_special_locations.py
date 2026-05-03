@@ -13,6 +13,8 @@ from typing import Any
 SUPPORTED_EXTRA_GROUPS = {"gMmExtraFlags", "gMmExtraFlags2", "gMmExtraFlags3"}
 SUPPORTED_GROUPS = SUPPORTED_EXTRA_GROUPS | {"weekEventReg", "gMmOwlFlags", "sharedNpcBitmap", "inventoryQuest", "gMmExtraBoss"}
 SUPPORTED_OOT_GROUPS = {"gOotExtraFlags", "inventoryQuest", "gOotTradeSave", "eventsChk", "eventsItem", "eventsMisc"}
+MM_RUNTIME_FALLBACK_GROUPS = SUPPORTED_EXTRA_GROUPS | {"weekEventReg", "gMmOwlFlags"}
+OOT_RUNTIME_FALLBACK_GROUPS = SUPPORTED_OOT_GROUPS
 
 EXTRA_STRUCTS = {
     "gMmExtraFlags": "MmExtraFlags",
@@ -80,6 +82,25 @@ def parse_args() -> argparse.Namespace:
         "--no-existing-hints",
         action="store_true",
         help="Do not read output files as hint files when explicit hints are omitted.",
+    )
+    parser.add_argument(
+        "--fallback-baseline",
+        help=(
+            "Optional JSON file containing the approved MM runtime fallback source state. "
+            "Generation fails when the generated state differs."
+        ),
+    )
+    parser.add_argument(
+        "--oot-fallback-baseline",
+        help=(
+            "Optional JSON file containing the approved OoT runtime fallback source state. "
+            "Generation fails when the generated state differs."
+        ),
+    )
+    parser.add_argument(
+        "--update-fallback-baseline",
+        action="store_true",
+        help="Write fallback baseline files instead of checking them.",
     )
     return parser.parse_args()
 
@@ -690,11 +711,144 @@ def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> 
     return entries, warnings
 
 
+def comparable_json(value: dict[str, Any]) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def fallback_sort_key(value: dict[str, Any]) -> tuple[Any, ...]:
+    source = value.get("source", {})
+    return (
+        value.get("symbol", ""),
+        value.get("name", ""),
+        source.get("group", ""),
+        source.get("field", ""),
+        source.get("mask", ""),
+        source.get("bit", -1),
+        source.get("flag", -1),
+        value.get("bit", -1),
+        value.get("byteIndex", -1),
+        value.get("mask", -1),
+    )
+
+
+def normalize_fallback_source(source: dict[str, Any]) -> dict[str, Any]:
+    normalized: dict[str, Any] = {
+        "group": source.get("group", ""),
+        "field": source.get("field", ""),
+    }
+    for key in ("mask", "bit", "flag"):
+        if key in source:
+            normalized[key] = source[key]
+    return normalized
+
+
+def build_mm_fallback_baseline(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    baseline: list[dict[str, Any]] = []
+    for entry in entries:
+        name = entry.get("name")
+        if not entry.get("symbol") or not name:
+            continue
+        for source in entry.get("sources", []):
+            group = source.get("group", "")
+            if group not in MM_RUNTIME_FALLBACK_GROUPS:
+                continue
+            record: dict[str, Any] = {
+                "symbol": entry["symbol"],
+                "name": name,
+                "source": normalize_fallback_source(source),
+            }
+            if group == "weekEventReg":
+                if "byteIndex" in entry:
+                    record["byteIndex"] = entry["byteIndex"]
+                if "mask" in entry:
+                    record["mask"] = entry["mask"]
+            else:
+                bits = entry.get("bits", [])
+                if not bits:
+                    continue
+                record["bit"] = bits[0]
+            baseline.append(record)
+    return sorted(baseline, key=fallback_sort_key)
+
+
+def build_oot_fallback_baseline(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    baseline: list[dict[str, Any]] = []
+    for entry in entries:
+        symbol = entry.get("symbol")
+        if not symbol:
+            continue
+        for source in entry.get("sources", []):
+            if source.get("group", "") not in OOT_RUNTIME_FALLBACK_GROUPS:
+                continue
+            baseline.append(
+                {
+                    "symbol": symbol,
+                    "source": normalize_fallback_source(source),
+                }
+            )
+    return sorted(baseline, key=fallback_sort_key)
+
+
+def check_or_update_fallback_baseline(
+    label: str,
+    baseline_path: pathlib.Path | None,
+    generated: list[dict[str, Any]],
+    update: bool,
+) -> bool:
+    if baseline_path is None:
+        return True
+
+    if update:
+        baseline_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline_path.write_text(json.dumps(generated, indent=2) + "\n", encoding="utf-8")
+        print(f"updated {label} fallback baseline: {baseline_path}", file=sys.stderr)
+        return True
+
+    if not baseline_path.is_file():
+        print(
+            f"{label} fallback baseline missing: {baseline_path}; "
+            "rerun with --update-fallback-baseline after reviewing the generated fallbacks",
+            file=sys.stderr,
+        )
+        return False
+
+    expected = json.loads(baseline_path.read_text(encoding="utf-8"))
+    if expected == generated:
+        return True
+
+    expected_keys = {comparable_json(record): record for record in expected}
+    generated_keys = {comparable_json(record): record for record in generated}
+    added = sorted(
+        (generated_keys[key] for key in generated_keys.keys() - expected_keys.keys()),
+        key=fallback_sort_key,
+    )
+    removed = sorted(
+        (expected_keys[key] for key in expected_keys.keys() - generated_keys.keys()),
+        key=fallback_sort_key,
+    )
+
+    print(
+        f"{label} fallback baseline changed: {len(added)} added, {len(removed)} removed",
+        file=sys.stderr,
+    )
+    for record in added[:25]:
+        print(f"added: {json.dumps(record, sort_keys=True)}", file=sys.stderr)
+    for record in removed[:25]:
+        print(f"removed: {json.dumps(record, sort_keys=True)}", file=sys.stderr)
+    if len(added) > 25 or len(removed) > 25:
+        print("warning: fallback baseline diff truncated", file=sys.stderr)
+    return False
+
+
 def main() -> int:
     args = parse_args()
     repo_root = pathlib.Path(args.ootmm_repo).resolve()
     output_path = pathlib.Path(args.output).resolve()
     oot_output_path = pathlib.Path(args.oot_output).resolve() if args.oot_output else None
+    fallback_baseline_path = pathlib.Path(args.fallback_baseline).resolve() if args.fallback_baseline else None
+    oot_fallback_baseline_path = (
+        pathlib.Path(args.oot_fallback_baseline).resolve() if args.oot_fallback_baseline else None
+    )
 
     if not repo_root.is_dir():
         print(f"OoTMM repository not found: {repo_root}", file=sys.stderr)
@@ -727,6 +881,23 @@ def main() -> int:
         oot_output_path.parent.mkdir(parents=True, exist_ok=True)
         oot_output_path.write_text(json.dumps(oot_entries, indent=2) + "\n", encoding="utf-8")
 
+    baseline_ok = check_or_update_fallback_baseline(
+        "MM",
+        fallback_baseline_path,
+        build_mm_fallback_baseline(entries),
+        args.update_fallback_baseline,
+    )
+    if oot_output_path is not None:
+        baseline_ok = (
+            check_or_update_fallback_baseline(
+                "OoT",
+                oot_fallback_baseline_path,
+                build_oot_fallback_baseline(oot_entries),
+                args.update_fallback_baseline,
+            )
+            and baseline_ok
+        )
+
     if warnings:
         print(f"generated {len(entries)} entries with {len(warnings)} missing source hints", file=sys.stderr)
         for warning in warnings[:25]:
@@ -741,6 +912,9 @@ def main() -> int:
                 print(f"warning: {warning}", file=sys.stderr)
             if len(oot_warnings) > 25:
                 print(f"warning: ... {len(oot_warnings) - 25} more", file=sys.stderr)
+    if not baseline_ok:
+        print("fallback baseline mismatch; review the diff before updating the baseline", file=sys.stderr)
+        return 1
     return 0
 
 
