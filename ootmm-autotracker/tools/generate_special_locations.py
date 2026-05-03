@@ -12,6 +12,7 @@ from typing import Any
 
 SUPPORTED_EXTRA_GROUPS = {"gMmExtraFlags", "gMmExtraFlags2", "gMmExtraFlags3"}
 SUPPORTED_GROUPS = SUPPORTED_EXTRA_GROUPS | {"weekEventReg", "gMmOwlFlags", "sharedNpcBitmap", "inventoryQuest", "gMmExtraBoss"}
+SUPPORTED_OOT_GROUPS = {"gOotExtraFlags", "inventoryQuest", "gOotTradeSave", "eventsChk", "eventsItem", "eventsMisc"}
 
 EXTRA_STRUCTS = {
     "gMmExtraFlags": "MmExtraFlags",
@@ -32,6 +33,85 @@ BOSS_SYMBOL_BITS = {
     "MM_REMAINS_TWINMOLD": 3,
 }
 
+OOT_EXTRA_SOURCES = [
+    ("FAIRY_MAGIC_UPGRADE", "greatFairies", 25, "Great Fairy magic upgrade"),
+    ("FAIRY_MAGIC_UPGRADE2", "greatFairies", 26, "Great Fairy magic upgrade 2"),
+    ("FAIRY_DEFENSE_UPGRADE", "greatFairies", 27, "Great Fairy defense upgrade"),
+    ("FAIRY_SPELL_WIND", "greatFairies", 28, "Great Fairy wind spell"),
+    ("FAIRY_SPELL_FIRE", "greatFairies", 29, "Great Fairy fire spell"),
+    ("FAIRY_SPELL_LOVE", "greatFairies", 30, "Great Fairy love spell"),
+    ("FISH_CHILD", "fishingChild", 24, "Child fishing pond completed"),
+    ("FISH_ADULT", "fishingAdult", 23, "Adult fishing pond completed"),
+    ("GORON_LINK_TUNIC", "tunicGoron", 22, "Goron tunic trade item"),
+    ("TRADE_BIGGORON_SWORD", "biggoron", 21, "Biggoron Sword trade item"),
+    ("ZORA_KING_TUNIC", "tunicZora", 20, "Zora tunic trade item"),
+    ("FIRE_ARROW", "fireArrow", 19, "Fire Arrow reward"),
+    ("CHEST_GAME_KEY", "chestGameKey", 6, "Treasure Chest Game skeleton key"),
+    ("TRADE_ODD_POTION", "oddPotion", 2, "Odd Potion trade item"),
+]
+
+OOT_EVENT_CHK_SOURCES = [
+    ("MALON_EGG", 0x12, "Malon egg event"),
+    ("MALON_SONG", 0x62, "Epona's Song event"),
+    ("MASTER_SWORD", 0x4F, "Master Sword pulled event"),
+    ("LIGHT_MEDALLION", 0x45, "Light Medallion obtained"),
+    ("OCARINA_TIME_ITEM", 0x43, "Ocarina of Time item obtained"),
+    ("OCARINA_TIME_SONG", 0xA9, "Song of Time learned"),
+    ("ROYAL_TOMB_SONG", 0x5A, "Song of Storms (Royal Tomb) event"),
+    ("RUTO_LETTER", 0x31, "Ruto's Letter event"),
+    ("FROGS_GAME", 0xD0, "Frogs game started"),
+    ("FROGS_ZL", 0xD1, "Frogs Zelda's Song"),
+    ("FROGS_EPONA", 0xD2, "Frogs Epona's Song"),
+    ("FROGS_SARIA", 0xD4, "Frogs Saria's Song"),
+    ("FROGS_SUNS", 0xD3, "Frogs Sun's Song"),
+    ("FROGS_SOT", 0xD5, "Frogs Song of Time"),
+    ("FROGS_STORMS", 0xD6, "Frogs Song of Storms"),
+    ("SARIA_SONG", 0x58, "Saria's Song event"),
+    ("ZORA_DIVING_GAME", 0x38, "Zora Diving Game completed"),
+    ("GS_10", 0xDA, "10 Golden Skulltulas collected"),
+    ("GS_20", 0xDB, "20 Golden Skulltulas collected"),
+    ("GS_30", 0xDC, "30 Golden Skulltulas collected"),
+    ("GS_40", 0xDD, "40 Golden Skulltulas collected"),
+    ("GS_50", 0xDE, "50 Golden Skulltulas collected"),
+    ("SARIA_OCARINA", 0xC1, "Saria's Ocarina obtained"),
+    ("SHEIK_FOREST", 0x50, "Forest Temple boss defeated"),
+    ("SHEIK_FIRE", 0x51, "Fire Temple boss defeated"),
+    ("SHEIK_WATER", 0x52, "Water Temple boss defeated"),
+    ("SHEIK_SHADOW", 0x54, "Shadow Temple boss defeated"),
+    ("SHEIK_LIGHT", 0x55, "Light Temple boss defeated"),
+    ("SHEIK_SPIRIT", 0xAC, "Spirit Temple boss defeated"),
+    ("SONG_STORMS", 0x5B, "Song of Storms learned"),
+    ("ZELDA_LETTER_EVENT", 0x40, "Zelda's Letter event flag"),
+    ("ZELDA_LIGHT_ARROW", 0xC4, "Light Arrows obtained"),
+    ("ZELDA_SONG", 0x59, "Zelda's Song learned"),
+]
+
+OOT_EVENT_ITEM_SOURCES = [
+    ("ANJU_BOTTLE", 0x0C, "Anju's Bottle obtained"),
+    ("TALON_BOTTLE", 0x02, "Talon Bottle obtained"),
+    ("SHOOTING_GAME_ADULT", 0x0E, "Shooting Gallery (Adult) reward"),
+    ("GERUDO_ARCHERY_2", 0x0F, "Gerudo Archery second reward"),
+    ("LABORATORY_DIVE", 0x10, "Laboratory Dive reward"),
+    ("BOMBCHU_BOWLING_1", 0x11, "Bombchu Bowling first reward"),
+    ("BOMBCHU_BOWLING_2", 0x12, "Bombchu Bowling second reward"),
+    ("KAKARIKO_ROOF_MAN", 0x15, "Kakariko Roof Man reward"),
+    ("LOST_WOODS_TARGET", 0x1D, "Lost Woods Target reward"),
+    ("DARUNIA_BRACELET", 0x20, "Darunia's Bracelet obtained"),
+    ("TRADE_POCKET_EGG", 0x2C, "Trade sequence Pocket Egg event"),
+    ("POCKET_EGG_EVENT", 0x2C, "Pocket Egg event item"),
+    ("MASK_SELL_KEATON", 0x38, "Keaton Mask sold"),
+    ("MASK_SELL_SKULL", 0x39, "Skull Mask sold"),
+    ("MASK_SELL_SPOOKY", 0x3A, "Spooky Mask sold"),
+    ("MASK_SELL_BUNNY", 0x3B, "Bunny Hood sold"),
+]
+
+OOT_EVENT_MISC_SOURCES = [
+    ("GORON_BOMB_BAG", 0x11E, "Goron Bomb Bag obtained"),
+    ("GERUDO_ARCHERY_1", 0x190, "Gerudo Archery first reward"),
+    ("DOG_LADY", 0x191, "Dog Lady Heart Piece"),
+    ("MEDIGORON", 0xB2, "Medigoron obtained"),
+]
+
 NPC_DEFINE_RE = re.compile(r"^(MM_[A-Z0-9_]+):\s*(0x[0-9a-fA-F]+|\d+)\s*$")
 BITFIELD_RE = re.compile(r"\bu32\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(\d+)\s*;")
 STRUCT_RE_TEMPLATE = r"typedef\s+struct\s*\{(?P<body>[^{}]*)\}\s*%s\s*;"
@@ -43,10 +123,11 @@ NPC_REF_RE = re.compile(r"\bNPC_(MM_[A-Z0-9_]+)\b")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate MM special location metadata for the autotracker from an OoTMM checkout."
+        description="Generate special location metadata for the autotracker from an OoTMM checkout."
     )
     parser.add_argument("--ootmm-repo", required=True, help="Path to the OoTMM repository root.")
-    parser.add_argument("--output", required=True, help="Path to write special_locations.json.")
+    parser.add_argument("--output", required=True, help="Path to write MM special_locations.json.")
+    parser.add_argument("--oot-output", help="Optional path to write OoT oot_special_locations.json.")
     parser.add_argument(
         "--hints",
         help=(
@@ -55,9 +136,16 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--oot-hints",
+        help=(
+            "Optional existing oot_special_locations.json to preserve manual source hints/notes. "
+            "Defaults to --oot-output when that file exists."
+        ),
+    )
+    parser.add_argument(
         "--no-existing-hints",
         action="store_true",
-        help="Do not read --output as a hint file when --hints is omitted.",
+        help="Do not read output files as hint files when explicit hints are omitted.",
     )
     return parser.parse_args()
 
@@ -253,9 +341,115 @@ def discover_simple_sources(repo_root: pathlib.Path, bitfields: dict[str, dict[s
 
 
 def append_unique_source(sources: list[dict[str, Any]], source: dict[str, Any]) -> None:
-    key = (source.get("group"), source.get("field"), source.get("mask"))
-    if all((item.get("group"), item.get("field"), item.get("mask")) != key for item in sources):
+    key = (
+        source.get("group"),
+        source.get("field"),
+        source.get("mask"),
+        source.get("bit"),
+        source.get("flag"),
+    )
+    if all(
+        (item.get("group"), item.get("field"), item.get("mask"), item.get("bit"), item.get("flag")) != key
+        for item in sources
+    ):
         sources.append(source)
+
+
+def oot_bit_source(group: str, field: str, bit: int) -> dict[str, Any]:
+    return {
+        "group": group,
+        "field": field,
+        "bit": bit,
+    }
+
+
+def oot_flag_source(group: str, field: str, flag: int) -> dict[str, Any]:
+    return {
+        "group": group,
+        "field": field,
+        "flag": flag,
+    }
+
+
+def oot_mask_source(group: str, field: str, mask: int) -> dict[str, Any]:
+    return {
+        "group": group,
+        "field": field,
+        "mask": f"0x{mask:04X}",
+    }
+
+
+def apply_oot_hint(entry: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
+    if not hint:
+        return entry
+
+    hinted_sources: list[dict[str, Any]] = []
+    for source in hint.get("sources", []):
+        if source.get("group") in SUPPORTED_OOT_GROUPS:
+            append_unique_source(hinted_sources, source)
+    if hinted_sources:
+        entry["sources"] = hinted_sources
+
+    for key in ("name", "note"):
+        if hint.get(key):
+            entry[key] = hint[key]
+
+    return entry
+
+
+def build_oot_entries(hints: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+
+    def add(symbol: str, sources: list[dict[str, Any]], note: str) -> None:
+        entry = {
+            "symbol": symbol,
+            "sources": sources,
+            "note": note,
+        }
+        entries.append(apply_oot_hint(entry, hints.get(symbol, {})))
+
+    for symbol, field, bit, note in OOT_EXTRA_SOURCES:
+        add(symbol, [oot_bit_source("gOotExtraFlags", f"gOotExtraFlags.{field}", bit)], note)
+
+    add("GERUDO_CARD", [oot_bit_source("inventoryQuest", "gOotSave.inventory.quest.value", 22)], "Gerudo Card quest item")
+    add("WEIRD_EGG", [oot_mask_source("gOotTradeSave", "gOotTradeSave.child", 0x1FFE)], "Weird Egg child trade progression")
+    add("ZELDA_LETTER", [oot_mask_source("gOotTradeSave", "gOotTradeSave.child", 0x1FFC)], "Zelda's Letter child trade progression")
+    add(
+        "POCKET_EGG",
+        [
+            oot_mask_source("gOotTradeSave", "gOotTradeSave.adult", 0x07FE),
+            oot_flag_source("eventsItem", "gOotSave.context.eventsItem", 0x2C),
+        ],
+        "Pocket Egg adult trade progression",
+    )
+
+    for symbol, flag, note in OOT_EVENT_CHK_SOURCES:
+        add(symbol, [oot_flag_source("eventsChk", "gOotSave.context.eventsChk", flag)], note)
+    for symbol, flag, note in OOT_EVENT_ITEM_SOURCES:
+        add(symbol, [oot_flag_source("eventsItem", "gOotSave.context.eventsItem", flag)], note)
+    for symbol, flag, note in OOT_EVENT_MISC_SOURCES:
+        add(symbol, [oot_flag_source("eventsMisc", "gOotSave.context.eventsMisc", flag)], note)
+
+    known_symbols = {entry["symbol"] for entry in entries}
+    for symbol, hint in hints.items():
+        if symbol in known_symbols:
+            continue
+        sources: list[dict[str, Any]] = []
+        for source in hint.get("sources", []):
+            if source.get("group") in SUPPORTED_OOT_GROUPS:
+                append_unique_source(sources, source)
+        if not sources:
+            continue
+        entry: dict[str, Any] = {
+            "symbol": symbol,
+            "sources": sources,
+        }
+        for key in ("name", "note"):
+            if hint.get(key):
+                entry[key] = hint[key]
+        entries.append(entry)
+
+    return entries
 
 
 def quest_source(symbol: str, quest_fields: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -354,6 +548,7 @@ def main() -> int:
     args = parse_args()
     repo_root = pathlib.Path(args.ootmm_repo).resolve()
     output_path = pathlib.Path(args.output).resolve()
+    oot_output_path = pathlib.Path(args.oot_output).resolve() if args.oot_output else None
 
     if not repo_root.is_dir():
         print(f"OoTMM repository not found: {repo_root}", file=sys.stderr)
@@ -365,14 +560,24 @@ def main() -> int:
     elif not args.no_existing_hints and output_path.is_file():
         hint_path = output_path
 
+    oot_hint_path: pathlib.Path | None = None
+    if args.oot_hints:
+        oot_hint_path = pathlib.Path(args.oot_hints).resolve()
+    elif oot_output_path is not None and not args.no_existing_hints and oot_output_path.is_file():
+        oot_hint_path = oot_output_path
+
     try:
         entries, warnings = build_entries(repo_root, load_hints(hint_path))
+        oot_entries = build_oot_entries(load_hints(oot_hint_path)) if oot_output_path is not None else []
     except Exception as exc:
         print(f"failed to generate special locations: {exc}", file=sys.stderr)
         return 1
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
+    if oot_output_path is not None:
+        oot_output_path.parent.mkdir(parents=True, exist_ok=True)
+        oot_output_path.write_text(json.dumps(oot_entries, indent=2) + "\n", encoding="utf-8")
 
     if warnings:
         print(f"generated {len(entries)} entries with {len(warnings)} missing source hints", file=sys.stderr)
@@ -380,6 +585,8 @@ def main() -> int:
             print(f"warning: {warning}", file=sys.stderr)
         if len(warnings) > 25:
             print(f"warning: ... {len(warnings) - 25} more", file=sys.stderr)
+    if oot_output_path is not None:
+        print(f"generated {len(oot_entries)} OoT special location entries", file=sys.stderr)
     return 0
 
 

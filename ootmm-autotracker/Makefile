@@ -19,7 +19,7 @@ generate-location-mapping:
 	python3 tools/generate_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/locations.json
 
 generate-special-locations:
-	python3 tools/generate_special_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/special_locations.json
+	python3 tools/generate_special_locations.py --ootmm-repo $(OOTMM_REPO) --output ootmm/special_locations.json --oot-output ootmm/oot_special_locations.json
 
 build: deps
 	$(GO) build $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o $(BINARY_NAME) .
