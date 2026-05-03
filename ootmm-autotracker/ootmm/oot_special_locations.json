@@ -638,6 +638,17 @@
     "note": "Kakariko Roof Man reward"
   },
   {
+    "symbol": "LOST_WOODS_SKULL_KID",
+    "sources": [
+      {
+        "group": "eventsItem",
+        "field": "gOotSave.context.eventsItem",
+        "flag": 22
+      }
+    ],
+    "note": "Lost Woods Skull Kid reward"
+  },
+  {
     "symbol": "LOST_WOODS_TARGET",
     "sources": [
       {
@@ -647,6 +658,28 @@
       }
     ],
     "note": "Lost Woods Target reward"
+  },
+  {
+    "symbol": "THEATER_STICKS",
+    "sources": [
+      {
+        "group": "eventsItem",
+        "field": "gOotSave.context.eventsItem",
+        "flag": 30
+      }
+    ],
+    "note": "Deku Theater Skull Mask reward"
+  },
+  {
+    "symbol": "THEATER_NUTS",
+    "sources": [
+      {
+        "group": "eventsItem",
+        "field": "gOotSave.context.eventsItem",
+        "flag": 31
+      }
+    ],
+    "note": "Deku Theater Mask of Truth reward"
   },
   {
     "symbol": "DARUNIA_BRACELET",

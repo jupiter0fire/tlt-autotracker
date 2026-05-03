@@ -2000,8 +2000,11 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			"GERUDO_ARCHERY_2":    "Gerudo Fortress Archery Reward 2",
 			"KAKARIKO_ROOF_MAN":   "Kakariko Man on Roof",
 			"LABORATORY_DIVE":     "Laboratory Dive",
+			"LOST_WOODS_SKULL_KID": "Lost Woods Skull Kid",
 			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
 			"LOST_WOODS_TARGET":   "Lost Woods Target",
+			"THEATER_NUTS":        "Deku Theater Nuts Upgrade",
+			"THEATER_STICKS":      "Deku Theater Sticks Upgrade",
 			"TALON_BOTTLE":        "Lon Lon Ranch Talon Bottle",
 			"SHOOTING_GAME_ADULT": "Shooting Gallery Adult",
 			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
@@ -2029,8 +2032,13 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		(1 << (ootEventItemLaboratoryDive & 0xF)) |
 			(1 << (ootEventItemBombchuBowling1 & 0xF)) |
 			(1 << (ootEventItemBombchuBowling2 & 0xF))
-	state.Oot.EventsItem[ootEventItemKakarikoRoofMan>>4] |= 1 << (ootEventItemKakarikoRoofMan & 0xF)
-	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] |= 1 << (ootEventItemLostWoodsTarget & 0xF)
+	state.Oot.EventsItem[ootEventItemKakarikoRoofMan>>4] |=
+		(1 << (ootEventItemKakarikoRoofMan & 0xF)) |
+		(1 << (0x16 & 0xF))
+	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] |=
+		(1 << (ootEventItemLostWoodsTarget & 0xF)) |
+		(1 << (0x1E & 0xF)) |
+		(1 << (0x1F & 0xF))
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
 	state.Oot.EventsItem[ootEventItemMaskSellKeaton>>4] =
 		(1 << (ootEventItemMaskSellKeaton & 0xF)) |
@@ -2047,8 +2055,11 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 		"Gerudo Fortress Archery Reward 2",
 		"Kakariko Man on Roof",
 		"Laboratory Dive",
+		"Lost Woods Skull Kid",
 		"Lon Lon Ranch Talon Bottle",
 		"Lost Woods Target",
+		"Deku Theater Sticks Upgrade",
+		"Deku Theater Nuts Upgrade",
 		"Shooting Gallery Adult",
 		"Shooting Gallery Child",
 		"Hyrule Field Sell Bunny Mask",
@@ -2234,6 +2245,60 @@ func TestExtractChecksIncludesOnlyKakarikoRoofManFromObservedEventItemDelta(t *t
 	for name := range beforeChecks {
 		if _, ok := afterChecks[name]; !ok {
 			t.Fatalf("unexpected removed check from observed Rooftop Man event-item delta: %s", name)
+		}
+	}
+}
+
+func TestExtractChecksIncludesOnlyLostWoodsSkullKidFromObservedEventItemDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"LOST_WOODS_SKULL_KID": "Lost Woods Skull Kid",
+			"KAKARIKO_ROOF_MAN":    "Kakariko Man on Roof",
+			"LOST_WOODS_TARGET":    "Lost Woods Target",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	if _, ok := beforeChecks["Lost Woods Skull Kid"]; ok {
+		t.Fatal("unexpected Lost Woods Skull Kid check before Skull Kid event-item bit is set")
+	}
+
+	afterState := &GameState{}
+	afterState.Oot.EventsItem[1] = 1 << 6 // eventsItem flag 22
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := afterChecks["Lost Woods Skull Kid"]; !ok {
+		t.Fatal("missing Lost Woods Skull Kid check after Skull Kid event-item bit is set")
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Lost Woods Skull Kid" {
+			t.Fatalf("unexpected new check from observed Lost Woods Skull Kid event-item delta: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count from observed Lost Woods Skull Kid event-item delta: got %d, want 1", newChecks)
+	}
+
+	for _, name := range []string{"Kakariko Man on Roof", "Lost Woods Target"} {
+		if _, ok := afterChecks[name]; ok {
+			t.Fatalf("unexpected %s check from Lost Woods Skull Kid event-item bit", name)
+		}
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check from observed Lost Woods Skull Kid event-item delta: %s", name)
 		}
 	}
 }
