@@ -145,7 +145,9 @@ const (
 	ootChildTradeHatchMask                     = 0x1ffe
 	ootChildTradeLetterMask                    = 0x1ffc
 	ootAdultTradePocketEggBit                  = 0
+	ootAdultTradeOddPotionBit                  = 4
 	ootAdultTradePocketCuccoMask               = 0x07fe
+	ootAdultTradeOddPotionMask                 = 1 << ootAdultTradeOddPotionBit
 	ootSceneShootingGallery                    = 0x42
 	ootSceneShootingGallerySave                = 0x43
 	ootEntranceChildArchery                    = 0x16d
@@ -676,6 +678,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
 
 	appendOotSymbolChecks(state, ootSymbolChecks, appendCheck)
+	appendOotAdultTradeConsumptionFallbacks(state, appendCheck)
 	appendMmSymbolChecks(state, mmSymbolChecks[:], appendCheck)
 	appendOotAmbiguousEventItemChecks(state, appendCheck)
 
@@ -728,6 +731,21 @@ func appendOotAmbiguousEventItemChecks(state *GameState, appendCheck func(string
 	if bitmapHasBit(npcOot, ootNpcShootingGalleryChildBit) || hasOotEventItemCheck(state, ootEventItemLostWoodsMemoryOrShootingChild) {
 		if name, ok := npcSymbolCheckName("OOT", "SHOOTING_GAME_CHILD"); ok {
 			appendCheck("OOT_event_item_SHOOTING_GAME_CHILD", name)
+		}
+	}
+}
+
+func appendOotAdultTradeConsumptionFallbacks(state *GameState, appendCheck func(string, string)) {
+	if state == nil {
+		return
+	}
+
+	adultTrade := uint16(state.Oot.ExtraRecords[ExtraIdxOotTrade] & 0xffff)
+	adultTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] & 0xffff)
+
+	if adultTradeSave&ootAdultTradeOddPotionMask != 0 && adultTrade&ootAdultTradeOddPotionMask == 0 {
+		if name, ok := npcSymbolCheckName("OOT", "TRADE_POACHER_SAW"); ok {
+			appendCheck("OOT_trade_TRADE_POACHER_SAW", name)
 		}
 	}
 }

@@ -2409,6 +2409,81 @@ func TestExtractChecksIncludesOnlyKakarikoAnjuEggFromObservedPocketEggEventDelta
 	}
 }
 
+func TestExtractChecksIncludesOnlyPoacherSawFromObservedOddPotionConsumptionDelta(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"TRADE_POACHER_SAW":        "Lost Woods Poacher's Saw",
+			"TRADE_ODD_POTION":         "Kakariko Potion Shop Odd Potion",
+			"TRADE_POCKET_EGG":         "Kakariko Anju Egg",
+			"TRADE_COJIRO":             "Kakariko Anju Cojiro",
+			"TRADE_ODD_MUSHROOM":       "Lost Woods Odd Mushroom",
+			"TRADE_BROKEN_GORON_SWORD": "Gerudo Valley Broken Goron Sword",
+			"TRADE_PRESCRIPTION":       "Death Mountain Trail Prescription",
+			"TRADE_EYEBALL_FROG":       "Zora Domain Eyeball Frog",
+			"TRADE_EYE_DROPS":          "Laboratory Eye Drops",
+			"TRADE_CLAIM_CHECK":        "Death Mountain Trail Claim Check",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	beforeState.Oot.ExtraRecords[ExtraIdxOotTrade] = 1 << ootAdultTradeOddPotionBit
+	beforeState.Oot.ExtraRecords[ExtraIdxOotTradeSave] = 1 << ootAdultTradeOddPotionBit
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+
+	if _, ok := beforeChecks["Lost Woods Poacher's Saw"]; ok {
+		t.Fatal("unexpected Lost Woods Poacher's Saw check before odd potion is consumed")
+	}
+
+	afterState := &GameState{}
+	afterState.Oot.ExtraRecords[ExtraIdxOotTradeSave] = beforeState.Oot.ExtraRecords[ExtraIdxOotTradeSave]
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := afterChecks["Lost Woods Poacher's Saw"]; !ok {
+		t.Fatal("missing Lost Woods Poacher's Saw check after odd potion is consumed")
+	}
+
+	for _, name := range []string{
+		"Kakariko Potion Shop Odd Potion",
+		"Kakariko Anju Egg",
+		"Kakariko Anju Cojiro",
+		"Lost Woods Odd Mushroom",
+		"Gerudo Valley Broken Goron Sword",
+		"Death Mountain Trail Prescription",
+		"Zora Domain Eyeball Frog",
+		"Laboratory Eye Drops",
+		"Death Mountain Trail Claim Check",
+	} {
+		if _, ok := afterChecks[name]; ok {
+			t.Fatalf("unexpected trade-location check from odd potion consumption fallback: %s", name)
+		}
+	}
+
+	newChecks := 0
+	for name := range afterChecks {
+		if _, ok := beforeChecks[name]; ok {
+			continue
+		}
+		newChecks++
+		if name != "Lost Woods Poacher's Saw" {
+			t.Fatalf("unexpected new check from observed odd potion consumption delta: %s", name)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count from observed odd potion consumption delta: got %d, want 1", newChecks)
+	}
+
+	for name := range beforeChecks {
+		if _, ok := afterChecks[name]; !ok {
+			t.Fatalf("unexpected removed check from observed odd potion consumption delta: %s", name)
+		}
+	}
+}
+
 func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
