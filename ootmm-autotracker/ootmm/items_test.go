@@ -1081,6 +1081,34 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksMapsMmExtraBossItemsToTempleBossChecks(t *testing.T) {
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxMmBoss] = uint32(1<<mmExtraBossSnowheadBit) << 8
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Snowhead Temple Boss"]; !ok {
+		t.Fatal("missing Snowhead Temple Boss check from MM extra boss items")
+	}
+	if _, ok := checks["Woodfall Temple Boss"]; ok {
+		t.Fatal("unexpected Woodfall Temple Boss check from MM extra boss items")
+	}
+}
+
+func TestExtractChecksMmExtraBossItemsStateTransition(t *testing.T) {
+	beforeState := &GameState{}
+	afterState := &GameState{}
+	afterState.Oot.ExtraRecords[ExtraIdxMmBoss] = uint32(1<<mmExtraBossSnowheadBit) << 8
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := beforeChecks["Snowhead Temple Boss"]; ok {
+		t.Fatal("unexpected Snowhead Temple Boss check before MM extra boss bit is set")
+	}
+	if _, ok := afterChecks["Snowhead Temple Boss"]; !ok {
+		t.Fatal("missing Snowhead Temple Boss check after MM extra boss bit is set")
+	}
+}
+
 func TestExtractChecksResolvesOotXflagConflictsFromRuntimeMqBits(t *testing.T) {
 	originalXflags := xflagCheckTables
 	originalConflicts := ootBitmapConflictTable["xflagsOot"]
