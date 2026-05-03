@@ -146,8 +146,6 @@ const (
 	ootChildTradeLetterMask                    = 0x1ffc
 	ootAdultTradePocketEggBit                  = 0
 	ootAdultTradeOddPotionBit                  = 4
-	ootAdultTradePocketCuccoMask               = 0x07fe
-	ootAdultTradeOddPotionMask                 = 1 << ootAdultTradeOddPotionBit
 	ootSceneShootingGallery                    = 0x42
 	ootSceneShootingGallerySave                = 0x43
 	ootEntranceChildArchery                    = 0x16d
@@ -176,6 +174,11 @@ type ootSymbolCheck struct {
 	flags     []int
 	mask      uint16
 	bit       int
+}
+
+type ootAdultTradeConsumptionFallback struct {
+	consumedBit int
+	symbol      string
 }
 
 type mmSymbolCheckSource uint8
@@ -213,6 +216,20 @@ var mmOwlItems = [...]struct {
 	{"MM_OWL_IKANA_CANYON", mmOwlIkanaCanyonBit},
 	{"MM_OWL_STONE_TOWER", mmOwlStoneTowerBit},
 	{"MM_OWL_HIDDEN", mmOwlHiddenBit},
+}
+
+var ootAdultTradeConsumptionFallbacks = [...]ootAdultTradeConsumptionFallback{
+	{consumedBit: 0, symbol: "TRADE_POCKET_EGG"},
+	{consumedBit: 1, symbol: "TRADE_COJIRO"},
+	{consumedBit: 2, symbol: "TRADE_ODD_MUSHROOM"},
+	{consumedBit: 3, symbol: "TRADE_ODD_POTION"},
+	{consumedBit: 4, symbol: "TRADE_POACHER_SAW"},
+	{consumedBit: 5, symbol: "TRADE_BROKEN_GORON_SWORD"},
+	{consumedBit: 6, symbol: "TRADE_PRESCRIPTION"},
+	{consumedBit: 7, symbol: "TRADE_EYEBALL_FROG"},
+	{consumedBit: 8, symbol: "TRADE_EYE_DROPS"},
+	{consumedBit: 9, symbol: "TRADE_CLAIM_CHECK"},
+	{consumedBit: 10, symbol: "TRADE_BIGGORON_SWORD"},
 }
 
 // mmSymbolChecks is loaded from special_locations.json at init time.
@@ -743,9 +760,13 @@ func appendOotAdultTradeConsumptionFallbacks(state *GameState, appendCheck func(
 	adultTrade := uint16(state.Oot.ExtraRecords[ExtraIdxOotTrade] & 0xffff)
 	adultTradeSave := uint16(state.Oot.ExtraRecords[ExtraIdxOotTradeSave] & 0xffff)
 
-	if adultTradeSave&ootAdultTradeOddPotionMask != 0 && adultTrade&ootAdultTradeOddPotionMask == 0 {
-		if name, ok := npcSymbolCheckName("OOT", "TRADE_POACHER_SAW"); ok {
-			appendCheck("OOT_trade_TRADE_POACHER_SAW", name)
+	for _, fallback := range ootAdultTradeConsumptionFallbacks {
+		mask := uint16(1 << fallback.consumedBit)
+		if adultTradeSave&mask == 0 || adultTrade&mask != 0 {
+			continue
+		}
+		if name, ok := npcSymbolCheckName("OOT", fallback.symbol); ok {
+			appendCheck("OOT_trade_"+fallback.symbol, name)
 		}
 	}
 }

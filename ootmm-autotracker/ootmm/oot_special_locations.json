@@ -187,22 +187,6 @@
     "note": "Zelda's Letter child trade progression"
   },
   {
-    "symbol": "POCKET_EGG",
-    "sources": [
-      {
-        "group": "gOotTradeSave",
-        "field": "gOotTradeSave.adult",
-        "mask": "0x07FE"
-      },
-      {
-        "group": "eventsItem",
-        "field": "gOotSave.context.eventsItem",
-        "flag": 44
-      }
-    ],
-    "note": "Pocket Egg adult trade progression"
-  },
-  {
     "symbol": "MALON_EGG",
     "sources": [
       {
@@ -674,28 +658,6 @@
       }
     ],
     "note": "Darunia's Bracelet obtained"
-  },
-  {
-    "symbol": "TRADE_POCKET_EGG",
-    "sources": [
-      {
-        "group": "eventsItem",
-        "field": "gOotSave.context.eventsItem",
-        "flag": 44
-      }
-    ],
-    "note": "Trade sequence Pocket Egg event"
-  },
-  {
-    "symbol": "POCKET_EGG_EVENT",
-    "sources": [
-      {
-        "group": "eventsItem",
-        "field": "gOotSave.context.eventsItem",
-        "flag": 44
-      }
-    ],
-    "note": "Pocket Egg event item"
   },
   {
     "symbol": "MASK_SELL_KEATON",
