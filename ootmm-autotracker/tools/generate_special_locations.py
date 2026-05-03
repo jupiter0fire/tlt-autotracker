@@ -20,6 +20,10 @@ EXTRA_STRUCTS = {
     "gMmExtraFlags3": "MmExtraFlags3",
 }
 
+OOT_EXTRA_STRUCTS = {
+    "gOotExtraFlags": "OotExtraFlags",
+}
+
 QUEST_SYMBOL_FIELDS = {
     "MM_SONG_AWAKENING": "songAwakening",
     "MM_SONG_ZORA": "songNewWave",
@@ -33,92 +37,22 @@ BOSS_SYMBOL_BITS = {
     "MM_REMAINS_TWINMOLD": 3,
 }
 
-OOT_EXTRA_SOURCES = [
-    ("FAIRY_MAGIC_UPGRADE", "greatFairies", 25, "Great Fairy magic upgrade"),
-    ("FAIRY_MAGIC_UPGRADE2", "greatFairies", 26, "Great Fairy magic upgrade 2"),
-    ("FAIRY_DEFENSE_UPGRADE", "greatFairies", 27, "Great Fairy defense upgrade"),
-    ("FAIRY_SPELL_WIND", "greatFairies", 28, "Great Fairy wind spell"),
-    ("FAIRY_SPELL_FIRE", "greatFairies", 29, "Great Fairy fire spell"),
-    ("FAIRY_SPELL_LOVE", "greatFairies", 30, "Great Fairy love spell"),
-    ("FISH_CHILD", "fishingChild", 24, "Child fishing pond completed"),
-    ("FISH_ADULT", "fishingAdult", 23, "Adult fishing pond completed"),
-    ("GORON_LINK_TUNIC", "tunicGoron", 22, "Goron tunic trade item"),
-    ("TRADE_BIGGORON_SWORD", "biggoron", 21, "Biggoron Sword trade item"),
-    ("ZORA_KING_TUNIC", "tunicZora", 20, "Zora tunic trade item"),
-    ("FIRE_ARROW", "fireArrow", 19, "Fire Arrow reward"),
-    ("CHEST_GAME_KEY", "chestGameKey", 6, "Treasure Chest Game skeleton key"),
-    ("TRADE_ODD_POTION", "oddPotion", 2, "Odd Potion trade item"),
-]
-
-OOT_EVENT_CHK_SOURCES = [
-    ("MALON_EGG", 0x12, "Malon egg event"),
-    ("MALON_SONG", 0x62, "Epona's Song event"),
-    ("MASTER_SWORD", 0x4F, "Master Sword pulled event"),
-    ("LIGHT_MEDALLION", 0x45, "Light Medallion obtained"),
-    ("OCARINA_TIME_ITEM", 0x43, "Ocarina of Time item obtained"),
-    ("OCARINA_TIME_SONG", 0xA9, "Song of Time learned"),
-    ("ROYAL_TOMB_SONG", 0x5A, "Song of Storms (Royal Tomb) event"),
-    ("RUTO_LETTER", 0x31, "Ruto's Letter event"),
-    ("FROGS_GAME", 0xD0, "Frogs game started"),
-    ("FROGS_ZL", 0xD1, "Frogs Zelda's Song"),
-    ("FROGS_EPONA", 0xD2, "Frogs Epona's Song"),
-    ("FROGS_SARIA", 0xD4, "Frogs Saria's Song"),
-    ("FROGS_SUNS", 0xD3, "Frogs Sun's Song"),
-    ("FROGS_SOT", 0xD5, "Frogs Song of Time"),
-    ("FROGS_STORMS", 0xD6, "Frogs Song of Storms"),
-    ("SARIA_SONG", 0x58, "Saria's Song event"),
-    ("ZORA_DIVING_GAME", 0x38, "Zora Diving Game completed"),
-    ("GS_10", 0xDA, "10 Golden Skulltulas collected"),
-    ("GS_20", 0xDB, "20 Golden Skulltulas collected"),
-    ("GS_30", 0xDC, "30 Golden Skulltulas collected"),
-    ("GS_40", 0xDD, "40 Golden Skulltulas collected"),
-    ("GS_50", 0xDE, "50 Golden Skulltulas collected"),
-    ("SARIA_OCARINA", 0xC1, "Saria's Ocarina obtained"),
-    ("SHEIK_FOREST", 0x50, "Forest Temple boss defeated"),
-    ("SHEIK_FIRE", 0x51, "Fire Temple boss defeated"),
-    ("SHEIK_WATER", 0x52, "Water Temple boss defeated"),
-    ("SHEIK_SHADOW", 0x54, "Shadow Temple boss defeated"),
-    ("SHEIK_LIGHT", 0x55, "Light Temple boss defeated"),
-    ("SHEIK_SPIRIT", 0xAC, "Spirit Temple boss defeated"),
-    ("SONG_STORMS", 0x5B, "Song of Storms learned"),
-    ("ZELDA_LETTER_EVENT", 0x40, "Zelda's Letter event flag"),
-    ("ZELDA_LIGHT_ARROW", 0xC4, "Light Arrows obtained"),
-    ("ZELDA_SONG", 0x59, "Zelda's Song learned"),
-]
-
-OOT_EVENT_ITEM_SOURCES = [
-    ("ANJU_BOTTLE", 0x0C, "Anju's Bottle obtained"),
-    ("TALON_BOTTLE", 0x02, "Talon Bottle obtained"),
-    ("SHOOTING_GAME_ADULT", 0x0E, "Shooting Gallery (Adult) reward"),
-    ("GERUDO_ARCHERY_2", 0x0F, "Gerudo Archery second reward"),
-    ("LABORATORY_DIVE", 0x10, "Laboratory Dive reward"),
-    ("BOMBCHU_BOWLING_1", 0x11, "Bombchu Bowling first reward"),
-    ("BOMBCHU_BOWLING_2", 0x12, "Bombchu Bowling second reward"),
-    ("KAKARIKO_ROOF_MAN", 0x15, "Kakariko Roof Man reward"),
-    ("LOST_WOODS_TARGET", 0x1D, "Lost Woods Target reward"),
-    ("DARUNIA_BRACELET", 0x20, "Darunia's Bracelet obtained"),
-    ("TRADE_POCKET_EGG", 0x2C, "Trade sequence Pocket Egg event"),
-    ("POCKET_EGG_EVENT", 0x2C, "Pocket Egg event item"),
-    ("MASK_SELL_KEATON", 0x38, "Keaton Mask sold"),
-    ("MASK_SELL_SKULL", 0x39, "Skull Mask sold"),
-    ("MASK_SELL_SPOOKY", 0x3A, "Spooky Mask sold"),
-    ("MASK_SELL_BUNNY", 0x3B, "Bunny Hood sold"),
-]
-
-OOT_EVENT_MISC_SOURCES = [
-    ("GORON_BOMB_BAG", 0x11E, "Goron Bomb Bag obtained"),
-    ("GERUDO_ARCHERY_1", 0x190, "Gerudo Archery first reward"),
-    ("DOG_LADY", 0x191, "Dog Lady Heart Piece"),
-    ("MEDIGORON", 0xB2, "Medigoron obtained"),
-]
-
 NPC_DEFINE_RE = re.compile(r"^(MM_[A-Z0-9_]+):\s*(0x[0-9a-fA-F]+|\d+)\s*$")
 BITFIELD_RE = re.compile(r"\bu32\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(\d+)\s*;")
 STRUCT_RE_TEMPLATE = r"typedef\s+struct\s*\{(?P<body>[^{}]*)\}\s*%s\s*;"
 MM_EV_RE = re.compile(r"#define\s+(EV_MM_WEEK_[A-Z0-9_]+)\s+MM_EV\((\d+),\s*(\d+)\)")
+OOT_EVENT_RE = re.compile(r"#define\s+((?:EV|EN)_OOT_(CHK|ITEM|INF)_[A-Z0-9_]+)\s+(.+)")
+OOT_QUEST_RE = re.compile(r"#define\s+QUEST_OOT_([A-Z0-9_]+)\s+(\d+)")
 MM_SET_EVENT_RE = re.compile(r"MM_SET_EVENT_WEEK\(([^)]+)\)")
 EXTRA_ASSIGN_RE = re.compile(r"\b(gMmExtraFlags2|gMmExtraFlags3|gMmExtraFlags)\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|\|=)")
 NPC_REF_RE = re.compile(r"\bNPC_(MM_[A-Z0-9_]+)\b")
+OOT_NPC_REF_RE = re.compile(r"\bNPC_OOT_([A-Z0-9_]+)\b")
+OOT_EXTRA_ASSIGN_RE = re.compile(r"\bgOotExtraFlags\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|\|=)")
+OOT_DIRECT_NPC_EVENT_RE = re.compile(r"\bNPC_OOT_([A-Z0-9_]+)\b[^;]*\b((?:EV|EN)_OOT_(?:CHK|ITEM|INF)_[A-Z0-9_]+)\b")
+OOT_SET_CHK_RE = re.compile(r"\b(?:SetEventChk|checkSetEvent)\s*\([^;]*?\b((?:EV|EN)_OOT_CHK_[A-Z0-9_]+)\b")
+OOT_GET_CHK_RE = re.compile(r"\bGetEventChk\s*\(\s*((?:EV|EN)_OOT_CHK_[A-Z0-9_]+)\s*\)")
+OOT_BITMAP_EVENT_RE = re.compile(r"\bBITMAP16_(?:SET|GET)\s*\(\s*g(?:Save|OotSave)\.info\.events(Chk|Item|Misc)\s*,\s*((?:EV|EN)_OOT_(?:CHK|ITEM|INF)_[A-Z0-9_]+)\s*\)")
+OOT_ARRAY_OR_RE = re.compile(r"\bg(?:Save|OotSave)\.info\.events(Item|Misc)\s*\[\s*(\d+)\s*\]\s*\|=\s*(0x[0-9a-fA-F]+|\d+)")
 
 
 def parse_args() -> argparse.Namespace:
@@ -163,7 +97,7 @@ def load_npc_ids(path: pathlib.Path) -> dict[str, int]:
     return ids
 
 
-def load_pool_names(path: pathlib.Path) -> dict[str, str]:
+def load_pool_names(path: pathlib.Path, prefix: str = "MM") -> dict[str, str]:
     names: dict[str, str] = {}
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle, skipinitialspace=True)
@@ -174,7 +108,7 @@ def load_pool_names(path: pathlib.Path) -> dict[str, str]:
             raw_id = row["id"].strip()
             if not location or not raw_id:
                 continue
-            symbol = raw_id if raw_id.startswith("MM_") else f"MM_{raw_id}"
+            symbol = raw_id if raw_id.startswith(f"{prefix}_") else f"{prefix}_{raw_id}"
             names.setdefault(symbol, location)
     return names
 
@@ -186,11 +120,14 @@ def load_hints(path: pathlib.Path | None) -> dict[str, dict[str, Any]]:
     return {entry["symbol"]: entry for entry in entries if entry.get("symbol")}
 
 
-def parse_bitfield_structs(header: pathlib.Path) -> dict[str, dict[str, dict[str, Any]]]:
+def parse_bitfield_structs(
+    header: pathlib.Path,
+    struct_names: dict[str, str] = EXTRA_STRUCTS,
+) -> dict[str, dict[str, dict[str, Any]]]:
     text = header.read_text(encoding="utf-8")
     structs: dict[str, dict[str, dict[str, Any]]] = {}
 
-    for group, struct_name in EXTRA_STRUCTS.items():
+    for group, struct_name in struct_names.items():
         match = re.search(STRUCT_RE_TEMPLATE % re.escape(struct_name), text, re.S)
         if not match:
             raise ValueError(f"failed to find {struct_name} in {header}")
@@ -355,6 +292,11 @@ def append_unique_source(sources: list[dict[str, Any]], source: dict[str, Any]) 
         sources.append(source)
 
 
+def append_unique_sources(sources: list[dict[str, Any]], extra_sources: list[dict[str, Any]]) -> None:
+    for source in extra_sources:
+        append_unique_source(sources, source)
+
+
 def oot_bit_source(group: str, field: str, bit: int) -> dict[str, Any]:
     return {
         "group": group,
@@ -379,77 +321,281 @@ def oot_mask_source(group: str, field: str, mask: int) -> dict[str, Any]:
     }
 
 
-def apply_oot_hint(entry: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
-    if not hint:
-        return entry
+def eval_oot_event_expr(expr: str) -> int | None:
+    expr = expr.split("/*", 1)[0].split("//", 1)[0].strip()
+    macro = re.fullmatch(r"OOT_EV\(\s*(0x[0-9a-fA-F]+|\d+)\s*,\s*(0x[0-9a-fA-F]+|\d+)\s*\)", expr)
+    if macro:
+        word, bit = macro.groups()
+        return (int(word, 0) << 4) | int(bit, 0)
+    literal = re.fullmatch(r"0x[0-9a-fA-F]+|\d+", expr)
+    if literal:
+        return int(expr, 0)
+    return None
 
-    hinted_sources: list[dict[str, Any]] = []
+
+def parse_oot_events(path: pathlib.Path) -> dict[str, dict[str, Any]]:
+    events: dict[str, dict[str, Any]] = {}
+    for name, kind, expr in OOT_EVENT_RE.findall(path.read_text(encoding="utf-8")):
+        flag = eval_oot_event_expr(expr)
+        if flag is None:
+            continue
+        group = {
+            "CHK": "eventsChk",
+            "ITEM": "eventsItem",
+            "INF": "eventsMisc",
+        }[kind]
+        field = {
+            "eventsChk": "gOotSave.context.eventsChk",
+            "eventsItem": "gOotSave.context.eventsItem",
+            "eventsMisc": "gOotSave.context.eventsMisc",
+        }[group]
+        events[name] = oot_flag_source(group, field, flag)
+    return events
+
+
+def parse_oot_quest_bits(path: pathlib.Path) -> dict[str, int]:
+    bits: dict[str, int] = {}
+    for symbol, bit_text in OOT_QUEST_RE.findall(path.read_text(encoding="utf-8")):
+        bits[symbol] = int(bit_text)
+    return bits
+
+
+def oot_source_from_event_macro(events: dict[str, dict[str, Any]], macro: str) -> dict[str, Any] | None:
+    return events.get(macro)
+
+
+def source_groups(sources: list[dict[str, Any]]) -> set[str]:
+    return {source.get("group", "") for source in sources}
+
+
+def event_suffix(macro: str) -> str:
+    return re.sub(r"^(?:EV|EN)_OOT_(?:CHK|ITEM|INF)_", "", macro)
+
+
+def best_matching_event_source(
+    symbol: str,
+    macros: list[str],
+    events: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    exact_matches = [macro for macro in macros if event_suffix(macro) == symbol]
+    if len(exact_matches) == 1:
+        return oot_source_from_event_macro(events, exact_matches[0])
+    if len(macros) == 1:
+        return oot_source_from_event_macro(events, macros[0])
+    return None
+
+
+def extract_oot_event_macros(text: str, events: dict[str, dict[str, Any]]) -> list[str]:
+    macros: list[str] = []
+    for macro in OOT_SET_CHK_RE.findall(text):
+        if macro in events and macro not in macros:
+            macros.append(macro)
+    for macro in OOT_GET_CHK_RE.findall(text):
+        if macro in events and macro not in macros:
+            macros.append(macro)
+    for _, macro in OOT_BITMAP_EVENT_RE.findall(text):
+        if macro in events and macro not in macros:
+            macros.append(macro)
+    return macros
+
+
+def extract_oot_literal_event_sources(text: str) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for kind, word_text, mask_text in OOT_ARRAY_OR_RE.findall(text):
+        mask = int(mask_text, 0)
+        if mask == 0 or mask & (mask - 1) != 0:
+            continue
+        flag = int(word_text) * 16 + (mask.bit_length() - 1)
+        group = "eventsItem" if kind == "Item" else "eventsMisc"
+        field = "gOotSave.context.eventsItem" if group == "eventsItem" else "gOotSave.context.eventsMisc"
+        append_unique_source(sources, oot_flag_source(group, field, flag))
+    return sources
+
+
+def iter_c_functions(text: str) -> list[str]:
+    functions: list[str] = []
+    for match in re.finditer(r"(?m)^[A-Za-z_][A-Za-z0-9_\s\*]*\s+[A-Za-z_][A-Za-z0-9_]*\s*\([^;{}]*\)\s*\{", text):
+        depth = 0
+        index = match.end() - 1
+        while index < len(text):
+            char = text[index]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    functions.append(text[match.start() : index + 1])
+                    break
+            index += 1
+    return functions
+
+
+def discover_oot_great_fairy_sources(text: str, bitfields: dict[str, dict[str, dict[str, Any]]]) -> dict[str, list[dict[str, Any]]]:
+    if "gOotExtraFlags.greatFairies" not in text:
+        return {}
+    match = re.search(r"kGreatFairyNPCs\[\]\s*=\s*\{(?P<body>.*?)\};", text, re.S)
+    if not match:
+        return {}
+    field_info = bitfields.get("gOotExtraFlags", {}).get("greatFairies")
+    if field_info is None:
+        return {}
+
+    sources: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for index, symbol in enumerate(OOT_NPC_REF_RE.findall(match.group("body"))):
+        raw_bits = field_info["raw_bits"]
+        if index >= len(raw_bits):
+            continue
+        append_unique_source(
+            sources[symbol],
+            oot_bit_source("gOotExtraFlags", "gOotExtraFlags.greatFairies", raw_bits[index]),
+        )
+    return sources
+
+
+def split_words(value: str) -> list[str]:
+    words: list[str] = []
+    for part in value.split("_"):
+        part = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", part)
+        words.extend(word.upper() for word in part.split("_") if word)
+    return words
+
+
+def word_matches_symbol(word: str, symbol_words: set[str]) -> bool:
+    return any(word == symbol_word or word.startswith(symbol_word) or symbol_word.startswith(word) for symbol_word in symbol_words)
+
+
+def oot_field_matches_symbol(field: str, symbol: str) -> bool:
+    field_words = split_words(field)
+    symbol_words = set(split_words(symbol))
+    return all(word_matches_symbol(word, symbol_words) for word in field_words)
+
+
+def append_oot_extra_field_source(
+    sources: list[dict[str, Any]],
+    field: str,
+    bitfields: dict[str, dict[str, dict[str, Any]]],
+) -> None:
+    field_info = bitfields.get("gOotExtraFlags", {}).get(field)
+    if field_info is None or not field_info["raw_bits"]:
+        return
+    append_unique_source(sources, oot_bit_source("gOotExtraFlags", f"gOotExtraFlags.{field}", field_info["raw_bits"][0]))
+
+
+def discover_oot_sources(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    oot_save_header = repo_root / "packages/generator/include/combo/oot/save.h"
+    events_header = repo_root / "packages/generator/include/combo/common/events.h"
+    bitfields = parse_bitfield_structs(oot_save_header, OOT_EXTRA_STRUCTS)
+    quest_bits = parse_oot_quest_bits(oot_save_header)
+    events = parse_oot_events(events_header)
+    target_symbols = set(hints)
+    discovered: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+    source_roots = [
+        repo_root / "packages/generator/src/oot",
+        repo_root / "packages/generator/src/common",
+    ]
+    source_paths = [path for root in source_roots for path in root.rglob("*.c")]
+
+    for path in source_paths:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for symbol, sources in discover_oot_great_fairy_sources(text, bitfields).items():
+            if not target_symbols or symbol in target_symbols:
+                append_unique_sources(discovered[symbol], sources)
+
+        file_npcs = sorted(set(OOT_NPC_REF_RE.findall(text)))
+        if target_symbols:
+            file_npcs = [symbol for symbol in file_npcs if symbol in target_symbols]
+        file_fields = sorted(set(OOT_EXTRA_ASSIGN_RE.findall(text)))
+        for field in file_fields:
+            for symbol in file_npcs:
+                if oot_field_matches_symbol(field, symbol):
+                    append_oot_extra_field_source(discovered[symbol], field, bitfields)
+
+        for symbol, macro in OOT_DIRECT_NPC_EVENT_RE.findall(text):
+            if target_symbols and symbol not in target_symbols:
+                continue
+            source = oot_source_from_event_macro(events, macro)
+            if source is not None:
+                append_unique_source(discovered[symbol], source)
+
+        for body in iter_c_functions(text):
+            npcs = sorted(set(OOT_NPC_REF_RE.findall(body)))
+            if target_symbols:
+                npcs = [symbol for symbol in npcs if symbol in target_symbols]
+            if not npcs:
+                continue
+
+            fields = sorted(set(OOT_EXTRA_ASSIGN_RE.findall(body)))
+            if fields:
+                for field in fields:
+                    for symbol in npcs:
+                        if len(npcs) == 1 or oot_field_matches_symbol(field, symbol):
+                            append_oot_extra_field_source(discovered[symbol], field, bitfields)
+
+            macros = extract_oot_event_macros(body, events)
+            literal_sources = extract_oot_literal_event_sources(body)
+            for symbol in npcs:
+                source = best_matching_event_source(symbol, macros, events)
+                if source is not None:
+                    append_unique_source(discovered[symbol], source)
+                elif len(npcs) == 1 and len(literal_sources) == 1:
+                    append_unique_source(discovered[symbol], literal_sources[0])
+
+            if len(npcs) == 1 and "gSave.info.inventory.quest.gerudoCard" in body:
+                bit = quest_bits.get("GERUDO_CARD")
+                if bit is not None:
+                    append_unique_source(
+                        discovered[npcs[0]],
+                        oot_bit_source("inventoryQuest", "gOotSave.inventory.quest.value", bit),
+                    )
+
+    return discovered
+
+
+def supported_hint_sources(hint: dict[str, Any]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
     for source in hint.get("sources", []):
         if source.get("group") in SUPPORTED_OOT_GROUPS:
-            append_unique_source(hinted_sources, source)
-    if hinted_sources:
-        entry["sources"] = hinted_sources
-
-    for key in ("name", "note"):
-        if hint.get(key):
-            entry[key] = hint[key]
-
-    return entry
+            append_unique_source(sources, source)
+    return sources
 
 
-def build_oot_entries(hints: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def build_oot_entries(
+    repo_root: pathlib.Path,
+    hints: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    discovered = discover_oot_sources(repo_root, hints)
+    symbols = list(hints) if hints else sorted(discovered)
+    warnings: list[str] = []
     entries: list[dict[str, Any]] = []
 
-    def add(symbol: str, sources: list[dict[str, Any]], note: str) -> None:
-        entry = {
-            "symbol": symbol,
-            "sources": sources,
-            "note": note,
-        }
-        entries.append(apply_oot_hint(entry, hints.get(symbol, {})))
+    for symbol in symbols:
+        hint = hints.get(symbol, {})
+        hinted_sources = supported_hint_sources(hint)
+        discovered_sources = discovered.get(symbol, [])
+        if hinted_sources and source_groups(discovered_sources) >= source_groups(hinted_sources):
+            sources = discovered_sources
+        elif hinted_sources:
+            sources = hinted_sources
+            if discovered_sources:
+                warnings.append(f"OOT_{symbol}: kept hinted sources; discovered only {sorted(source_groups(discovered_sources))}")
+            else:
+                warnings.append(f"OOT_{symbol}: no source discovered, kept hinted sources")
+        else:
+            sources = discovered_sources
 
-    for symbol, field, bit, note in OOT_EXTRA_SOURCES:
-        add(symbol, [oot_bit_source("gOotExtraFlags", f"gOotExtraFlags.{field}", bit)], note)
-
-    add("GERUDO_CARD", [oot_bit_source("inventoryQuest", "gOotSave.inventory.quest.value", 22)], "Gerudo Card quest item")
-    add("WEIRD_EGG", [oot_mask_source("gOotTradeSave", "gOotTradeSave.child", 0x1FFE)], "Weird Egg child trade progression")
-    add("ZELDA_LETTER", [oot_mask_source("gOotTradeSave", "gOotTradeSave.child", 0x1FFC)], "Zelda's Letter child trade progression")
-    add(
-        "POCKET_EGG",
-        [
-            oot_mask_source("gOotTradeSave", "gOotTradeSave.adult", 0x07FE),
-            oot_flag_source("eventsItem", "gOotSave.context.eventsItem", 0x2C),
-        ],
-        "Pocket Egg adult trade progression",
-    )
-
-    for symbol, flag, note in OOT_EVENT_CHK_SOURCES:
-        add(symbol, [oot_flag_source("eventsChk", "gOotSave.context.eventsChk", flag)], note)
-    for symbol, flag, note in OOT_EVENT_ITEM_SOURCES:
-        add(symbol, [oot_flag_source("eventsItem", "gOotSave.context.eventsItem", flag)], note)
-    for symbol, flag, note in OOT_EVENT_MISC_SOURCES:
-        add(symbol, [oot_flag_source("eventsMisc", "gOotSave.context.eventsMisc", flag)], note)
-
-    known_symbols = {entry["symbol"] for entry in entries}
-    for symbol, hint in hints.items():
-        if symbol in known_symbols:
-            continue
-        sources: list[dict[str, Any]] = []
-        for source in hint.get("sources", []):
-            if source.get("group") in SUPPORTED_OOT_GROUPS:
-                append_unique_source(sources, source)
         if not sources:
             continue
+
         entry: dict[str, Any] = {
             "symbol": symbol,
             "sources": sources,
         }
-        for key in ("name", "note"):
-            if hint.get(key):
-                entry[key] = hint[key]
+        if hint.get("note"):
+            entry["note"] = hint["note"]
         entries.append(entry)
 
-    return entries
+    return entries, warnings
 
 
 def quest_source(symbol: str, quest_fields: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -568,7 +714,9 @@ def main() -> int:
 
     try:
         entries, warnings = build_entries(repo_root, load_hints(hint_path))
-        oot_entries = build_oot_entries(load_hints(oot_hint_path)) if oot_output_path is not None else []
+        oot_entries, oot_warnings = (
+            build_oot_entries(repo_root, load_hints(oot_hint_path)) if oot_output_path is not None else ([], [])
+        )
     except Exception as exc:
         print(f"failed to generate special locations: {exc}", file=sys.stderr)
         return 1
@@ -587,6 +735,12 @@ def main() -> int:
             print(f"warning: ... {len(warnings) - 25} more", file=sys.stderr)
     if oot_output_path is not None:
         print(f"generated {len(oot_entries)} OoT special location entries", file=sys.stderr)
+        if oot_warnings:
+            print(f"{len(oot_warnings)} OoT entries used preserved hint sources", file=sys.stderr)
+            for warning in oot_warnings[:25]:
+                print(f"warning: {warning}", file=sys.stderr)
+            if len(oot_warnings) > 25:
+                print(f"warning: ... {len(oot_warnings) - 25} more", file=sys.stderr)
     return 0
 
 
