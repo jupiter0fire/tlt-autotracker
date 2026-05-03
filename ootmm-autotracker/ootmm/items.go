@@ -150,7 +150,6 @@ const (
 	ootSceneShootingGallerySave                = 0x43
 	ootEntranceChildArchery                    = 0x16d
 	ootNpcLostWoodsMemoryBit                   = 12
-	ootNpcShootingGalleryChildBit              = 31
 	ootItemRutoLetter                          = 0x1b
 	mmItemRutoLetter                           = 0xb6
 )
@@ -744,11 +743,6 @@ func appendOotAmbiguousEventItemChecks(state *GameState, appendCheck func(string
 		}
 	}
 
-	if bitmapHasBit(npcOot, ootNpcShootingGalleryChildBit) || hasOotEventItemCheck(state, ootEventItemLostWoodsMemoryOrShootingChild) {
-		if name, ok := npcSymbolCheckName("OOT", "SHOOTING_GAME_CHILD"); ok {
-			appendCheck("OOT_event_item_SHOOTING_GAME_CHILD", name)
-		}
-	}
 }
 
 func appendOotAdultTradeConsumptionFallbacks(state *GameState, appendCheck func(string, string)) {

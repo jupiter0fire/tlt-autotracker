@@ -572,6 +572,17 @@
     "note": "Talon Bottle obtained"
   },
   {
+    "symbol": "SHOOTING_GAME_CHILD",
+    "sources": [
+      {
+        "group": "eventsItem",
+        "field": "gOotSave.context.eventsItem",
+        "flag": 13
+      }
+    ],
+    "note": "Shooting Gallery (Child) reward"
+  },
+  {
     "symbol": "SHOOTING_GAME_ADULT",
     "sources": [
       {
