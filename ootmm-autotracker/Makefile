@@ -21,18 +21,18 @@ generate-location-mapping:
 generate-special-locations:
 	python3 tools/generate_special_locations.py \
 		--ootmm-repo $(OOTMM_REPO) \
-		--output ootmm/special_locations.json \
-		--oot-output ootmm/oot_special_locations.json \
-		--fallback-baseline ootmm/special_locations_fallbacks.lock.json \
-		--oot-fallback-baseline ootmm/oot_special_locations_fallbacks.lock.json
+		--output ootmm/special_locations_mm.json \
+		--oot-output ootmm/special_locations_oot.json \
+		--fallback-baseline ootmm/special_locations_fallbacks_mm.lock.json \
+		--oot-fallback-baseline ootmm/special_locations_fallbacks_oot.lock.json
 
 update-special-location-fallback-baselines:
 	python3 tools/generate_special_locations.py \
 		--ootmm-repo $(OOTMM_REPO) \
-		--output ootmm/special_locations.json \
-		--oot-output ootmm/oot_special_locations.json \
-		--fallback-baseline ootmm/special_locations_fallbacks.lock.json \
-		--oot-fallback-baseline ootmm/oot_special_locations_fallbacks.lock.json \
+		--output ootmm/special_locations_mm.json \
+		--oot-output ootmm/special_locations_oot.json \
+		--fallback-baseline ootmm/special_locations_fallbacks_mm.lock.json \
+		--oot-fallback-baseline ootmm/special_locations_fallbacks_oot.lock.json \
 		--update-fallback-baseline
 
 build: deps

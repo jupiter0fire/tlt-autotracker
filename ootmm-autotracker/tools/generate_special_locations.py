@@ -62,19 +62,19 @@ def parse_args() -> argparse.Namespace:
         description="Generate special location metadata for the autotracker from an OoTMM checkout."
     )
     parser.add_argument("--ootmm-repo", required=True, help="Path to the OoTMM repository root.")
-    parser.add_argument("--output", required=True, help="Path to write MM special_locations.json.")
-    parser.add_argument("--oot-output", help="Optional path to write OoT oot_special_locations.json.")
+    parser.add_argument("--output", required=True, help="Path to write MM special_locations_mm.json.")
+    parser.add_argument("--oot-output", help="Optional path to write OoT special_locations_oot.json.")
     parser.add_argument(
         "--hints",
         help=(
-            "Optional existing special_locations.json to preserve manual source hints/notes. "
+            "Optional existing special_locations_mm.json to preserve manual source hints/notes. "
             "Defaults to --output when that file exists."
         ),
     )
     parser.add_argument(
         "--oot-hints",
         help=(
-            "Optional existing oot_special_locations.json to preserve manual source hints/notes. "
+            "Optional existing special_locations_oot.json to preserve manual source hints/notes. "
             "Defaults to --oot-output when that file exists."
         ),
     )
@@ -584,10 +584,12 @@ def supported_hint_sources(hint: dict[str, Any]) -> list[dict[str, Any]]:
 def build_oot_entries(
     repo_root: pathlib.Path,
     hints: dict[str, dict[str, Any]],
-) -> tuple[list[dict[str, Any]], list[str]]:
+) -> tuple[list[dict[str, Any]], list[str], int]:
     discovered = discover_oot_sources(repo_root, hints)
     symbols = list(hints) if hints else sorted(discovered)
     warnings: list[str] = []
+    no_discovered_hinted_symbols: list[str] = []
+    preserved_hint_source_count = 0
     entries: list[dict[str, Any]] = []
 
     for symbol in symbols:
@@ -598,10 +600,11 @@ def build_oot_entries(
             sources = discovered_sources
         elif hinted_sources:
             sources = hinted_sources
+            preserved_hint_source_count += 1
             if discovered_sources:
                 warnings.append(f"OOT_{symbol}: kept hinted sources; discovered only {sorted(source_groups(discovered_sources))}")
             else:
-                warnings.append(f"OOT_{symbol}: no source discovered, kept hinted sources")
+                no_discovered_hinted_symbols.append(f"OOT_{symbol}")
         else:
             sources = discovered_sources
 
@@ -616,7 +619,13 @@ def build_oot_entries(
             entry["note"] = hint["note"]
         entries.append(entry)
 
-    return entries, warnings
+    if no_discovered_hinted_symbols:
+        warnings.append(
+            "no source discovered, kept hinted sources: "
+            + ", ".join(sorted(no_discovered_hinted_symbols))
+        )
+
+    return entries, warnings, preserved_hint_source_count
 
 
 def quest_source(symbol: str, quest_fields: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -868,8 +877,8 @@ def main() -> int:
 
     try:
         entries, warnings = build_entries(repo_root, load_hints(hint_path))
-        oot_entries, oot_warnings = (
-            build_oot_entries(repo_root, load_hints(oot_hint_path)) if oot_output_path is not None else ([], [])
+        oot_entries, oot_warnings, oot_preserved_hint_source_count = (
+            build_oot_entries(repo_root, load_hints(oot_hint_path)) if oot_output_path is not None else ([], [], 0)
         )
     except Exception as exc:
         print(f"failed to generate special locations: {exc}", file=sys.stderr)
@@ -907,13 +916,17 @@ def main() -> int:
     if oot_output_path is not None:
         print(f"generated {len(oot_entries)} OoT special location entries", file=sys.stderr)
         if oot_warnings:
-            print(f"{len(oot_warnings)} OoT entries used preserved hint sources", file=sys.stderr)
+            print(f"{oot_preserved_hint_source_count} OoT entries used preserved hint sources", file=sys.stderr)
             for warning in oot_warnings[:25]:
                 print(f"warning: {warning}", file=sys.stderr)
             if len(oot_warnings) > 25:
                 print(f"warning: ... {len(oot_warnings) - 25} more", file=sys.stderr)
     if not baseline_ok:
-        print("fallback baseline mismatch; review the diff before updating the baseline", file=sys.stderr)
+        print(
+            "fallback baseline mismatch; review the diff before updating the baseline "
+            "with make update-special-location-fallback-baselines",
+            file=sys.stderr,
+        )
         return 1
     return 0
 

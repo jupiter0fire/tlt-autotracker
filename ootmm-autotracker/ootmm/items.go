@@ -230,10 +230,10 @@ var ootAdultTradeConsumptionFallbacks = [...]ootAdultTradeConsumptionFallback{
 	{consumedBit: 10, symbol: "TRADE_BIGGORON_SWORD"},
 }
 
-// mmSymbolChecks is loaded from special_locations.json at init time.
+// mmSymbolChecks is loaded from special_locations_mm.json at init time.
 var mmSymbolChecks []mmSymbolCheck
 
-// ootSymbolChecks is loaded from oot_special_locations.json at init time.
+// ootSymbolChecks is loaded from special_locations_oot.json at init time.
 var ootSymbolChecks []ootSymbolCheck
 
 func init() {

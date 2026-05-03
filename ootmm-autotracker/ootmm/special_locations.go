@@ -39,10 +39,10 @@ func getSourceInfo(group string) (mmSymbolCheckSource, string) {
 	return 0, ""
 }
 
-//go:embed special_locations.json
+//go:embed special_locations_mm.json
 var embeddedSpecialLocations []byte
 
-//go:embed oot_special_locations.json
+//go:embed special_locations_oot.json
 var embeddedOotSpecialLocations []byte
 
 type ootSpecialLocationEntry struct {
@@ -81,7 +81,7 @@ func getOotSourceInfo(group string, field string) (ootSymbolCheckSource, string)
 	return 0, ""
 }
 
-// loadMmSymbolChecks parses special_locations.json and builds the mmSymbolChecks slice.
+// loadMmSymbolChecks parses special_locations_mm.json and builds the mmSymbolChecks slice.
 func loadMmSymbolChecks() []mmSymbolCheck {
 	var entries []specialLocationEntry
 	if err := json.Unmarshal(embeddedSpecialLocations, &entries); err != nil {
@@ -160,7 +160,7 @@ func parseWeekEventSource(entry specialLocationEntry, src specialLocationSourceE
 	return byteIndex, mask, true
 }
 
-// loadOotSymbolChecks parses oot_special_locations.json and builds the ootSymbolChecks slice.
+// loadOotSymbolChecks parses special_locations_oot.json and builds the ootSymbolChecks slice.
 func loadOotSymbolChecks() []ootSymbolCheck {
 	var entries []ootSpecialLocationEntry
 	if err := json.Unmarshal(embeddedOotSpecialLocations, &entries); err != nil {

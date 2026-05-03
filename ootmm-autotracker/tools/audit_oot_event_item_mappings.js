@@ -9,7 +9,7 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const oatChecksPath = path.join(repoRoot, 'OOT-Auto-Tracker', 'src', 'main', 'checks.js');
-const ootSpecialPath = path.join(repoRoot, 'ootmm-autotracker', 'ootmm', 'oot_special_locations.json');
+const ootSpecialPath = path.join(repoRoot, 'ootmm-autotracker', 'ootmm', 'special_locations_oot.json');
 
 // OOT-Auto-Tracker encodes OoT event bits as one 768-bit string:
 // 0..223 = eventsChk, 224..287 = eventsItem, 288..767 = eventsMisc.
@@ -165,7 +165,7 @@ function main() {
 
   const ootSpecial = parseJsonOrFail(ootSpecialPath);
   if (!Array.isArray(ootSpecial)) {
-    console.error('oot_special_locations.json is not an array.');
+    console.error('special_locations_oot.json is not an array.');
     process.exit(1);
   }
 

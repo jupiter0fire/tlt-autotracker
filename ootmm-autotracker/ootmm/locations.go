@@ -151,7 +151,7 @@ func init() {
 			panic("symbol location entry is missing game, symbol, or name")
 		}
 		if entry.Game == "MM" {
-			// MM symbol check names are now loaded from special_locations.json
+			// MM symbol check names are now loaded from special_locations_mm.json
 			continue
 		}
 		gameTable, ok := npcSymbolTables[entry.Game]
