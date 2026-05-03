@@ -2354,7 +2354,7 @@ func TestExtractChecksIncludesOotMemoryAndChildShootingFromSeparateSignals(t *te
 	}
 }
 
-func TestExtractChecksIncludesOotPocketEggConsumptionFallback(t *testing.T) {
+func TestExtractChecksDoesNotIncludeOotPocketEggConsumptionFallback(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
@@ -2376,12 +2376,12 @@ func TestExtractChecksIncludesOotPocketEggConsumptionFallback(t *testing.T) {
 
 	state.Oot.ExtraRecords[ExtraIdxOotTrade] = 0
 	checks = checkNameSet(ExtractChecks(state))
-	if _, ok := checks["Kakariko Anju Egg"]; !ok {
-		t.Fatal("missing Kakariko Anju Egg check after Pocket Egg is consumed")
+	if _, ok := checks["Kakariko Anju Egg"]; ok {
+		t.Fatal("unexpected Kakariko Anju Egg check after Pocket Egg is consumed")
 	}
 }
 
-func TestExtractChecksIncludesOnlyKakarikoAnjuEggFromObservedPocketEggConsumptionDelta(t *testing.T) {
+func TestExtractChecksIncludesNoChecksFromObservedPocketEggConsumptionDelta(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
@@ -2426,8 +2426,8 @@ func TestExtractChecksIncludesOnlyKakarikoAnjuEggFromObservedPocketEggConsumptio
 	afterState := &GameState{}
 	afterState.Oot.ExtraRecords[ExtraIdxOotTradeSave] = beforeState.Oot.ExtraRecords[ExtraIdxOotTradeSave]
 	afterChecks := checkNameSet(ExtractChecks(afterState))
-	if _, ok := afterChecks["Kakariko Anju Egg"]; !ok {
-		t.Fatal("missing Kakariko Anju Egg check after Pocket Egg consumption")
+	if _, ok := afterChecks["Kakariko Anju Egg"]; ok {
+		t.Fatal("unexpected Kakariko Anju Egg check after Pocket Egg consumption")
 	}
 	for _, name := range []string{
 		"Kakariko Anju Cojiro",
@@ -2450,18 +2450,37 @@ func TestExtractChecksIncludesOnlyKakarikoAnjuEggFromObservedPocketEggConsumptio
 			continue
 		}
 		newChecks++
-		if name != "Kakariko Anju Egg" {
-			t.Fatalf("unexpected new check from observed Pocket Egg consumption delta: %s", name)
-		}
+		t.Fatalf("unexpected new check from observed Pocket Egg consumption delta: %s", name)
 	}
-	if newChecks != 1 {
-		t.Fatalf("unexpected new check count from observed Pocket Egg consumption delta: got %d, want 1", newChecks)
+	if newChecks != 0 {
+		t.Fatalf("unexpected new check count from observed Pocket Egg consumption delta: got %d, want 0", newChecks)
 	}
 
 	for name := range beforeChecks {
 		if _, ok := afterChecks[name]; !ok {
 			t.Fatalf("unexpected removed check from observed Pocket Egg consumption delta: %s", name)
 		}
+	}
+}
+
+func TestExtractChecksIncludesKakarikoAnjuEggFromPocketEggEventItem(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"TRADE_POCKET_EGG": "Kakariko Anju Egg",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	state.Oot.EventsItem[ootEventItemPocketEgg>>4] = 1 << (ootEventItemPocketEgg & 0xF)
+
+	checks := ExtractChecks(state)
+	if got, ok := checkKeyByName(checks, "Kakariko Anju Egg"); !ok || got != "OOT_event_item_TRADE_POCKET_EGG" {
+		t.Fatalf("Kakariko Anju Egg key = %q, want %q", got, "OOT_event_item_TRADE_POCKET_EGG")
 	}
 }
 
@@ -2568,7 +2587,6 @@ func TestExtractChecksIncludesAdultTradeConsumptionFallbacksForAllSteps(t *testi
 	}
 
 	tests := []tc{
-		{consumedBit: 0, expected: "Kakariko Anju Egg"},
 		{consumedBit: 1, expected: "Kakariko Anju Cojiro"},
 		{consumedBit: 2, expected: "Lost Woods Odd Mushroom"},
 		{consumedBit: 3, expected: "Kakariko Potion Shop Odd Potion"},
@@ -2582,7 +2600,6 @@ func TestExtractChecksIncludesAdultTradeConsumptionFallbacksForAllSteps(t *testi
 	}
 
 	allTradeCheckNames := []string{
-		"Kakariko Anju Egg",
 		"Kakariko Anju Cojiro",
 		"Lost Woods Odd Mushroom",
 		"Kakariko Potion Shop Odd Potion",
@@ -2736,7 +2753,6 @@ func TestExtractChecksPreservesGroupedOotSymbolCheckKeys(t *testing.T) {
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
 			"FIRE_ARROW":       "Lake Hylia Fire Arrow",
-			"TRADE_POCKET_EGG": "Kakariko Anju Egg",
 			"ZELDA_LETTER":     "Zelda's Letter",
 		},
 		"MM": {},
@@ -2748,17 +2764,13 @@ func TestExtractChecksPreservesGroupedOotSymbolCheckKeys(t *testing.T) {
 	state := &GameState{}
 	state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << ootExtraFlagsFireArrowBit
 	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] =
-		(1 << ootAdultTradePocketEggBit) |
-			uint32(1<<(16+ootChildTradeWeirdEggBit)) |
+		uint32(1<<(16+ootChildTradeWeirdEggBit)) |
 			uint32(1<<(16+2))
 	state.Oot.EventsChk[0x40>>4] = 1 << (0x40 & 0xF)
 
 	checks := ExtractChecks(state)
 	if got, ok := checkKeyByName(checks, "Lake Hylia Fire Arrow"); !ok || got != "OOT_extra_2_19" {
 		t.Fatalf("Lake Hylia Fire Arrow key = %q, want %q", got, "OOT_extra_2_19")
-	}
-	if got, ok := checkKeyByName(checks, "Kakariko Anju Egg"); !ok || got != "OOT_trade_TRADE_POCKET_EGG" {
-		t.Fatalf("Kakariko Anju Egg key = %q, want %q", got, "OOT_trade_TRADE_POCKET_EGG")
 	}
 	if got, ok := checkKeyByName(checks, "Zelda's Letter"); !ok || got != "OOT_child_trade_ZELDA_LETTER" {
 		t.Fatalf("Zelda's Letter key = %q, want %q", got, "OOT_child_trade_ZELDA_LETTER")

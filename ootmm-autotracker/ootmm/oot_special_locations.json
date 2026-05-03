@@ -693,6 +693,17 @@
     "note": "Darunia's Bracelet obtained"
   },
   {
+    "symbol": "TRADE_POCKET_EGG",
+    "sources": [
+      {
+        "group": "eventsItem",
+        "field": "gOotSave.context.eventsItem",
+        "flag": 44
+      }
+    ],
+    "note": "Trade sequence Pocket Egg event"
+  },
+  {
     "symbol": "MASK_SELL_KEATON",
     "sources": [
       {
