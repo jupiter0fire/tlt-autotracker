@@ -1407,6 +1407,21 @@ func TestDodongoGsConflictsGenerated(t *testing.T) {
 	assertConflictContains("Dodongo Cavern GS Near Boss", "MQ Dodongo Cavern GS Time Blocks")
 }
 
+func TestOotSilverRupeeConflictsGenerated(t *testing.T) {
+	assertConflictContains := func(vanilla string, mq string) {
+		t.Helper()
+		for _, entry := range ootBitmapConflictTable["srOot"] {
+			if containsString(entry.Vanilla, vanilla) && containsString(entry.Mq, mq) {
+				return
+			}
+		}
+		t.Fatalf("missing generated OOT silver rupee conflict %q <-> %q", vanilla, mq)
+	}
+
+	assertConflictContains("Spirit Temple SR Child 1", "MQ Spirit Temple SR Lobby After Water Near Stairs")
+	assertConflictContains("Gerudo Training Grounds SR Lava Back Center", "MQ Gerudo Training Grounds SR Lava Front-Right")
+}
+
 func TestExtractChecksIncludesDodongoGsChecksFromGeneratedConflicts(t *testing.T) {
 	state := &GameState{}
 	state.Oot.HasRuntimeMqBits = true

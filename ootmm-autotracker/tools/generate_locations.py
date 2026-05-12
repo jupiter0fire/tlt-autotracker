@@ -263,7 +263,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     if bit < 0:
                         continue
                     add_unique_mapping(bitmap_checks_raw, bitmap_conflicts, (bitmap_block, bit), location)
-                    if game == "OOT" and bitmap_block == "gsOot":
+                    if game == "OOT" and bitmap_block in {"gsOot", "srOot"}:
                         bitmap_variant_candidates[(bitmap_block, bit)].append((scene_name, location))
                     continue
 
