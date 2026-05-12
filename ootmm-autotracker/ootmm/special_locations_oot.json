@@ -638,6 +638,94 @@
     "note": "Bombchu Bowling second reward"
   },
   {
+    "symbol": "BLUE_WARP_GOHMA",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 25
+      }
+    ],
+    "note": "Deku Tree boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_KING_DODONGO",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 37
+      }
+    ],
+    "note": "Dodongo Cavern boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_BARINADE",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 55
+      }
+    ],
+    "note": "Jabu-Jabu boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_PHANTOM_GANON",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 72
+      }
+    ],
+    "note": "Forest Temple boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_VOLVAGIA",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 73
+      }
+    ],
+    "note": "Fire Temple boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_MORPHA",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 74
+      }
+    ],
+    "note": "Water Temple boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_BONGO_BONGO",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 97
+      }
+    ],
+    "note": "Shadow Temple boss blue warp reward event"
+  },
+  {
+    "symbol": "BLUE_WARP_TWINROVA",
+    "sources": [
+      {
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 200
+      }
+    ],
+    "note": "Spirit Temple boss blue warp reward event"
+  },
+  {
     "symbol": "KAKARIKO_ROOF_MAN",
     "sources": [
       {

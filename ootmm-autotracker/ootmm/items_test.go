@@ -1143,6 +1143,80 @@ func TestExtractChecksMmExtraBossItemsStateTransition(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesOotBossChecksFromBossEvents(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"BLUE_WARP_GOHMA": "Deku Tree Boss",
+			"BLUE_WARP_KING_DODONGO": "Dodongo Cavern Boss",
+			"BLUE_WARP_BARINADE": "Jabu-Jabu Boss",
+			"BLUE_WARP_PHANTOM_GANON": "Forest Temple Boss",
+			"BLUE_WARP_VOLVAGIA": "Fire Temple Boss",
+			"BLUE_WARP_MORPHA": "Water Temple Boss",
+			"BLUE_WARP_BONGO_BONGO": "Shadow Temple Boss",
+			"BLUE_WARP_TWINROVA": "Spirit Temple Boss",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	for _, flag := range []int{
+		0x19,
+		0x25,
+		0x37,
+		0x48,
+		0x49,
+		0x4a,
+		0x61,
+		0xc8,
+	} {
+		state.Oot.EventsChk[flag>>4] |= 1 << (flag & 0xF)
+	}
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range []string{
+		"Deku Tree Boss",
+		"Dodongo Cavern Boss",
+		"Jabu-Jabu Boss",
+		"Forest Temple Boss",
+		"Fire Temple Boss",
+		"Water Temple Boss",
+		"Shadow Temple Boss",
+		"Spirit Temple Boss",
+	} {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing OoT boss check from event fallback: %s", name)
+		}
+	}
+}
+
+func TestExtractChecksOotBossEventStateTransition(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {"BLUE_WARP_MORPHA": "Water Temple Boss"},
+		"MM":  {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	beforeState := &GameState{}
+	afterState := &GameState{}
+	afterState.Oot.EventsChk[0x4a>>4] = 1 << (0x4a & 0xF)
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+	if _, ok := beforeChecks["Water Temple Boss"]; ok {
+		t.Fatal("unexpected Water Temple Boss check before OoT boss event is set")
+	}
+	if _, ok := afterChecks["Water Temple Boss"]; !ok {
+		t.Fatal("missing Water Temple Boss check after OoT boss event is set")
+	}
+}
+
 func TestExtractChecksResolvesOotXflagConflictsFromRuntimeMqBits(t *testing.T) {
 	originalXflags := xflagCheckTables
 	originalConflicts := ootBitmapConflictTable["xflagsOot"]

@@ -50,7 +50,7 @@ EXTRA_ASSIGN_RE = re.compile(r"\b(gMmExtraFlags2|gMmExtraFlags3|gMmExtraFlags)\.
 NPC_REF_RE = re.compile(r"\bNPC_(MM_[A-Z0-9_]+)\b")
 OOT_NPC_REF_RE = re.compile(r"\bNPC_OOT_([A-Z0-9_]+)\b")
 OOT_EXTRA_ASSIGN_RE = re.compile(r"\bgOotExtraFlags\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|\|=)")
-OOT_DIRECT_NPC_EVENT_RE = re.compile(r"\bNPC_OOT_([A-Z0-9_]+)\b[^;]*\b((?:EV|EN)_OOT_(?:CHK|ITEM|INF)_[A-Z0-9_]+)\b")
+OOT_DIRECT_NPC_EVENT_RE = re.compile(r"\bNPC_OOT_([A-Z0-9_]+)\b[^;{}]*?\b((?:EV|EN)_OOT_(?:CHK|ITEM|INF)_[A-Z0-9_]+)\b")
 OOT_SET_CHK_RE = re.compile(r"\b(?:SetEventChk|checkSetEvent)\s*\([^;]*?\b((?:EV|EN)_OOT_CHK_[A-Z0-9_]+)\b")
 OOT_GET_CHK_RE = re.compile(r"\bGetEventChk\s*\(\s*((?:EV|EN)_OOT_CHK_[A-Z0-9_]+)\s*\)")
 OOT_BITMAP_EVENT_RE = re.compile(r"\bBITMAP16_(?:SET|GET)\s*\(\s*g(?:Save|OotSave)\.info\.events(Chk|Item|Misc)\s*,\s*((?:EV|EN)_OOT_(?:CHK|ITEM|INF)_[A-Z0-9_]+)\s*\)")

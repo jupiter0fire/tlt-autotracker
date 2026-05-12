@@ -8,6 +8,70 @@
     }
   },
   {
+    "symbol": "BLUE_WARP_BARINADE",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 55
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_BONGO_BONGO",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 97
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_GOHMA",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 25
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_KING_DODONGO",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 37
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_MORPHA",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 74
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_PHANTOM_GANON",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 72
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_TWINROVA",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 200
+    }
+  },
+  {
+    "symbol": "BLUE_WARP_VOLVAGIA",
+    "source": {
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 73
+    }
+  },
+  {
     "symbol": "BOMBCHU_BOWLING_1",
     "source": {
       "group": "eventsItem",
