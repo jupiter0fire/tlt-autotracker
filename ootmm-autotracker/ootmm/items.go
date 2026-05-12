@@ -704,7 +704,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("shopsOot"), "OOT", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
-	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
+	appendOotSilverRupeeChecks(state.Shared.Bitmap("srOot"), &state.Oot, appendCheck)
 
 	appendOotSymbolChecks(state, ootSymbolChecks, appendCheck)
 	appendOotAdultTradeConsumptionFallbacks(state, appendCheck)
@@ -926,6 +926,26 @@ func appendOotXflagChecks(bitmap []uint8, oot *OotState, appendCheck func(string
 			if names, ok := ootConflictingXflagCheckNames(oot, index); ok {
 				for _, name := range names {
 					appendCheck("OOT_xflag_"+itoa(index), name)
+				}
+			}
+		}
+	}
+}
+
+func appendOotSilverRupeeChecks(bitmap []uint8, oot *OotState, appendCheck func(string, string)) {
+	for byteIndex, value := range bitmap {
+		for bit := 0; bit < 8; bit++ {
+			if value&(1<<uint(bit)) == 0 {
+				continue
+			}
+			index := byteIndex*8 + bit
+			if name, ok := silverRupeeCheckName("OOT", index); ok {
+				appendCheck("OOT_sr_"+itoa(index), name)
+				continue
+			}
+			if names, ok := ootConflictingSilverRupeeCheckNames(oot, index); ok {
+				for _, name := range names {
+					appendCheck("OOT_sr_"+itoa(index), name)
 				}
 			}
 		}

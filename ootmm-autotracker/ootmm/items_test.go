@@ -1345,6 +1345,52 @@ func TestExtractChecksResolvesDodongoGsConflictsFromRuntimeMqBits(t *testing.T) 
 	}
 }
 
+func TestExtractChecksResolvesOotSilverRupeeConflictsFromRuntimeMqBits(t *testing.T) {
+	state := &GameState{}
+	state.Oot.HasRuntimeMqBits = true
+	state.Shared.SetBit("srOot", 0x49)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Gerudo Training Grounds SR Lava Back Center"]; !ok {
+		t.Fatal("missing vanilla Gerudo Training Grounds silver rupee check")
+	}
+	if _, ok := checks["MQ Gerudo Training Grounds SR Lava Front-Right"]; ok {
+		t.Fatal("MQ Gerudo Training Grounds silver rupee check should not be exported for vanilla")
+	}
+
+	state.Oot.RuntimeMqBits = 1 << OotMqGerudoTrainingGrounds
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["MQ Gerudo Training Grounds SR Lava Front-Right"]; !ok {
+		t.Fatal("missing MQ Gerudo Training Grounds silver rupee conflict resolution")
+	}
+	if _, ok := checks["Gerudo Training Grounds SR Lava Back Center"]; ok {
+		t.Fatal("vanilla Gerudo Training Grounds silver rupee check should not be exported for MQ")
+	}
+}
+
+func TestExtractChecksResolvesSpiritSilverRupeeConflictsFromRuntimeMqBits(t *testing.T) {
+	state := &GameState{}
+	state.Oot.HasRuntimeMqBits = true
+	state.Shared.SetBit("srOot", 0x0A)
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Spirit Temple SR Child 1"]; !ok {
+		t.Fatal("missing vanilla Spirit Temple silver rupee check")
+	}
+	if _, ok := checks["MQ Spirit Temple SR Lobby After Water Near Stairs"]; ok {
+		t.Fatal("MQ Spirit Temple silver rupee check should not be exported for vanilla")
+	}
+
+	state.Oot.RuntimeMqBits = 1 << OotMqTempleSpirit
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["MQ Spirit Temple SR Lobby After Water Near Stairs"]; !ok {
+		t.Fatal("missing MQ Spirit Temple silver rupee conflict resolution")
+	}
+	if _, ok := checks["Spirit Temple SR Child 1"]; ok {
+		t.Fatal("vanilla Spirit Temple silver rupee check should not be exported for MQ")
+	}
+}
+
 func TestDodongoGsConflictsGenerated(t *testing.T) {
 	assertConflictContains := func(vanilla string, mq string) {
 		t.Helper()
