@@ -56,6 +56,24 @@ func TestExtractItemsNormalizesMmInventorySlots(t *testing.T) {
 	}
 }
 
+func TestExtractItemsTracksMmBottledGoldDustSeparately(t *testing.T) {
+	state := &GameState{}
+	state.Mm.Items[mustMmInventorySlotIndex("MM_BOTTLE_1")] = mmItemGoldDust
+	state.Mm.Items[mustMmInventorySlotIndex("MM_BOTTLE_2")] = 0x14
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_BOTTLED_GOLD_DUST"]; got != 1 {
+		t.Fatalf("MM_BOTTLED_GOLD_DUST = %d, want 1", got)
+	}
+	if got := items["MM_BOTTLE_1"]; got != 1 {
+		t.Fatalf("MM_BOTTLE_1 = %d, want 1", got)
+	}
+	if got := items["MM_BOTTLE_2"]; got != 1 {
+		t.Fatalf("MM_BOTTLE_2 = %d, want 1", got)
+	}
+}
+
 func TestExtractItemsPublishesOotSwordAndShieldBitmasks(t *testing.T) {
 	state := &GameState{}
 	state.Oot.Equipment = 0x1537

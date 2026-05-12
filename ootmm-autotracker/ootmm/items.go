@@ -151,6 +151,7 @@ const (
 	ootEntranceChildArchery                    = 0x16d
 	ootNpcLostWoodsMemoryBit                   = 12
 	ootItemRutoLetter                          = 0x1b
+	mmItemGoldDust                             = 0x22
 	mmItemRutoLetter                           = 0xb6
 )
 
@@ -532,6 +533,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 		}
 	}
 	items = append(items, TrackedItem{"MM_BOTTLE_RUTO_LETTER", countMmBottleItem(mm.Items[:], mmItemRutoLetter)})
+	items = append(items, TrackedItem{"MM_BOTTLED_GOLD_DUST", countMmBottleItem(mm.Items[:], mmItemGoldDust)})
 
 	// MM trade items — bitmasks from ExtraRecords (stored in OoT save).
 	// MmExtraTrade (big-endian): trade1:6|trade2:5|trade3:5|tradeObtained1:6|tradeObtained2:5|tradeObtained3:5
