@@ -369,6 +369,40 @@ func TestExtractItemsIncludesSpecificRequestedSouls(t *testing.T) {
 	}
 }
 
+func TestCatalogOotNpcSoulBitsRespectSparseNumbering(t *testing.T) {
+	tests := []struct {
+		itemID string
+		bit    int
+	}{
+		{itemID: "OOT_SOUL_NPC_DAMPE", bit: 31},
+		{itemID: "OOT_SOUL_NPC_BOMBERS", bit: 32},
+		{itemID: "OOT_SOUL_NPC_POE_COLLECTOR", bit: 33},
+		{itemID: "OOT_SOUL_NPC_COMPOSER_BROS", bit: 34},
+		{itemID: "OOT_SOUL_NPC_HONEY_DARLING", bit: 35},
+		{itemID: "OOT_SOUL_NPC_ASTRONOMER", bit: 36},
+		{itemID: "OOT_SOUL_NPC_ROOFTOP_MAN", bit: 37},
+		{itemID: "OOT_SOUL_NPC_BEAN_SALESMAN", bit: 38},
+		{itemID: "OOT_SOUL_NPC_SCIENTIST", bit: 39},
+		{itemID: "OOT_SOUL_NPC_GORMAN", bit: 40},
+		{itemID: "OOT_SOUL_NPC_GROG", bit: 41},
+		{itemID: "OOT_SOUL_NPC_DOG_LADY", bit: 42},
+		{itemID: "OOT_SOUL_NPC_CARPET_MAN", bit: 43},
+		{itemID: "OOT_SOUL_NPC_OLD_HAG", bit: 44},
+		{itemID: "OOT_SOUL_NPC_BANKER", bit: 45},
+		{itemID: "OOT_SOUL_NPC_THIEVES", bit: 46},
+	}
+
+	for _, tt := range tests {
+		source := mustCatalogItemSource(tt.itemID)
+		if source.Block != "soulsNpcOot" {
+			t.Fatalf("%s block = %s, want soulsNpcOot", tt.itemID, source.Block)
+		}
+		if source.Bit != tt.bit {
+			t.Fatalf("%s bit = %d, want %d", tt.itemID, source.Bit, tt.bit)
+		}
+	}
+}
+
 func TestExtractItemsKeepsMmComponentsWhenSpecialItemsPresent(t *testing.T) {
 	state := &GameState{}
 	state.Mm.DungeonItems[0] = 0x08

@@ -1150,7 +1150,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 30
+          "bit": 31
         }
       },
       {
@@ -1158,7 +1158,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 31
+          "bit": 32
         }
       },
       {
@@ -1166,7 +1166,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 32
+          "bit": 33
         }
       },
       {
@@ -1174,7 +1174,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 33
+          "bit": 34
         }
       },
       {
@@ -1182,7 +1182,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 34
+          "bit": 35
         }
       },
       {
@@ -1190,7 +1190,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 35
+          "bit": 36
         }
       },
       {
@@ -1198,7 +1198,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 36
+          "bit": 37
         }
       },
       {
@@ -1206,7 +1206,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 37
+          "bit": 38
         }
       },
       {
@@ -1214,7 +1214,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 38
+          "bit": 39
         }
       },
       {
@@ -1222,7 +1222,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 39
+          "bit": 40
         }
       },
       {
@@ -1230,7 +1230,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 40
+          "bit": 41
         }
       },
       {
@@ -1238,7 +1238,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 41
+          "bit": 42
         }
       },
       {
@@ -1246,7 +1246,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 42
+          "bit": 43
         }
       },
       {
@@ -1254,7 +1254,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 43
+          "bit": 44
         }
       },
       {
@@ -1262,7 +1262,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 44
+          "bit": 45
         }
       },
       {
@@ -1270,7 +1270,7 @@
         "source": {
           "kind": "shared-bitmap-bit",
           "block": "soulsNpcOot",
-          "bit": 45
+          "bit": 46
         }
       },
       {

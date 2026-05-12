@@ -9,6 +9,7 @@ import sys
 
 SLOT_DEFINE_RE = re.compile(r"^#define\s+(ITS_(OOT|MM)_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
 GI_ID_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),")
+SOUL_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),\s+type:\s+SOUL,\s+add:\s+\[[A-Z_]+,\s+0x([0-9a-fA-F]+)\]")
 
 OOT_OVERRIDES = {
     "STICKS": "STICK",
@@ -231,6 +232,25 @@ def extract_gi_ids(gi_defs: pathlib.Path) -> list[str]:
     return gi_ids
 
 
+def extract_soul_entries(gi_defs: pathlib.Path) -> list[dict[str, int | str]]:
+    soul_entries: list[dict[str, int | str]] = []
+
+    for line in gi_defs.read_text(encoding="utf-8").splitlines():
+        match = SOUL_GI_RE.match(line)
+        if not match:
+            continue
+
+        item_id, raw_add = match.groups()
+        soul_entries.append(
+            {
+                "itemId": item_id,
+                "bit": int(raw_add, 16) & 0x0FFF,
+            }
+        )
+
+    return soul_entries
+
+
 def collect_prefixed_ids(gi_ids: list[str], prefix: str) -> list[str]:
     return [item_id for item_id in gi_ids if item_id.startswith(prefix)]
 
@@ -244,17 +264,24 @@ def ensure_ids_exist(gi_ids: list[str], required_ids: list[str], label: str) -> 
 
 def build_catalog(gi_defs: pathlib.Path) -> dict[str, object]:
     gi_ids = extract_gi_ids(gi_defs)
+    soul_entries = extract_soul_entries(gi_defs)
     bitmap_sizes = {bitmap["name"]: bitmap["size"] for bitmap in SHARED_STORAGE["bitmaps"]}
 
     items: list[dict[str, object]] = []
     for spec in SOUL_SOURCE_SPECS:
-        soul_ids = collect_prefixed_ids(gi_ids, spec["prefix"])
+        prefixed_souls = [entry for entry in soul_entries if str(entry["itemId"]).startswith(spec["prefix"])]
         max_bits = bitmap_sizes[spec["block"]] * 8
-        if len(soul_ids) > max_bits:
-            raise ValueError(
-                f"{spec['block']} only has space for {max_bits} bits, found {len(soul_ids)} items"
-            )
-        for bit, item_id in enumerate(soul_ids):
+        used_bits: set[int] = set()
+        for entry in prefixed_souls:
+            item_id = str(entry["itemId"])
+            bit = int(entry["bit"])
+            if bit >= max_bits:
+                raise ValueError(
+                    f"{item_id} references out-of-range bit {bit} for {spec['block']}"
+                )
+            if bit in used_bits:
+                raise ValueError(f"duplicate bit {bit} in {spec['block']}")
+            used_bits.add(bit)
             items.append(
                 {
                     "itemId": item_id,
