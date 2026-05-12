@@ -54,6 +54,50 @@
     "mask": 32
   },
   {
+    "symbol": "MM_CLEAR_STATE_GREAT_BAY",
+    "name": "Great Bay Temple Boss",
+    "source": {
+      "group": "weekEventReg",
+      "field": "gMmSave.info.weekEventReg[55]",
+      "mask": "0x80"
+    },
+    "byteIndex": 55,
+    "mask": 128
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_IKANA",
+    "name": "Stone Tower Temple Inverted Boss",
+    "source": {
+      "group": "weekEventReg",
+      "field": "gMmSave.info.weekEventReg[52]",
+      "mask": "0x20"
+    },
+    "byteIndex": 52,
+    "mask": 32
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_SNOWHEAD",
+    "name": "Snowhead Temple Boss",
+    "source": {
+      "group": "weekEventReg",
+      "field": "gMmSave.info.weekEventReg[33]",
+      "mask": "0x80"
+    },
+    "byteIndex": 33,
+    "mask": 128
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_WOODFALL",
+    "name": "Woodfall Temple Boss",
+    "source": {
+      "group": "weekEventReg",
+      "field": "gMmSave.info.weekEventReg[20]",
+      "mask": "0x02"
+    },
+    "byteIndex": 20,
+    "mask": 2
+  },
+  {
     "symbol": "MM_CREMIA_ESCORT",
     "name": "Romani Ranch Cremia Escort",
     "source": {
@@ -932,6 +976,16 @@
   {
     "symbol": "MM_SKULL_KID_OCARINA",
     "name": "Clock Tower Roof Skull Kid Ocarina",
+    "source": {
+      "group": "gMmExtraFlags2",
+      "field": "gMmExtraFlags2.ocarina",
+      "mask": "0x00020000"
+    },
+    "bit": 14
+  },
+  {
+    "symbol": "MM_SKULL_KID_SONG",
+    "name": "Clock Tower Roof Skull Kid Song of Time",
     "source": {
       "group": "gMmExtraFlags2",
       "field": "gMmExtraFlags2.ocarina",

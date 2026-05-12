@@ -152,10 +152,6 @@ const (
 	ootNpcLostWoodsMemoryBit                   = 12
 	ootItemRutoLetter                          = 0x1b
 	mmItemRutoLetter                           = 0xb6
-	mmExtraBossWoodfallBit                     = 0
-	mmExtraBossSnowheadBit                     = 1
-	mmExtraBossGreatBayBit                     = 2
-	mmExtraBossStoneTowerBit                   = 3
 )
 
 type ootSymbolCheckSource uint8
@@ -190,6 +186,7 @@ const (
 	mmSymbolCheckSourceExtraFlags mmSymbolCheckSource = iota
 	mmSymbolCheckSourceExtraFlags2
 	mmSymbolCheckSourceExtraFlags3
+	mmSymbolCheckSourceExtraBoss
 	mmSymbolCheckSourceWeekEvent
 	mmSymbolCheckSourceOwlActivation
 )
@@ -706,7 +703,6 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("srOot"), "OOT", "sr", silverRupeeCheckName)
-	appendMmTempleBossChecksFromExtraBoss(state, appendCheck)
 
 	appendOotSymbolChecks(state, ootSymbolChecks, appendCheck)
 	appendOotAdultTradeConsumptionFallbacks(state, appendCheck)
@@ -714,25 +710,6 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendOotAmbiguousEventItemChecks(state, appendCheck)
 
 	return checks
-}
-
-func appendMmTempleBossChecksFromExtraBoss(state *GameState, appendCheck func(string, string)) {
-	if state == nil {
-		return
-	}
-	items := mmExtraBossItems(state)
-	if items&(1<<mmExtraBossWoodfallBit) != 0 {
-		appendCheck("MM_boss_remains_dungeon_8", "Woodfall Temple Boss")
-}
-	if items&(1<<mmExtraBossSnowheadBit) != 0 {
-		appendCheck("MM_boss_remains_dungeon_9", "Snowhead Temple Boss")
-}
-	if items&(1<<mmExtraBossGreatBayBit) != 0 {
-		appendCheck("MM_boss_remains_dungeon_10", "Great Bay Temple Boss")
-}
-	if items&(1<<mmExtraBossStoneTowerBit) != 0 {
-		appendCheck("MM_boss_remains_dungeon_11", "Stone Tower Temple Inverted Boss")
-	}
 }
 
 func mmExtraBossItems(state *GameState) uint8 {
@@ -832,6 +809,8 @@ func mmSymbolCheckMatches(state *GameState, entry mmSymbolCheck, mmFlags uint32,
 		return mmFlags2&(1<<entry.bit) != 0
 	case mmSymbolCheckSourceExtraFlags3:
 		return mmFlags3&(1<<entry.bit) != 0
+	case mmSymbolCheckSourceExtraBoss:
+		return mmExtraBossItems(state)&entry.mask != 0
 	case mmSymbolCheckSourceWeekEvent:
 		return hasMmWeekEventBit(state, entry.byteIndex, entry.mask)
 	case mmSymbolCheckSourceOwlActivation:
@@ -844,6 +823,8 @@ func mmSymbolCheckMatches(state *GameState, entry mmSymbolCheck, mmFlags uint32,
 func mmSymbolCheckKey(entry mmSymbolCheck) string {
 	switch entry.source {
 	case mmSymbolCheckSourceExtraFlags, mmSymbolCheckSourceExtraFlags2, mmSymbolCheckSourceExtraFlags3:
+		return entry.keyPrefix + itoa(entry.bit)
+	case mmSymbolCheckSourceExtraBoss:
 		return entry.keyPrefix + itoa(entry.bit)
 	case mmSymbolCheckSourceWeekEvent:
 		return entry.keyPrefix + itoa(entry.byteIndex) + "_" + itoa(int(entry.mask))

@@ -1117,13 +1117,21 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 
 func TestExtractChecksMapsMmExtraBossItemsToTempleBossChecks(t *testing.T) {
 	state := &GameState{}
-	state.Oot.ExtraRecords[ExtraIdxMmBoss] = uint32(1<<mmExtraBossSnowheadBit) << 8
+	state.Oot.ExtraRecords[ExtraIdxMmBoss] = mmExtraBossItemsRecord(0x02)
 
-	checks := checkNameSet(ExtractChecks(state))
-	if _, ok := checks["Snowhead Temple Boss"]; !ok {
+	checks := ExtractChecks(state)
+	checkNames := checkNameSet(checks)
+	key, ok := checkKeyByName(checks, "Snowhead Temple Boss")
+	if !ok {
+		t.Fatal("missing Snowhead Temple Boss key from MM extra boss items")
+	}
+	if key != "MM_boss_remains_dungeon_9" {
+		t.Fatalf("Snowhead Temple Boss key = %q, want %q", key, "MM_boss_remains_dungeon_9")
+	}
+	if _, ok := checkNames["Snowhead Temple Boss"]; !ok {
 		t.Fatal("missing Snowhead Temple Boss check from MM extra boss items")
 	}
-	if _, ok := checks["Woodfall Temple Boss"]; ok {
+	if _, ok := checkNames["Woodfall Temple Boss"]; ok {
 		t.Fatal("unexpected Woodfall Temple Boss check from MM extra boss items")
 	}
 }
@@ -1131,7 +1139,7 @@ func TestExtractChecksMapsMmExtraBossItemsToTempleBossChecks(t *testing.T) {
 func TestExtractChecksMmExtraBossItemsStateTransition(t *testing.T) {
 	beforeState := &GameState{}
 	afterState := &GameState{}
-	afterState.Oot.ExtraRecords[ExtraIdxMmBoss] = uint32(1<<mmExtraBossSnowheadBit) << 8
+	afterState.Oot.ExtraRecords[ExtraIdxMmBoss] = mmExtraBossItemsRecord(0x02)
 
 	beforeChecks := checkNameSet(ExtractChecks(beforeState))
 	afterChecks := checkNameSet(ExtractChecks(afterState))
@@ -1140,6 +1148,16 @@ func TestExtractChecksMmExtraBossItemsStateTransition(t *testing.T) {
 	}
 	if _, ok := afterChecks["Snowhead Temple Boss"]; !ok {
 		t.Fatal("missing Snowhead Temple Boss check after MM extra boss bit is set")
+	}
+}
+
+func TestExtractChecksIncludesMmBossCheckFromDungeonClearWeekEvent(t *testing.T) {
+	state := &GameState{}
+	state.Mm.WeekEventReg[20] = 0x02
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Woodfall Temple Boss"]; !ok {
+		t.Fatal("missing Woodfall Temple Boss check from MM dungeon clear week event")
 	}
 }
 
@@ -3187,6 +3205,10 @@ func checkKeyByName(checks []TrackedCheck, name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func mmExtraBossItemsRecord(items uint8) uint32 {
+	return uint32(items) << 8
 }
 
 func TestExtractChecksIncludesMmCycleFlagCollectible(t *testing.T) {

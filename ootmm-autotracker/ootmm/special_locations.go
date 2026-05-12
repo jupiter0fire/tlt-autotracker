@@ -4,9 +4,12 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"math/bits"
 	"strconv"
 	"strings"
 )
+
+const mmExtraBossLegacyDungeonIndexBase = 8
 
 type specialLocationEntry struct {
 	Symbol    string                       `json:"symbol"`
@@ -31,6 +34,8 @@ func getSourceInfo(group string) (mmSymbolCheckSource, string) {
 		return mmSymbolCheckSourceExtraFlags2, "MM_extra_"
 	case "gMmExtraFlags3":
 		return mmSymbolCheckSourceExtraFlags3, "MM_extra_13_"
+	case "gMmExtraBoss":
+		return mmSymbolCheckSourceExtraBoss, "MM_boss_remains_dungeon_"
 	case "weekEventReg":
 		return mmSymbolCheckSourceWeekEvent, "MM_week_event_"
 	case "gMmOwlFlags":
@@ -113,6 +118,13 @@ func loadMmSymbolChecks() []mmSymbolCheck {
 			}
 
 			switch source {
+			case mmSymbolCheckSourceExtraBoss:
+				if keyBit, sourceMask, ok := parseExtraBossSource(src); ok {
+					check.bit = keyBit
+					check.mask = sourceMask
+				} else {
+					continue
+				}
 			case mmSymbolCheckSourceWeekEvent:
 				if byteIndex, mask, ok := parseWeekEventSource(entry, src); ok {
 					check.byteIndex = byteIndex
@@ -131,6 +143,21 @@ func loadMmSymbolChecks() []mmSymbolCheck {
 		}
 	}
 	return result
+}
+
+func parseExtraBossSource(src specialLocationSourceEntry) (int, uint8, bool) {
+	if src.Mask == "" {
+		return 0, 0, false
+	}
+	value, err := strconv.ParseUint(src.Mask, 0, 8)
+	if err != nil {
+		return 0, 0, false
+	}
+	mask := uint8(value)
+	if mask == 0 || mask&(mask-1) != 0 {
+		return 0, 0, false
+	}
+	return bits.TrailingZeros8(mask) + mmExtraBossLegacyDungeonIndexBase, mask, true
 }
 
 func parseWeekEventSource(entry specialLocationEntry, src specialLocationSourceEntry) (int, uint8, bool) {

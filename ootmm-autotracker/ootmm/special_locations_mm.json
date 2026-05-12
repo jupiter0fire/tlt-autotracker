@@ -1827,5 +1827,65 @@
     "note": "day 3 lottery reward",
     "name": "Lottery Prize Night 3",
     "bits": [27]
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_GREAT_BAY",
+    "sources": [
+      {
+        "group": "weekEventReg",
+        "field": "gMmSave.info.weekEventReg[55]",
+        "mask": "0x80"
+      }
+    ],
+    "note": "Great Bay Temple Boss dungeon clear state",
+    "name": "Great Bay Temple Boss",
+    "bits": [447],
+    "byteIndex": 55,
+    "mask": 128
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_IKANA",
+    "sources": [
+      {
+        "group": "weekEventReg",
+        "field": "gMmSave.info.weekEventReg[52]",
+        "mask": "0x20"
+      }
+    ],
+    "note": "Stone Tower Temple Inverted Boss dungeon clear state",
+    "name": "Stone Tower Temple Inverted Boss",
+    "bits": [421],
+    "byteIndex": 52,
+    "mask": 32
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_SNOWHEAD",
+    "sources": [
+      {
+        "group": "weekEventReg",
+        "field": "gMmSave.info.weekEventReg[33]",
+        "mask": "0x80"
+      }
+    ],
+    "note": "Snowhead Temple Boss dungeon clear state",
+    "name": "Snowhead Temple Boss",
+    "bits": [271],
+    "byteIndex": 33,
+    "mask": 128
+  },
+  {
+    "symbol": "MM_CLEAR_STATE_WOODFALL",
+    "sources": [
+      {
+        "group": "weekEventReg",
+        "field": "gMmSave.info.weekEventReg[20]",
+        "mask": "0x02"
+      }
+    ],
+    "note": "Woodfall Temple Boss dungeon clear state",
+    "name": "Woodfall Temple Boss",
+    "bits": [161],
+    "byteIndex": 20,
+    "mask": 2
   }
 ]

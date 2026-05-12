@@ -39,6 +39,20 @@ BOSS_SYMBOL_BITS = {
     "MM_REMAINS_TWINMOLD": 3,
 }
 
+MM_DUNGEON_CLEAR_EVENT_MACROS = {
+    "WF": "EV_MM_WEEK_DUNGEON_WF",
+    "SH": "EV_MM_WEEK_DUNGEON_SH",
+    "GB": "EV_MM_WEEK_DUNGEON_GB",
+    "IST": "EV_MM_WEEK_DUNGEON_ST",
+}
+
+MM_DUNGEON_CLEAR_NAMES = {
+    "WF": "Woodfall Temple Boss",
+    "SH": "Snowhead Temple Boss",
+    "GB": "Great Bay Temple Boss",
+    "IST": "Stone Tower Temple Inverted Boss",
+}
+
 NPC_DEFINE_RE = re.compile(r"^(MM_[A-Z0-9_]+):\s*(0x[0-9a-fA-F]+|\d+)\s*$")
 BITFIELD_RE = re.compile(r"\bu32\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(\d+)\s*;")
 STRUCT_RE_TEMPLATE = r"typedef\s+struct\s*\{(?P<body>[^{}]*)\}\s*%s\s*;"
@@ -55,6 +69,10 @@ OOT_SET_CHK_RE = re.compile(r"\b(?:SetEventChk|checkSetEvent)\s*\([^;]*?\b((?:EV
 OOT_GET_CHK_RE = re.compile(r"\bGetEventChk\s*\(\s*((?:EV|EN)_OOT_CHK_[A-Z0-9_]+)\s*\)")
 OOT_BITMAP_EVENT_RE = re.compile(r"\bBITMAP16_(?:SET|GET)\s*\(\s*g(?:Save|OotSave)\.info\.events(Chk|Item|Misc)\s*,\s*((?:EV|EN)_OOT_(?:CHK|ITEM|INF)_[A-Z0-9_]+)\s*\)")
 OOT_ARRAY_OR_RE = re.compile(r"\bg(?:Save|OotSave)\.info\.events(Item|Misc)\s*\[\s*(\d+)\s*\]\s*\|=\s*(0x[0-9a-fA-F]+|\d+)")
+MM_BOSS_EVENT_CLEAR_RE = re.compile(
+    r"\{\s*name:\s*'[^']+'.*?entrance:\s*'MM_[^']+'.*?dungeon:\s*'(?P<dungeon>[^']+)'.*?eventClear:\s*'(?P<symbol>MM_CLEAR_STATE_[A-Z_]+)'",
+    re.S,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -653,6 +671,41 @@ def boss_source(symbol: str) -> dict[str, Any] | None:
     }
 
 
+def discover_mm_dungeon_clear_symbols(
+    repo_root: pathlib.Path,
+    week_events: dict[str, tuple[int, int]],
+) -> dict[str, dict[str, Any]]:
+    boss_metadata_path = repo_root / "packages/generator/lib/combo/logic/boss.ts"
+    if not boss_metadata_path.is_file():
+        return {}
+
+    discovered: dict[str, dict[str, Any]] = {}
+    text = boss_metadata_path.read_text(encoding="utf-8")
+    for match in MM_BOSS_EVENT_CLEAR_RE.finditer(text):
+        dungeon = match.group("dungeon")
+        symbol = match.group("symbol")
+        event_macro = MM_DUNGEON_CLEAR_EVENT_MACROS.get(dungeon)
+        name = MM_DUNGEON_CLEAR_NAMES.get(dungeon)
+        if event_macro is None or name is None:
+            continue
+        event_info = week_events.get(event_macro)
+        if event_info is None:
+            continue
+        byte_index, mask = event_info
+        discovered[symbol] = {
+            "name": name,
+            "note": f"{name} dungeon clear state",
+            "sources": [
+                {
+                    "group": "weekEventReg",
+                    "field": f"gMmSave.info.weekEventReg[{byte_index}]",
+                    "mask": f"0x{mask:02x}",
+                }
+            ],
+        }
+    return discovered
+
+
 def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
     data_root = repo_root / "packages/data/src"
     npc_ids = load_npc_ids(data_root / "defs/npc.yml")
@@ -662,6 +715,7 @@ def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> 
     quest_fields = parse_quest_fields(mm_save_header)
     week_events = parse_week_events(repo_root / "packages/generator/include/combo/common/events.h")
     discovered = discover_simple_sources(repo_root, bitfields, week_events)
+    dungeon_clear_symbols = discover_mm_dungeon_clear_symbols(repo_root, week_events)
 
     warnings: list[str] = []
     entries: list[dict[str, Any]] = []
@@ -717,11 +771,83 @@ def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> 
 
         entries.append(entry)
 
+    for symbol in sorted(dungeon_clear_symbols):
+        if symbol in npc_ids:
+            continue
+
+        hint = hints.get(symbol, {})
+        sources: list[dict[str, Any]] = []
+        for source in hint.get("sources", []):
+            if source.get("group") in SUPPORTED_GROUPS:
+                append_unique_source(sources, source)
+        if not sources:
+            for source in dungeon_clear_symbols[symbol].get("sources", []):
+                append_unique_source(sources, source)
+
+        entry: dict[str, Any] = {
+            "symbol": symbol,
+        }
+        if sources:
+            enriched_sources: list[dict[str, Any]] = []
+            all_bits: list[int] = []
+            byte_index: int | None = None
+            mask: int | None = None
+            for source in sources:
+                enriched, bits, source_byte_index, source_mask = enrich_source(source, bitfields)
+                append_unique_source(enriched_sources, enriched)
+                all_bits.extend(bits)
+                if byte_index is None and source_byte_index is not None:
+                    byte_index = source_byte_index
+                if mask is None and source_mask is not None:
+                    mask = source_mask
+            entry["sources"] = enriched_sources
+            if hint.get("note"):
+                entry["note"] = hint["note"]
+            elif dungeon_clear_symbols[symbol].get("note"):
+                entry["note"] = dungeon_clear_symbols[symbol]["note"]
+            name = hint.get("name") or dungeon_clear_symbols[symbol].get("name")
+            if name:
+                entry["name"] = name
+            unique_bits = sorted(set(all_bits))
+            if unique_bits:
+                entry["bits"] = unique_bits
+            if byte_index is not None and mask is not None:
+                entry["byteIndex"] = byte_index
+                entry["mask"] = mask
+        elif hint.get("name") or dungeon_clear_symbols[symbol].get("name"):
+            entry["name"] = hint.get("name") or dungeon_clear_symbols[symbol]["name"]
+            warnings.append(f"{symbol}: no source found")
+
+        entries.append(entry)
+
     return entries, warnings
 
 
 def comparable_json(value: dict[str, Any]) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def format_json(value: Any, current_indent: int = 0) -> str:
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        lines = []
+        for key, item in value.items():
+            lines.append(
+                " " * (current_indent + 2)
+                + f"{json.dumps(key)}: {format_json(item, current_indent + 2)}"
+            )
+        return "{\n" + ",\n".join(lines) + "\n" + " " * current_indent + "}"
+
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        if all(not isinstance(item, (dict, list)) for item in value):
+            return "[" + ", ".join(json.dumps(item) for item in value) + "]"
+        lines = [" " * (current_indent + 2) + format_json(item, current_indent + 2) for item in value]
+        return "[\n" + ",\n".join(lines) + "\n" + " " * current_indent + "]"
+
+    return json.dumps(value)
 
 
 def fallback_sort_key(value: dict[str, Any]) -> tuple[Any, ...]:
@@ -809,7 +935,7 @@ def check_or_update_fallback_baseline(
 
     if update:
         baseline_path.parent.mkdir(parents=True, exist_ok=True)
-        baseline_path.write_text(json.dumps(generated, indent=2) + "\n", encoding="utf-8")
+        baseline_path.write_text(format_json(generated) + "\n", encoding="utf-8")
         print(f"updated {label} fallback baseline: {baseline_path}", file=sys.stderr)
         return True
 
@@ -885,10 +1011,10 @@ def main() -> int:
         return 1
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
+    output_path.write_text(format_json(entries) + "\n", encoding="utf-8")
     if oot_output_path is not None:
         oot_output_path.parent.mkdir(parents=True, exist_ok=True)
-        oot_output_path.write_text(json.dumps(oot_entries, indent=2) + "\n", encoding="utf-8")
+        oot_output_path.write_text(format_json(oot_entries) + "\n", encoding="utf-8")
 
     baseline_ok = check_or_update_fallback_baseline(
         "MM",
