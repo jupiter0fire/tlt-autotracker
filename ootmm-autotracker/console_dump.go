@@ -180,6 +180,25 @@ func resolveSnapshotPath(raw string, now time.Time) (string, error) {
 	return filepath.Join("memory-dumps", fmt.Sprintf("%s-%s.json", label, timestamp)), nil
 }
 
+func resolveAutomaticSnapshotPath(now time.Time) string {
+	timestamp := now.Format("20060102-150405")
+	return filepath.Join("memory-dumps", fmt.Sprintf("auto-snapshot-%s.json", timestamp))
+}
+
+func writeAutomaticSnapshot(mem *n64.Memory, now time.Time) error {
+	absolutePath, err := filepath.Abs(resolveAutomaticSnapshotPath(now))
+	if err != nil {
+		return fmt.Errorf("automatic snapshot path could not be resolved: %w", err)
+	}
+
+	log.Printf("Writing automatic snapshot to %s", absolutePath)
+	if err := writeDebugSnapshot(absolutePath, mem); err != nil {
+		return err
+	}
+	log.Printf("Automatic snapshot saved: %s", absolutePath)
+	return nil
+}
+
 func sanitizeSnapshotLabel(raw string) string {
 	raw = strings.ToLower(strings.TrimSpace(raw))
 	if raw == "" {
@@ -268,11 +287,22 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 			MmPlayerForm: state.Mm.PlayerForm,
 		}
 		if state.Valid && state.ActiveGame != ootmm.GameNone {
-			snapshot.Summary.Items = ootmm.ExtractItems(state)
+			snapshot.Summary.Items = filterSnapshotItems(ootmm.ExtractItems(state))
 			snapshot.Summary.Checks = ootmm.ExtractChecks(state)
 		}
 	}
 	return snapshot, nil
+}
+
+func filterSnapshotItems(items []ootmm.TrackedItem) []ootmm.TrackedItem {
+	filtered := make([]ootmm.TrackedItem, 0, len(items))
+	for _, item := range items {
+		if item.Qty == 0 {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
 }
 
 func snapshotRegionSpecs() []memoryRegionSpec {

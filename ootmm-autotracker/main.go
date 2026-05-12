@@ -22,6 +22,7 @@ const (
 	retryDelay        = 2 * time.Second
 	startupRetryDelay = 500 * time.Millisecond
 	ootmmLostTimeout  = 20 * time.Second
+	autoSnapshotInterval = 5 * time.Minute
 )
 
 // emulatorBackend abstracts the lifecycle of RetroArch and PJ64 connections.
@@ -75,11 +76,12 @@ func main() {
 	state := tracker.NewState()
 
 	var (
-		connected               = selected.connected
-		probed                  bool
-		lastGame                ootmm.ActiveGame
-		lastScene               uint16
-		ootmmUnavailableSince   time.Time
+		connected                = selected.connected
+		probed                   bool
+		lastGame                 ootmm.ActiveGame
+		lastScene                uint16
+		ootmmUnavailableSince    time.Time
+		nextAutoSnapshotAt       = time.Now().Add(autoSnapshotInterval)
 		forceFullSyncOnReconnect bool
 	)
 
@@ -174,6 +176,14 @@ func main() {
 			continue
 		}
 		ootmmUnavailableSince = time.Time{}
+
+		if !now.Before(nextAutoSnapshotAt) {
+			snapshotNow := time.Now()
+			if err := writeAutomaticSnapshot(mem, snapshotNow); err != nil {
+				log.Printf("Automatic snapshot failed: %v", err)
+			}
+			nextAutoSnapshotAt = snapshotNow.Add(autoSnapshotInterval)
+		}
 
 		// Step 4: Compute deltas
 		hadTrackerBaseline := state.Initialized()
