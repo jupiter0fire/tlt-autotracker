@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -61,5 +62,116 @@ func TestFilterSnapshotItemsOmitsZeroQty(t *testing.T) {
 	}
 	if filtered[1].ID != "MM_BOMB" || filtered[1].Qty != 3 {
 		t.Fatalf("unexpected second filtered item: %+v", filtered[1])
+	}
+}
+
+func TestSnapshotMemoryBlocksOnlyIncludeVariableBlocks(t *testing.T) {
+	blocks := snapshotMemoryBlocks()
+	if len(blocks) == 0 {
+		t.Fatal("expected memory blocks to be present")
+	}
+
+	var sharedLive *debugSnapshotMemoryBlock
+	for index := range blocks {
+		block := &blocks[index]
+		if block.BaseKind == "active-save-context" || block.BaseKind == "inactive-foreign-save-copy" || block.BaseKind == "payload-shared-slot-copy" {
+			t.Fatalf("unexpected static block kind %q for %s", block.BaseKind, block.LogicalID)
+		}
+		switch block.LogicalID {
+		case "shared.live_near_foreign_mm_payload.xflagsMm":
+			sharedLive = block
+		}
+	}
+
+	if len(blocks) < 2 {
+		t.Fatalf("expected variable block metadata for both live shared variants, got %d entries", len(blocks))
+	}
+
+	if sharedLive == nil {
+		t.Fatal("missing shared live near-foreign MM payload block")
+	}
+	if sharedLive.BaseKind != "live-shared-near-foreign" {
+		t.Fatalf("unexpected live shared base kind: %q", sharedLive.BaseKind)
+	}
+	if !strings.Contains(sharedLive.RegionOffset, "located foreign OoT save offset") {
+		t.Fatalf("unexpected live shared region formula: %q", sharedLive.RegionOffset)
+	}
+}
+
+func TestSnapshotResolvedAddressesDescribeDynamicCandidates(t *testing.T) {
+	resolved := ootmm.DebugResolvedAddresses{
+		ForeignMmSaveAddr:  ootmm.AddrOotPayload + 0x6000,
+		ForeignOotSaveAddr: ootmm.AddrMmPayload + 0x5000,
+		OotSilverDataAddr:  ootmm.AddrOotPayload + 0x1200,
+		OotMaxKeysAddr:     ootmm.AddrOotPayload + 0x2200,
+		ComboConfigOotAddr: ootmm.AddrOotPayload + 0x3200,
+		OotPlayStateAddr:   ootmm.AddrOotPlayStateNtsc10,
+	}
+
+	addresses := snapshotResolvedAddresses(resolved)
+	if len(addresses) == 0 {
+		t.Fatal("expected resolved addresses to be present")
+	}
+
+	byID := make(map[string]debugSnapshotResolvedAddress, len(addresses))
+	for _, entry := range addresses {
+		byID[entry.LogicalID] = entry
+	}
+
+	if _, ok := byID["shared.slot_copy_oot_payload"]; ok {
+		t.Fatal("fixed shared slot copy address should not be exported")
+	}
+	if got := byID["mm.foreign_save_in_oot_payload"].Address; got != "0x80406000" {
+		t.Fatalf("unexpected foreign MM address: %q", got)
+	}
+	if got := byID["oot.foreign_save_in_mm_payload"].Address; got != "0x80735000" {
+		t.Fatalf("unexpected foreign OoT address: %q", got)
+	}
+	if got := byID["oot.live.play_state"].Selection; got != "candidate-probe-selected" {
+		t.Fatalf("unexpected OoT play state selection: %q", got)
+	}
+	if _, ok := byID["oot.active.scene_flags"]; ok {
+		t.Fatal("fixed save-context blocks should not appear in resolved addresses")
+	}
+}
+
+func TestSelectSnapshotExportRegionsKeepsOnlyDynamicWindows(t *testing.T) {
+	coreRegions := []capturedSnapshotRegion{
+		{name: "ootSaveContext", address: ootmm.AddrOotSaveCtx, size: 0x100, data: make([]byte, 0x100)},
+		{name: "mmSaveContext", address: ootmm.AddrMmSaveCtx, size: 0x100, data: make([]byte, 0x100)},
+		{name: "ootPayload", address: ootmm.AddrOotPayload, size: 0x9000, data: make([]byte, 0x9000)},
+		{name: "mmPayload", address: ootmm.AddrMmPayload, size: 0x9000, data: make([]byte, 0x9000)},
+	}
+	resolved := ootmm.DebugResolvedAddresses{
+		ForeignMmSaveAddr:  ootmm.AddrOotPayload + 0x4000,
+		ForeignOotSaveAddr: ootmm.AddrMmPayload + 0x5000,
+		OotSilverDataAddr:  ootmm.AddrOotPayload + 0x1200,
+		ComboConfigMmAddr:  ootmm.AddrMmPayload + 0x1800,
+	}
+
+	regions := selectSnapshotExportRegions(coreRegions, resolved)
+	if len(regions) != 6 {
+		t.Fatalf("expected 6 exported regions, got %d", len(regions))
+	}
+
+	names := make(map[string]bool, len(regions))
+	for _, region := range regions {
+		names[region.name] = true
+	}
+
+	for _, required := range []string{
+		"ootPayload.liveSharedNearForeignMm",
+		"ootPayload.foreignMmSave",
+		"mmPayload.liveSharedNearForeignOot",
+		"mmPayload.foreignOotSave",
+		"ootPayload.runtimeSilverRupeeData",
+		"mmPayload.runtimeOotComboConfig",
+	} {
+		if !names[required] {
+			t.Fatalf("missing exported region %q", required)
+		}
+	}
+	if names["ootSaveContext"] || names["mmSaveContext"] {
+		t.Fatal("fixed save-context regions should not be exported")
 	}
 }

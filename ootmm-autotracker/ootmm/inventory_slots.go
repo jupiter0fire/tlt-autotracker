@@ -43,6 +43,19 @@ type sharedBitmapInfo struct {
 	Size   int    `json:"size"`
 }
 
+type SnapshotSharedStorageLayout struct {
+	BaseOffset  uint32                 `json:"baseOffset"`
+	Stride      uint32                 `json:"stride"`
+	TrackedSize int                    `json:"trackedSize"`
+	Bitmaps     []SnapshotSharedBitmap `json:"bitmaps"`
+}
+
+type SnapshotSharedBitmap struct {
+	Name   string `json:"name"`
+	Offset int    `json:"offset"`
+	Size   int    `json:"size"`
+}
+
 type catalogItemEntry struct {
 	ItemID string            `json:"itemId"`
 	Source catalogItemSource `json:"source"`
@@ -213,6 +226,24 @@ func markSharedCheckBitmapsUsed(usedBits map[string]int, bitmaps map[string]shar
 		case "xflagsOot", "npcOot", "shopsOot", "scrubsOot", "srOot", "xflagsMm", "npcMm", "shopsMm":
 			usedBits[name] = bitmap.Size * 8
 		}
+	}
+}
+
+func SharedStorageSnapshotLayout() SnapshotSharedStorageLayout {
+	bitmaps := make([]SnapshotSharedBitmap, len(sharedStorage.Bitmaps))
+	for index, bitmap := range sharedStorage.Bitmaps {
+		bitmaps[index] = SnapshotSharedBitmap{
+			Name:   bitmap.Name,
+			Offset: bitmap.Offset,
+			Size:   bitmap.Size,
+		}
+	}
+
+	return SnapshotSharedStorageLayout{
+		BaseOffset:  sharedStorage.BaseOffset,
+		Stride:      sharedStorage.Stride,
+		TrackedSize: sharedStorage.TrackedSize,
+		Bitmaps:     bitmaps,
 	}
 }
 

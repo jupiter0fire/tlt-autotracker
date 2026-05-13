@@ -25,6 +25,15 @@ const (
 	sharedBombchuBagMask        = 0x3
 )
 
+const (
+	SharedOcarinaButtonMaskOotOffset  = sharedOcarinaButtonMaskOotOffset
+	SharedOcarinaButtonMaskMmOffset   = sharedOcarinaButtonMaskMmOffset
+	SharedCaughtChildFishWeightOffset = sharedCaughtChildFishWeightOffset
+	SharedCaughtAdultFishWeightOffset = sharedCaughtAdultFishWeightOffset
+	SharedCaughtFishWeightCount       = sharedCaughtFishWeightCount
+	SharedBombchuBagFlagsOffset       = sharedBombchuBagFlagsOffset
+)
+
 var sharedCheckBitmapNames = [...]string{
 	"xflagsOot",
 	"npcOot",
@@ -39,6 +48,19 @@ var sharedCheckBitmapNames = [...]string{
 type sharedStateCandidate struct {
 	source string
 	state  SharedCustomState
+}
+
+// DebugResolvedAddresses describes the movable addresses the reader resolved
+// while building the current state snapshot.
+type DebugResolvedAddresses struct {
+	ForeignOotSaveAddr uint32
+	ForeignMmSaveAddr  uint32
+	OotPlayStateAddr   uint32
+	MmPlayStateAddr    uint32
+	ComboConfigOotAddr uint32
+	ComboConfigMmAddr  uint32
+	OotMaxKeysAddr     uint32
+	OotSilverDataAddr  uint32
 }
 
 // Reader reads OoTMM game state from N64 RDRAM.
@@ -72,6 +94,21 @@ func NewReader(mem *n64.Memory) *Reader {
 	return &Reader{
 		mem:      mem,
 		detector: NewDetector(mem),
+	}
+}
+
+// DebugResolvedAddresses returns the currently selected candidate addresses
+// for movable payload and live-state structures.
+func (r *Reader) DebugResolvedAddresses() DebugResolvedAddresses {
+	return DebugResolvedAddresses{
+		ForeignOotSaveAddr: r.foreignOotSaveAddr,
+		ForeignMmSaveAddr:  r.foreignMmSaveAddr,
+		OotPlayStateAddr:   r.ootPlayStateAddr,
+		MmPlayStateAddr:    r.mmPlayStateAddr,
+		ComboConfigOotAddr: r.comboConfigOotAddr,
+		ComboConfigMmAddr:  r.comboConfigMmAddr,
+		OotMaxKeysAddr:     r.ootMaxKeysAddr,
+		OotSilverDataAddr:  r.ootSilverDataAddr,
 	}
 }
 
