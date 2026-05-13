@@ -342,7 +342,10 @@ func mmExtraFlags(state *GameState) uint32 {
 }
 
 func mmTownStrayFairyCollected(state *GameState) bool {
-	return state.Mm.TownStrayFairy || mmExtraFlags2(state)&(1<<mmExtraFlags2TownStrayFairy) != 0
+	if state == nil {
+		return false
+	}
+	return state.Mm.TownStrayFairy
 }
 
 func hasMmWeekEventBit(state *GameState, byteIndex int, mask uint8) bool {

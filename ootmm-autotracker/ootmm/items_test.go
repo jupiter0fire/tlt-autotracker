@@ -2136,13 +2136,13 @@ func TestExtractChecksIncludesMmArcheryWeekEventFallbacks(t *testing.T) {
 	}
 }
 
-func TestExtractItemsIncludesMmTownStrayFairyFromExtraFlags2(t *testing.T) {
+func TestExtractItemsDoesNotTreatMmTownStrayFairyCheckAsItem(t *testing.T) {
 	state := &GameState{}
 	state.Mm.ExtraFlags2 = 1 << mmExtraFlags2TownStrayFairy
 
 	items := itemQtyMap(ExtractItems(state))
-	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 1 {
-		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 1 from MM extra flags", got)
+	if got := items["MM_STRAY_FAIRY_TOWN"]; got != 0 {
+		t.Fatalf("MM_STRAY_FAIRY_TOWN = %d, want 0 when only the MM check bit is set", got)
 	}
 }
 
