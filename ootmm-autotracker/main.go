@@ -49,6 +49,14 @@ type backendOption struct {
 }
 
 func main() {
+	launched, err := relaunchInTerminalIfNeeded()
+	if err != nil {
+		log.Printf("automatic terminal relaunch unavailable: %v", err)
+	}
+	if launched {
+		return
+	}
+
 	raHost := flag.String("ra-host", retroarch.DefaultHost, "RetroArch host")
 	raPort := flag.Int("ra-port", retroarch.DefaultPort, "RetroArch network command port")
 	pj64Mode := flag.Bool("pj64", false, "Force Project64 backend (skip auto-detection)")
