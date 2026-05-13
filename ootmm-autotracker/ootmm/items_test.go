@@ -1143,8 +1143,8 @@ func TestExtractChecksMapsMmExtraBossItemsToTempleBossChecks(t *testing.T) {
 	if !ok {
 		t.Fatal("missing Snowhead Temple Boss key from MM extra boss items")
 	}
-	if key != "MM_boss_remains_dungeon_9" {
-		t.Fatalf("Snowhead Temple Boss key = %q, want %q", key, "MM_boss_remains_dungeon_9")
+	if key != "MM_symbol_REMAINS_GOHT" {
+		t.Fatalf("Snowhead Temple Boss key = %q, want %q", key, "MM_symbol_REMAINS_GOHT")
 	}
 	if _, ok := checkNames["Snowhead Temple Boss"]; !ok {
 		t.Fatal("missing Snowhead Temple Boss check from MM extra boss items")
@@ -1618,6 +1618,30 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	}
 	if _, ok := checks["Clock Town Stray Fairy"]; !ok {
 		t.Fatal("missing MM extra-flag check for Clock Town Stray Fairy")
+	}
+}
+
+func TestExtractChecksUsesDistinctKeysForMirroredMmSymbolChecks(t *testing.T) {
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = 1 << mmExtraFlags2Ocarina
+
+	checks := ExtractChecks(state)
+	ocarinaKey, ok := checkKeyByName(checks, "Clock Tower Roof Skull Kid Ocarina")
+	if !ok {
+		t.Fatal("missing MM extra-flag check for Skull Kid Ocarina")
+	}
+	songKey, ok := checkKeyByName(checks, "Clock Tower Roof Skull Kid Song of Time")
+	if !ok {
+		t.Fatal("missing MM mirrored extra-flag check for Skull Kid Song of Time")
+	}
+	if ocarinaKey == songKey {
+		t.Fatalf("mirrored MM Skull Kid checks share key %q", ocarinaKey)
+	}
+	if ocarinaKey != "MM_symbol_SKULL_KID_OCARINA" {
+		t.Fatalf("Skull Kid Ocarina key = %q, want %q", ocarinaKey, "MM_symbol_SKULL_KID_OCARINA")
+	}
+	if songKey != "MM_symbol_SKULL_KID_SONG" {
+		t.Fatalf("Skull Kid Song key = %q, want %q", songKey, "MM_symbol_SKULL_KID_SONG")
 	}
 }
 

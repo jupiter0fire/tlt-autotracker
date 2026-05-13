@@ -97,3 +97,24 @@ func TestFullStateKeepsPendingChecksDuringGracePeriod(t *testing.T) {
 		t.Fatal("full sync should keep pending check collected during grace period")
 	}
 }
+
+func TestUpdateEmitsBothMirroredMmSkullKidCheckDiffs(t *testing.T) {
+	state := NewState()
+	gs := &ootmm.GameState{}
+	gs.Oot.ExtraRecords[ootmm.ExtraIdxMmFlags2] = 1 << 14
+
+	_, checks, _ := state.Update(gs)
+	if len(checks) != 2 {
+		t.Fatalf("len(checks) = %d, want 2", len(checks))
+	}
+	seen := map[string]struct{}{}
+	for _, check := range checks {
+		seen[check.Name] = struct{}{}
+	}
+	if _, ok := seen["Clock Tower Roof Skull Kid Ocarina"]; !ok {
+		t.Fatal("missing Clock Tower Roof Skull Kid Ocarina diff")
+	}
+	if _, ok := seen["Clock Tower Roof Skull Kid Song of Time"]; !ok {
+		t.Fatal("missing Clock Tower Roof Skull Kid Song of Time diff")
+	}
+}

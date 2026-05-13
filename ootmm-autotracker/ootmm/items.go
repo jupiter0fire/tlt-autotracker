@@ -826,6 +826,9 @@ func mmSymbolCheckMatches(state *GameState, entry mmSymbolCheck, mmFlags uint32,
 }
 
 func mmSymbolCheckKey(entry mmSymbolCheck) string {
+	if entry.symbol != "" {
+		return "MM_symbol_" + entry.symbol
+	}
 	switch entry.source {
 	case mmSymbolCheckSourceExtraFlags, mmSymbolCheckSourceExtraFlags2, mmSymbolCheckSourceExtraFlags3:
 		return entry.keyPrefix + itoa(entry.bit)
