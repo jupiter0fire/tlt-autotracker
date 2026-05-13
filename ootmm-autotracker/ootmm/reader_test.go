@@ -357,6 +357,80 @@ func TestLocateForeignMmSaveFindsNearChecksummedCandidate(t *testing.T) {
 	}
 }
 
+func TestStabilizeSnapshotStateUsesSlotAnchoredForeignOotSave(t *testing.T) {
+	foreignAddr, err := foreignOotSaveAddr(0)
+	if err != nil {
+		t.Fatalf("foreignOotSaveAddr(0): %v", err)
+	}
+	sharedAddr, err := sharedSaveAddr(AddrMmPayload, MmPayloadSize, 0)
+	if err != nil {
+		t.Fatalf("sharedSaveAddr(MM, 0): %v", err)
+	}
+
+	ootData := make([]byte, OotSaveSize)
+	for i := 0; i < len(ootData[OotOffInvItems:OotOffInvItems+24]); i++ {
+		ootData[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 19; i++ {
+		ootData[OotOffDungeonKeys+i] = 0xff
+	}
+	binary.BigEndian.PutUint32(ootData[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(ootData[OotOffSceneID:], 0x20)
+
+	sharedData := make([]byte, sharedStateReadSize())
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{
+		{address: foreignAddr, data: ootData},
+		{address: sharedAddr, data: sharedData},
+	}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	state := &GameState{
+		Valid:      true,
+		ActiveGame: GameMm,
+		SaveIndex:  0,
+	}
+	resetEmptyOotState(&state.Oot)
+	state.Oot.SceneID = 0x52
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_BOOMERANG")] = 0x06
+	state.Oot.Items[mustOotInventorySlotIndex("OOT_BOTTLE_4")] = 0x16
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = 0xfeedbeef
+	state.Mm.ExtraFlags2 = 0xfeedbeef
+	state.Shared.BombchuBagOot = 3
+
+	r.StabilizeSnapshotState(state)
+
+	items := itemQtyMap(ExtractItems(state))
+	if got := items["OOT_BOOMERANG"]; got != 0 {
+		t.Fatalf("OOT_BOOMERANG = %d, want 0", got)
+	}
+	if got := items["OOT_BOTTLE_4"]; got != 0 {
+		t.Fatalf("OOT_BOTTLE_4 = %d, want 0", got)
+	}
+	if state.Mm.ExtraFlags2 != 0 {
+		t.Fatalf("MM extra flags 2 = %#x, want 0", state.Mm.ExtraFlags2)
+	}
+	if state.Shared.BombchuBagOot != 0 {
+		t.Fatalf("shared OoT bombchu bag = %d, want 0", state.Shared.BombchuBagOot)
+	}
+	for index, itemID := range state.Oot.Items {
+		if itemID != emptyInventoryItem {
+			t.Fatalf("unexpected stabilized OoT item %d: got %#02x want %#02x", index, itemID, emptyInventoryItem)
+		}
+	}
+	if state.Oot.SceneID != 0x20 {
+		t.Fatalf("stabilized OoT scene = %#x, want 0x20", state.Oot.SceneID)
+	}
+	if state.Oot.Age != 1 {
+		t.Fatalf("stabilized OoT age = %d, want 1", state.Oot.Age)
+	}
+	if state.Oot.HasRuntimeMqBits {
+		t.Fatal("expected snapshot-stabilized OoT state to keep runtime MQ bits disabled without combo config data")
+	}
+}
+
 func TestResetEmptyMmStateUsesEmptyInventorySentinels(t *testing.T) {
 	mm := MmState{}
 	resetEmptyMmState(&mm)

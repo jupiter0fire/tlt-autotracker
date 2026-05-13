@@ -318,6 +318,7 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 	}
 
 	if state != nil {
+		reader.StabilizeSnapshotState(state)
 		snapshot.Summary = debugSnapshotSummary{
 			Valid:        state.Valid,
 			ActiveGame:   state.ActiveGame.String(),

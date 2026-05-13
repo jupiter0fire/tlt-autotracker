@@ -112,6 +112,40 @@ func (r *Reader) DebugResolvedAddresses() DebugResolvedAddresses {
 	}
 }
 
+// StabilizeSnapshotState rewrites the inactive-game and shared portions of an
+// already-read state from deterministic payload slot addresses.
+//
+// Live tracking intentionally accepts heuristic foreign-save candidates because
+// OoTMM mutates the foreign save in RAM without always refreshing its checksum.
+// For persisted debug snapshots we prefer slot-addressed payload copies keyed by
+// saveIndex so the exported summary is stable instead of depending on payload
+// scanning heuristics.
+func (r *Reader) StabilizeSnapshotState(state *GameState) {
+	if state == nil || !state.Valid || state.ActiveGame == GameNone {
+		return
+	}
+
+	switch state.ActiveGame {
+	case GameOot:
+		if err := r.readSnapshotForeignMmState(state.SaveIndex, &state.Mm); err != nil {
+			resetEmptyMmState(&state.Mm)
+		}
+		if err := r.readSharedStateFromPayload(AddrOotPayload, OotPayloadSize, state.SaveIndex, &state.Shared); err != nil {
+			state.Shared = SharedCustomState{}
+		}
+	case GameMm:
+		if err := r.readSnapshotForeignOotState(state.SaveIndex, &state.Oot); err != nil {
+			resetEmptyOotState(&state.Oot)
+		} else {
+			r.readOotComboConfig(GameMm, &state.Oot)
+		}
+		state.Mm.ExtraFlags2 = state.Oot.ExtraRecords[ExtraIdxMmFlags2]
+		if err := r.readSharedStateFromPayload(AddrMmPayload, MmPayloadSize, state.SaveIndex, &state.Shared); err != nil {
+			state.Shared = SharedCustomState{}
+		}
+	}
+}
+
 // ReadState performs a full read of the current game state.
 // It guards against race conditions during game switches by verifying the
 // active game has not changed after reading is complete. When a change is
@@ -1047,6 +1081,27 @@ func (r *Reader) readForeignOotState(oot *OotState) error {
 	return nil
 }
 
+func (r *Reader) readSnapshotForeignOotState(saveIndex uint32, oot *OotState) error {
+	addr, err := foreignOotSaveAddr(saveIndex)
+	if err != nil {
+		return err
+	}
+
+	data, err := r.mem.Read(addr, OotSaveSize)
+	if err != nil {
+		return fmt.Errorf("read snapshot OoT save: %w", err)
+	}
+	if !isPlausibleOotSave(data) {
+		return fmt.Errorf("snapshot OoT save failed plausibility checks")
+	}
+
+	resetEmptyOotState(oot)
+	if err := parseOotSave(oot, data); err != nil {
+		return fmt.Errorf("parse snapshot OoT save: %w", err)
+	}
+	return nil
+}
+
 func (r *Reader) readForeignMmState(mm *MmState) error {
 	if err := r.readForeignMmSave(mm); err == nil {
 		return nil
@@ -1059,6 +1114,27 @@ func (r *Reader) readForeignMmState(mm *MmState) error {
 
 	resetEmptyMmState(mm)
 
+	return nil
+}
+
+func (r *Reader) readSnapshotForeignMmState(saveIndex uint32, mm *MmState) error {
+	addr, err := foreignMmSaveAddr(saveIndex)
+	if err != nil {
+		return err
+	}
+
+	data, err := r.mem.Read(addr, MmSaveSize)
+	if err != nil {
+		return fmt.Errorf("read snapshot MM save: %w", err)
+	}
+	if !isPlausibleMmSave(data) {
+		return fmt.Errorf("snapshot MM save failed plausibility checks")
+	}
+
+	resetEmptyMmState(mm)
+	if err := parseMmSave(mm, data); err != nil {
+		return fmt.Errorf("parse snapshot MM save: %w", err)
+	}
 	return nil
 }
 
