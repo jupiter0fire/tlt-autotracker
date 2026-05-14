@@ -96,7 +96,7 @@ func main() {
 	for {
 		time.Sleep(pollInterval)
 		now := time.Now()
-		drainConsoleCommands(consoleCommands, connected, probed, mem)
+		drainConsoleCommands(consoleCommands, connected, probed, state.Initialized(), mem, reader)
 
 		// Step 1: Ensure connected to emulator
 		if !connected {
@@ -138,7 +138,7 @@ func main() {
 			log.Println("OoTMM detected!")
 		}
 
-		drainConsoleCommands(consoleCommands, connected, probed, mem)
+		drainConsoleCommands(consoleCommands, connected, probed, state.Initialized(), mem, reader)
 
 		// Step 3: Read game state
 		gs, err := reader.ReadState()
@@ -187,7 +187,7 @@ func main() {
 
 		if !now.Before(nextAutoSnapshotAt) {
 			snapshotNow := time.Now()
-			if err := writeAutomaticSnapshot(mem, snapshotNow); err != nil {
+			if err := writeAutomaticSnapshot(mem, reader, snapshotNow); err != nil {
 				log.Printf("Automatic snapshot failed: %v", err)
 			}
 			nextAutoSnapshotAt = snapshotNow.Add(autoSnapshotInterval)

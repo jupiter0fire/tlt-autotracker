@@ -97,6 +97,39 @@ func NewReader(mem *n64.Memory) *Reader {
 	}
 }
 
+// CloneForMemory copies the reader's resolved-address caches and continuity
+// state onto a new memory source so frozen snapshots can be evaluated with the
+// same heuristics as the live tracker.
+func (r *Reader) CloneForMemory(mem *n64.Memory) *Reader {
+	clone := NewReader(mem)
+	if r == nil {
+		return clone
+	}
+
+	clone.foreignOotSaveAddr = r.foreignOotSaveAddr
+	clone.foreignMmSaveAddr = r.foreignMmSaveAddr
+	clone.ootPlayStateAddr = r.ootPlayStateAddr
+	clone.mmPlayStateAddr = r.mmPlayStateAddr
+	clone.comboConfigOotAddr = r.comboConfigOotAddr
+	clone.comboConfigMmAddr = r.comboConfigMmAddr
+	clone.ootMaxKeysAddr = r.ootMaxKeysAddr
+	clone.ootSilverDataAddr = r.ootSilverDataAddr
+	clone.lastKnownOot = r.lastKnownOot
+	clone.lastKnownMm = r.lastKnownMm
+	clone.lastKnownShared = r.lastKnownShared.Clone()
+	clone.lastKnownMmSaveIdx = r.lastKnownMmSaveIdx
+	clone.hasLastKnownOot = r.hasLastKnownOot
+	clone.hasLastKnownMm = r.hasLastKnownMm
+	clone.hasLastKnownShared = r.hasLastKnownShared
+	clone.stableGame = r.stableGame
+	clone.stableSaveIndex = r.stableSaveIndex
+	clone.pendingGame = r.pendingGame
+	clone.pendingSaveIndex = r.pendingSaveIndex
+	clone.hasPendingState = r.hasPendingState
+
+	return clone
+}
+
 // DebugResolvedAddresses returns the currently selected candidate addresses
 // for movable payload and live-state structures.
 func (r *Reader) DebugResolvedAddresses() DebugResolvedAddresses {

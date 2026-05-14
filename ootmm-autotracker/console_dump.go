@@ -46,8 +46,8 @@ type debugSnapshotRegion struct {
 	Name     string `json:"name"`
 	Address  string `json:"address"`
 	Size     int    `json:"size"`
-	Encoding string `json:"encoding"`
-	Data     string `json:"data"`
+	Encoding string `json:"encoding,omitempty"`
+	Data     string `json:"data,omitempty"`
 }
 
 type debugSnapshotResolvedAddress struct {
@@ -78,7 +78,7 @@ type snapshotMemoryBlockSpec struct {
 	Meaning   string
 }
 
-const debugSnapshotSchemaVersion = 4
+const debugSnapshotSchemaVersion = 5
 
 type memoryRegionSpec struct {
 	name    string
@@ -148,24 +148,28 @@ func startConsoleCommands() <-chan consoleCommand {
 	return commands
 }
 
-func drainConsoleCommands(commands <-chan consoleCommand, connected, probed bool, mem *n64.Memory) {
+func drainConsoleCommands(commands <-chan consoleCommand, connected, probed bool, liveStateReady bool, mem *n64.Memory, reader *ootmm.Reader) {
 	for {
 		select {
 		case command := <-commands:
-			handleConsoleCommand(command, connected, probed, mem)
+			handleConsoleCommand(command, connected, probed, liveStateReady, mem, reader)
 		default:
 			return
 		}
 	}
 }
 
-func handleConsoleCommand(command consoleCommand, connected, probed bool, mem *n64.Memory) {
+func handleConsoleCommand(command consoleCommand, connected, probed bool, liveStateReady bool, mem *n64.Memory, reader *ootmm.Reader) {
 	switch command.name {
 	case "help":
 		printConsoleHelp()
 	case "dump", "snapshot":
 		if !connected || !probed {
 			log.Printf("Snapshot not possible: RetroArch/OoTMM is not currently connected")
+			return
+		}
+		if !liveStateReady || reader == nil {
+			log.Printf("Snapshot not possible: the live tracker has no stable state yet")
 			return
 		}
 		path, err := resolveSnapshotPath(command.args, time.Now())
@@ -179,7 +183,7 @@ func handleConsoleCommand(command consoleCommand, connected, probed bool, mem *n
 			return
 		}
 		log.Printf("Writing snapshot to %s", absolutePath)
-		if err := writeDebugSnapshot(absolutePath, mem); err != nil {
+		if err := writeDebugSnapshot(absolutePath, mem, reader); err != nil {
 			log.Printf("Snapshot failed: %v", err)
 			return
 		}
@@ -223,14 +227,14 @@ func resolveAutomaticSnapshotPath(now time.Time) string {
 	return filepath.Join("memory-dumps", fmt.Sprintf("auto-snapshot-%s.json", timestamp))
 }
 
-func writeAutomaticSnapshot(mem *n64.Memory, now time.Time) error {
+func writeAutomaticSnapshot(mem *n64.Memory, reader *ootmm.Reader, now time.Time) error {
 	absolutePath, err := filepath.Abs(resolveAutomaticSnapshotPath(now))
 	if err != nil {
 		return fmt.Errorf("automatic snapshot path could not be resolved: %w", err)
 	}
 
 	log.Printf("Writing automatic snapshot to %s", absolutePath)
-	if err := writeDebugSnapshot(absolutePath, mem); err != nil {
+	if err := writeDebugSnapshot(absolutePath, mem, reader); err != nil {
 		return err
 	}
 	log.Printf("Automatic snapshot saved: %s", absolutePath)
@@ -261,8 +265,8 @@ func sanitizeSnapshotLabel(raw string) string {
 	return strings.Trim(builder.String(), "-")
 }
 
-func writeDebugSnapshot(path string, mem *n64.Memory) error {
-	snapshot, err := captureDebugSnapshot(mem)
+func writeDebugSnapshot(path string, mem *n64.Memory, reader *ootmm.Reader) error {
+	snapshot, err := captureDebugSnapshot(mem, reader)
 	if err != nil {
 		return err
 	}
@@ -281,7 +285,7 @@ func writeDebugSnapshot(path string, mem *n64.Memory) error {
 	return nil
 }
 
-func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
+func captureDebugSnapshot(mem *n64.Memory, liveReader *ootmm.Reader) (*debugSnapshot, error) {
 	snapshot := &debugSnapshot{
 		SchemaVersion: debugSnapshotSchemaVersion,
 		CreatedAt:     time.Now().Format(time.RFC3339),
@@ -296,7 +300,7 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 	readerMem := n64.NewMemory(&snapshotCoreReader{regions: append([]capturedSnapshotRegion(nil), coreRegions...)})
 	readerMem.SetBaseShift(n64.VirtualBase)
 	readerMem.SetSwizzle(false)
-	reader := ootmm.NewReader(readerMem)
+	reader := liveReader.CloneForMemory(readerMem)
 	var (
 		state    *ootmm.GameState
 		readErr  error
@@ -318,7 +322,6 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 	}
 
 	if state != nil {
-		reader.StabilizeSnapshotState(state)
 		snapshot.Summary = debugSnapshotSummary{
 			Valid:        state.Valid,
 			ActiveGame:   state.ActiveGame.String(),
@@ -333,7 +336,10 @@ func captureDebugSnapshot(mem *n64.Memory) (*debugSnapshot, error) {
 		}
 	}
 	snapshot.ResolvedAddresses = snapshotResolvedAddresses(resolved)
-	snapshot.Regions = encodeSnapshotRegions(selectSnapshotExportRegions(coreRegions, resolved))
+	snapshot.Regions = append(
+		encodeSnapshotRegions(selectSnapshotExportRegions(coreRegions, resolved)),
+		snapshotCandidateRegionAddresses(resolved)...,
+	)
 	return snapshot, nil
 }
 
@@ -391,15 +397,89 @@ func captureSnapshotCoreRegions(mem *n64.Memory) ([]capturedSnapshotRegion, erro
 func encodeSnapshotRegions(captured []capturedSnapshotRegion) []debugSnapshotRegion {
 	regions := make([]debugSnapshotRegion, 0, len(captured))
 	for _, region := range captured {
-		if region.name == "mmRuntimeMarker" {
-			continue
-		}
 		regions = append(regions, debugSnapshotRegion{
 			Name:     region.name,
 			Address:  fmt.Sprintf("0x%08x", region.address),
 			Size:     region.size,
 			Encoding: "base64",
 			Data:     base64.StdEncoding.EncodeToString(region.data),
+		})
+	}
+	return regions
+}
+
+func snapshotCandidateRegionSpecs(resolved ootmm.DebugResolvedAddresses) []snapshotExportRegionSpec {
+	specs := make([]snapshotExportRegionSpec, 0, 8)
+	sharedSize := snapshotSharedStateSize()
+
+	if resolved.ForeignMmSaveAddr >= ootmm.SharedCustomSaveSize {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "ootPayload.liveSharedNearForeignMm",
+			address: resolved.ForeignMmSaveAddr - ootmm.SharedCustomSaveSize,
+			size:    sharedSize,
+		})
+	}
+	if resolved.ForeignMmSaveAddr != 0 {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "ootPayload.foreignMmSave",
+			address: resolved.ForeignMmSaveAddr,
+			size:    ootmm.MmSaveSize,
+		})
+	}
+	if resolved.ForeignOotSaveAddr >= ootmm.SharedCustomSaveSize {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "mmPayload.liveSharedNearForeignOot",
+			address: resolved.ForeignOotSaveAddr - ootmm.SharedCustomSaveSize,
+			size:    sharedSize,
+		})
+	}
+	if resolved.ForeignOotSaveAddr != 0 {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "mmPayload.foreignOotSave",
+			address: resolved.ForeignOotSaveAddr,
+			size:    ootmm.OotSaveSize,
+		})
+	}
+	if resolved.OotSilverDataAddr != 0 {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "ootPayload.runtimeSilverRupeeData",
+			address: resolved.OotSilverDataAddr,
+			size:    ootmm.OotSilverRupeeDataSize,
+		})
+	}
+	if resolved.OotMaxKeysAddr != 0 {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "ootPayload.runtimeMaxKeys",
+			address: resolved.OotMaxKeysAddr,
+			size:    ootmm.OotMaxKeysBlockSize,
+		})
+	}
+	if resolved.ComboConfigOotAddr != 0 {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "ootPayload.runtimeOotComboConfig",
+			address: resolved.ComboConfigOotAddr,
+			size:    ootmm.OotComboConfigSize,
+		})
+	}
+	if resolved.ComboConfigMmAddr != 0 {
+		specs = append(specs, snapshotExportRegionSpec{
+			name:    "mmPayload.runtimeOotComboConfig",
+			address: resolved.ComboConfigMmAddr,
+			size:    ootmm.OotComboConfigSize,
+		})
+	}
+
+	return specs
+}
+
+func snapshotCandidateRegionAddresses(resolved ootmm.DebugResolvedAddresses) []debugSnapshotRegion {
+	specs := snapshotCandidateRegionSpecs(resolved)
+	regions := make([]debugSnapshotRegion, 0, len(specs))
+	for _, spec := range specs {
+		regions = append(regions, debugSnapshotRegion{
+			Name:    spec.name,
+			Address: fmt.Sprintf("0x%08x", spec.address),
+			Size:    spec.size,
 		})
 	}
 	return regions
@@ -610,70 +690,14 @@ func snapshotResolvedAddresses(resolved ootmm.DebugResolvedAddresses) []debugSna
 }
 
 func selectSnapshotExportRegions(coreRegions []capturedSnapshotRegion, resolved ootmm.DebugResolvedAddresses) []capturedSnapshotRegion {
-	specs := make([]snapshotExportRegionSpec, 0, 8)
-	sharedSize := snapshotSharedStateSize()
-
-	if resolved.ForeignMmSaveAddr >= ootmm.SharedCustomSaveSize {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "ootPayload.liveSharedNearForeignMm",
-			address: resolved.ForeignMmSaveAddr - ootmm.SharedCustomSaveSize,
-			size:    sharedSize,
-		})
-	}
-	if resolved.ForeignMmSaveAddr != 0 {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "ootPayload.foreignMmSave",
-			address: resolved.ForeignMmSaveAddr,
-			size:    ootmm.MmSaveSize,
-		})
-	}
-	if resolved.ForeignOotSaveAddr >= ootmm.SharedCustomSaveSize {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "mmPayload.liveSharedNearForeignOot",
-			address: resolved.ForeignOotSaveAddr - ootmm.SharedCustomSaveSize,
-			size:    sharedSize,
-		})
-	}
-	if resolved.ForeignOotSaveAddr != 0 {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "mmPayload.foreignOotSave",
-			address: resolved.ForeignOotSaveAddr,
-			size:    ootmm.OotSaveSize,
-		})
-	}
-	if resolved.OotSilverDataAddr != 0 {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "ootPayload.runtimeSilverRupeeData",
-			address: resolved.OotSilverDataAddr,
-			size:    ootmm.OotSilverRupeeDataSize,
-		})
-	}
-	if resolved.OotMaxKeysAddr != 0 {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "ootPayload.runtimeMaxKeys",
-			address: resolved.OotMaxKeysAddr,
-			size:    ootmm.OotMaxKeysBlockSize,
-		})
-	}
-	if resolved.ComboConfigOotAddr != 0 {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "ootPayload.runtimeOotComboConfig",
-			address: resolved.ComboConfigOotAddr,
-			size:    ootmm.OotComboConfigSize,
-		})
-	}
-	if resolved.ComboConfigMmAddr != 0 {
-		specs = append(specs, snapshotExportRegionSpec{
-			name:    "mmPayload.runtimeOotComboConfig",
-			address: resolved.ComboConfigMmAddr,
-			size:    ootmm.OotComboConfigSize,
-		})
-	}
-
-	exports := make([]capturedSnapshotRegion, 0, len(specs))
-	for _, spec := range specs {
-		if region, ok := sliceCapturedSnapshotRegion(coreRegions, spec.name, spec.address, spec.size); ok {
-			exports = append(exports, region)
+	_ = resolved
+	exports := make([]capturedSnapshotRegion, len(coreRegions))
+	for i, region := range coreRegions {
+		exports[i] = capturedSnapshotRegion{
+			name:    region.name,
+			address: region.address,
+			size:    region.size,
+			data:    append([]byte(nil), region.data...),
 		}
 	}
 	return exports

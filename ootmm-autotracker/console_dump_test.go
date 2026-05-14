@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"ootmm-autotracker/n64"
 	"ootmm-autotracker/ootmm"
 )
 
@@ -43,6 +44,16 @@ func TestResolveAutomaticSnapshotPath(t *testing.T) {
 	if path != "memory-dumps/auto-snapshot-20260414-123456.json" {
 		t.Fatalf("unexpected automatic snapshot path: %q", path)
 	}
+}
+
+type zeroSnapshotCoreReader struct{}
+
+func (zeroSnapshotCoreReader) ReadMemory(addr uint32, size int) ([]byte, error) {
+	return make([]byte, size), nil
+}
+
+func (zeroSnapshotCoreReader) ReadMemoryLarge(addr uint32, size int) ([]byte, error) {
+	return make([]byte, size), nil
 }
 
 func TestFilterSnapshotItemsOmitsZeroQty(t *testing.T) {
@@ -135,7 +146,7 @@ func TestSnapshotResolvedAddressesDescribeDynamicCandidates(t *testing.T) {
 	}
 }
 
-func TestSelectSnapshotExportRegionsKeepsOnlyDynamicWindows(t *testing.T) {
+func TestSelectSnapshotExportRegionsKeepsCapturedCoreRegions(t *testing.T) {
 	coreRegions := []capturedSnapshotRegion{
 		{name: "ootSaveContext", address: ootmm.AddrOotSaveCtx, size: 0x100, data: make([]byte, 0x100)},
 		{name: "mmSaveContext", address: ootmm.AddrMmSaveCtx, size: 0x100, data: make([]byte, 0x100)},
@@ -150,8 +161,8 @@ func TestSelectSnapshotExportRegionsKeepsOnlyDynamicWindows(t *testing.T) {
 	}
 
 	regions := selectSnapshotExportRegions(coreRegions, resolved)
-	if len(regions) != 6 {
-		t.Fatalf("expected 6 exported regions, got %d", len(regions))
+	if len(regions) != len(coreRegions) {
+		t.Fatalf("expected %d exported regions, got %d", len(coreRegions), len(regions))
 	}
 
 	names := make(map[string]bool, len(regions))
@@ -160,18 +171,78 @@ func TestSelectSnapshotExportRegionsKeepsOnlyDynamicWindows(t *testing.T) {
 	}
 
 	for _, required := range []string{
-		"ootPayload.liveSharedNearForeignMm",
-		"ootPayload.foreignMmSave",
-		"mmPayload.liveSharedNearForeignOot",
-		"mmPayload.foreignOotSave",
-		"ootPayload.runtimeSilverRupeeData",
-		"mmPayload.runtimeOotComboConfig",
+		"ootSaveContext",
+		"mmSaveContext",
+		"ootPayload",
+		"mmPayload",
 	} {
 		if !names[required] {
 			t.Fatalf("missing exported region %q", required)
 		}
 	}
-	if names["ootSaveContext"] || names["mmSaveContext"] {
-		t.Fatal("fixed save-context regions should not be exported")
+	if len(regions[0].data) == 0 {
+		t.Fatal("expected exported region data to be copied")
+	}
+}
+
+func TestSnapshotCandidateRegionAddressesExposeAddressesWithoutData(t *testing.T) {
+	resolved := ootmm.DebugResolvedAddresses{
+		ForeignMmSaveAddr:  ootmm.AddrOotPayload + 0x4000,
+		ForeignOotSaveAddr: ootmm.AddrMmPayload + 0x5000,
+		OotSilverDataAddr:  ootmm.AddrOotPayload + 0x1200,
+		OotMaxKeysAddr:     ootmm.AddrOotPayload + 0x2200,
+		ComboConfigMmAddr:  ootmm.AddrMmPayload + 0x1800,
+	}
+
+	regions := snapshotCandidateRegionAddresses(resolved)
+	if len(regions) == 0 {
+		t.Fatal("expected candidate region addresses to be present")
+	}
+
+	byName := make(map[string]debugSnapshotRegion, len(regions))
+	for _, region := range regions {
+		byName[region.Name] = region
+	}
+
+	if got := byName["mmPayload.liveSharedNearForeignOot"].Address; got != "0x80734790" {
+		t.Fatalf("unexpected live shared near-foreign OoT address: %q", got)
+	}
+	if got := byName["ootPayload.foreignMmSave"].Address; got != "0x80404000" {
+		t.Fatalf("unexpected foreign MM address: %q", got)
+	}
+	if byName["mmPayload.liveSharedNearForeignOot"].Data != "" {
+		t.Fatal("candidate region addresses should not include raw data")
+	}
+	if byName["mmPayload.liveSharedNearForeignOot"].Encoding != "" {
+		t.Fatal("candidate region addresses should not include an encoding")
+	}
+}
+
+func TestCaptureDebugSnapshotExportsCoreRegionsAndRuntimeMarker(t *testing.T) {
+	mem := n64.NewMemory(zeroSnapshotCoreReader{})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	snapshot, err := captureDebugSnapshot(mem, ootmm.NewReader(mem))
+	if err != nil {
+		t.Fatalf("captureDebugSnapshot returned error: %v", err)
+	}
+
+	names := make(map[string]bool, len(snapshot.Regions))
+	var candidate debugSnapshotRegion
+	for _, region := range snapshot.Regions {
+		names[region.Name] = true
+		if region.Name == "mmPayload.liveSharedNearForeignOot" {
+			candidate = region
+		}
+	}
+
+	for _, required := range []string{"comboCtxOot", "comboCtxMm", "ootSaveContext", "mmSaveContext", "ootPayload", "mmPayload", "mmRuntimeMarker"} {
+		if !names[required] {
+			t.Fatalf("missing snapshot region %q", required)
+		}
+	}
+	if candidate.Data != "" || candidate.Encoding != "" {
+		t.Fatal("candidate region metadata should omit raw data")
 	}
 }

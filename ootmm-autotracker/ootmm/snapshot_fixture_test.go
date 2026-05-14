@@ -75,6 +75,9 @@ func loadSnapshotFixtureStateOptions(t *testing.T, name string, allowGameNone bo
 
 	regions := make([]snapshotFixtureRegion, 0, len(snapshot.Regions))
 	for _, region := range snapshot.Regions {
+		if region.Encoding == "" && region.Data == "" {
+			continue
+		}
 		if region.Encoding != "base64" {
 			t.Fatalf("snapshot fixture region %s uses unsupported encoding %q", region.Name, region.Encoding)
 		}
