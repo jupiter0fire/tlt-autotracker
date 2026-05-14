@@ -103,6 +103,22 @@ func TestIsPlausibleOotSaveRejectsInvalidSceneID(t *testing.T) {
 	}
 }
 
+func TestIsPlausibleOotSaveAllowsRicherInventory(t *testing.T) {
+	data := make([]byte, OotSaveSize)
+	binary.BigEndian.PutUint32(data[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(data[OotOffSceneID:], 0x20)
+	for i := 0; i < 24; i++ {
+		data[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 17; i++ {
+		data[OotOffInvItems+i] = byte(i)
+	}
+
+	if !isPlausibleOotSave(data) {
+		t.Fatal("expected OoT save with 17 filled inventory slots to remain plausible")
+	}
+}
+
 func TestLocateForeignOotSaveFindsRewardMutatedCandidate(t *testing.T) {
 	payload := make([]byte, 0x50000)
 
@@ -462,6 +478,63 @@ func TestIsPlausibleOotPlayStateSample(t *testing.T) {
 	sample.actorTotal = 0
 	if isPlausibleOotPlayStateSample(sample) {
 		t.Fatal("expected sample with zero actors to fail plausibility")
+	}
+}
+
+func TestReadForeignOotSavePrefersChecksummedCandidateOverWeakCachedAddress(t *testing.T) {
+	payload := make([]byte, MmPayloadSize)
+	weakOffset := 0x408a0
+	weak := payload[weakOffset : weakOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(weak[OotOffAge:], 0)
+	binary.BigEndian.PutUint16(weak[OotOffSceneID:], 0x00)
+	for i := 0; i < 24; i++ {
+		weak[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 16; i++ {
+		weak[OotOffInvItems+i] = byte(i)
+	}
+
+	exactOffset := 0x429f0
+	exact := payload[exactOffset : exactOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(exact[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(exact[OotOffSceneID:], 0x20)
+	binary.BigEndian.PutUint16(exact[OotOffGoldTokens:], 31)
+	binary.BigEndian.PutUint32(exact[OotOffUpgrades:], 0x00120089)
+	for i := 0; i < 24; i++ {
+		exact[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 17; i++ {
+		exact[OotOffInvItems+i] = byte(i)
+	}
+	binary.BigEndian.PutUint16(exact[OotOffChecksum:], ootChecksum(exact))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPayload, data: payload}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	r.foreignOotSaveAddr = AddrMmPayload + uint32(weakOffset)
+
+	if err := r.validateForeignOotSaveAt(r.foreignOotSaveAddr, weak); err != nil {
+		t.Fatalf("expected weak cached candidate to remain prefix-valid: %v", err)
+	}
+
+	var oot OotState
+	if err := r.readForeignOotSave(&oot); err != nil {
+		t.Fatalf("readForeignOotSave: %v", err)
+	}
+
+	if want := AddrMmPayload + uint32(exactOffset); r.foreignOotSaveAddr != want {
+		t.Fatalf("foreignOotSaveAddr = %08x, want %08x", r.foreignOotSaveAddr, want)
+	}
+	if oot.SceneID != 0x20 {
+		t.Fatalf("OoT scene = %#x, want 0x20", oot.SceneID)
+	}
+	if got := oot.Items[16]; got != 0x10 {
+		t.Fatalf("OoT item 16 = %#02x, want 0x10", got)
+	}
+	if oot.GoldTokens != 31 {
+		t.Fatalf("OoT gold tokens = %d, want 31", oot.GoldTokens)
 	}
 }
 

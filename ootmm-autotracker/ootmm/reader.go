@@ -11,6 +11,7 @@ import (
 const (
 	maxForeignOotChecksumDelta        = 0x1000
 	maxForeignMmChecksumDelta         = 0x400
+	minPlausibleOotEmptyInventorySlot = 4
 	sharedOcarinaButtonMaskOotOffset  = 0x7c8
 	sharedOcarinaButtonMaskMmOffset   = 0x7ca
 	sharedCaughtChildFishWeightOffset = 2037
@@ -1045,8 +1046,17 @@ func (r *Reader) readActiveSaveIndex(game ActiveGame) (uint32, error) {
 
 func (r *Reader) readForeignOotSave(oot *OotState) error {
 	if r.foreignOotSaveAddr != 0 {
-		if err := r.readOotSaveAt(r.foreignOotSaveAddr, oot); err == nil {
-			return nil
+		data, err := r.mem.Read(r.foreignOotSaveAddr, OotSaveSize)
+		if err == nil {
+			if err := r.validateForeignOotSaveAt(r.foreignOotSaveAddr, data); err == nil {
+				if validateOotSave(data) != nil {
+					if exactAddr, ok, exactErr := r.findChecksummedForeignOotSaveAddr(); exactErr == nil && ok && exactAddr != r.foreignOotSaveAddr {
+						r.foreignOotSaveAddr = exactAddr
+						return r.readOotSaveAt(exactAddr, oot)
+					}
+				}
+				return parseOotSave(oot, data)
+			}
 		}
 		r.foreignOotSaveAddr = 0
 	}
@@ -1611,6 +1621,16 @@ func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
 	return addr, nil
 }
 
+func (r *Reader) findChecksummedForeignOotSaveAddr() (uint32, bool, error) {
+	payload, err := r.mem.Read(AddrMmPayload, MmPayloadSize)
+	if err != nil {
+		return 0, false, fmt.Errorf("read MM payload: %w", err)
+	}
+
+	addr, ok := locateChecksummedForeignOotSave(payload, AddrMmPayload)
+	return addr, ok, nil
+}
+
 func (r *Reader) findForeignMmSaveAddr() (uint32, error) {
 	if r.foreignMmSaveAddr != 0 {
 		return r.foreignMmSaveAddr, nil
@@ -1648,19 +1668,8 @@ func foreignSaveAddr(payloadBase uint32, payloadSize int, baseOffset, stride uin
 }
 
 func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
-	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
-		candidate := payload[offset : offset+OotSaveSize]
-		expected := binary.BigEndian.Uint16(candidate[OotOffChecksum:])
-		if expected == 0 {
-			continue
-		}
-		if err := validateOotSave(candidate); err != nil {
-			continue
-		}
-		if !isPlausibleOotSave(candidate) {
-			continue
-		}
-		return payloadBase + uint32(offset), true
+	if addr, ok := locateChecksummedForeignOotSave(payload, payloadBase); ok {
+		return addr, true
 	}
 
 	bestOffset := -1
@@ -1709,6 +1718,25 @@ func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
 	return 0, false
 }
 
+func locateChecksummedForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
+	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
+		candidate := payload[offset : offset+OotSaveSize]
+		expected := binary.BigEndian.Uint16(candidate[OotOffChecksum:])
+		if expected == 0 {
+			continue
+		}
+		if err := validateOotSave(candidate); err != nil {
+			continue
+		}
+		if !isPlausibleOotSave(candidate) {
+			continue
+		}
+		return payloadBase + uint32(offset), true
+	}
+
+	return 0, false
+}
+
 func isPlausibleOotSave(data []byte) bool {
 	age := binary.BigEndian.Uint32(data[OotOffAge:])
 	if age > 1 {
@@ -1726,7 +1754,7 @@ func isPlausibleOotSave(data []byte) bool {
 			emptySlots++
 		}
 	}
-	if emptySlots < 8 {
+	if emptySlots < minPlausibleOotEmptyInventorySlot {
 		return false
 	}
 
