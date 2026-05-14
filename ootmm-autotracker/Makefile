@@ -4,6 +4,11 @@ OOTMM_REPO?=../OoTMM
 GO?=go
 BUILD_FLAGS?=-trimpath -buildvcs=false
 LDFLAGS?=-s -w
+GIT_COMMIT?=$(shell git rev-parse --verify HEAD 2>/dev/null)
+
+ifneq ($(strip $(GIT_COMMIT)),)
+LDFLAGS += -X main.commitHash=$(GIT_COMMIT)
+endif
 
 .PHONY: all build build-all clean deps generate-slot-mapping generate-location-mapping generate-special-locations update-special-location-fallback-baselines
 

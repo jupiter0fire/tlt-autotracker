@@ -65,3 +65,37 @@ func TestParseBackendChoiceRejectsUnknownInput(t *testing.T) {
 		t.Fatalf("parseBackendChoice returned %q for invalid input", chosen.kind)
 	}
 }
+
+func TestShortCommitHash(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "empty", input: "", want: ""},
+		{name: "whitespace", input: "  ", want: ""},
+		{name: "devel", input: "(devel)", want: ""},
+		{name: "short", input: "abc1234", want: "abc1234"},
+		{name: "full", input: "0123456789abcdef0123456789abcdef01234567", want: "0123456789ab"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := shortCommitHash(test.input); got != test.want {
+				t.Fatalf("shortCommitHash(%q) = %q, want %q", test.input, got, test.want)
+			}
+		})
+	}
+}
+
+func TestStartupCommitHashPrefersInjectedValue(t *testing.T) {
+	original := commitHash
+	commitHash = "0123456789abcdef0123456789abcdef01234567"
+	t.Cleanup(func() {
+		commitHash = original
+	})
+
+	if got := startupCommitHash(); got != "0123456789ab" {
+		t.Fatalf("startupCommitHash() = %q, want %q", got, "0123456789ab")
+	}
+}

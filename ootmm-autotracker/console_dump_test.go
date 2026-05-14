@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -244,5 +245,41 @@ func TestCaptureDebugSnapshotExportsCoreRegionsAndRuntimeMarker(t *testing.T) {
 	}
 	if candidate.Data != "" || candidate.Encoding != "" {
 		t.Fatal("candidate region metadata should omit raw data")
+	}
+}
+
+func TestCaptureDebugSnapshotIncludesCommitHashAtTopLevel(t *testing.T) {
+	original := commitHash
+	commitHash = "0123456789abcdef0123456789abcdef01234567"
+	t.Cleanup(func() {
+		commitHash = original
+	})
+
+	mem := n64.NewMemory(zeroSnapshotCoreReader{})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	snapshot, err := captureDebugSnapshot(mem, ootmm.NewReader(mem))
+	if err != nil {
+		t.Fatalf("captureDebugSnapshot returned error: %v", err)
+	}
+	if snapshot.CommitHash != "0123456789ab" {
+		t.Fatalf("unexpected commit hash: %q", snapshot.CommitHash)
+	}
+
+	data, err := json.MarshalIndent(snapshot, "", "  ")
+	if err != nil {
+		t.Fatalf("MarshalIndent returned error: %v", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	if len(lines) < 4 {
+		t.Fatalf("expected multiline JSON, got %q", string(data))
+	}
+	if !strings.Contains(lines[1], `"schemaVersion":`) {
+		t.Fatalf("expected schema version first, got %q", lines[1])
+	}
+	if lines[2] != `  "commitHash": "0123456789ab",` {
+		t.Fatalf("expected commit hash second, got %q", lines[2])
 	}
 }

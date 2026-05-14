@@ -23,6 +23,7 @@ type consoleCommand struct {
 
 type debugSnapshot struct {
 	SchemaVersion     int                            `json:"schemaVersion"`
+	CommitHash        string                         `json:"commitHash"`
 	CreatedAt         string                         `json:"createdAt"`
 	Summary           debugSnapshotSummary           `json:"summary"`
 	MemoryBlocks      []debugSnapshotMemoryBlock     `json:"memoryBlocks"`
@@ -78,7 +79,7 @@ type snapshotMemoryBlockSpec struct {
 	Meaning   string
 }
 
-const debugSnapshotSchemaVersion = 5
+const debugSnapshotSchemaVersion = 6
 
 type memoryRegionSpec struct {
 	name    string
@@ -288,6 +289,7 @@ func writeDebugSnapshot(path string, mem *n64.Memory, reader *ootmm.Reader) erro
 func captureDebugSnapshot(mem *n64.Memory, liveReader *ootmm.Reader) (*debugSnapshot, error) {
 	snapshot := &debugSnapshot{
 		SchemaVersion: debugSnapshotSchemaVersion,
+		CommitHash:    startupCommitHash(),
 		CreatedAt:     time.Now().Format(time.RFC3339),
 		MemoryBlocks:  snapshotMemoryBlocks(),
 	}

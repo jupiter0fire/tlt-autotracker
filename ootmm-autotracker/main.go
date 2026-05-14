@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -18,12 +19,15 @@ import (
 )
 
 const (
-	pollInterval      = 100 * time.Millisecond
-	retryDelay        = 2 * time.Second
-	startupRetryDelay = 500 * time.Millisecond
-	ootmmLostTimeout  = 20 * time.Second
+	pollInterval          = 100 * time.Millisecond
+	retryDelay            = 2 * time.Second
+	startupRetryDelay     = 500 * time.Millisecond
+	ootmmLostTimeout      = 20 * time.Second
 	autoSnapshotInterval = 5 * time.Minute
+	shortCommitHashLength = 12
 )
+
+var commitHash string
 
 // emulatorBackend abstracts the lifecycle of RetroArch and PJ64 connections.
 type emulatorBackend interface {
@@ -56,6 +60,8 @@ func main() {
 	if launched {
 		return
 	}
+
+	fmt.Println(startupCommitHash())
 
 	raHost := flag.String("ra-host", retroarch.DefaultHost, "RetroArch host")
 	raPort := flag.Int("ra-port", retroarch.DefaultPort, "RetroArch network command port")
@@ -229,6 +235,39 @@ func main() {
 			forceFullSyncOnReconnect = false
 		}
 	}
+}
+
+func startupCommitHash() string {
+	if hash := shortCommitHash(commitHash); hash != "" {
+		return hash
+	}
+
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+
+	for _, setting := range buildInfo.Settings {
+		if setting.Key == "vcs.revision" {
+			if hash := shortCommitHash(setting.Value); hash != "" {
+				return hash
+			}
+			break
+		}
+	}
+
+	return "unknown"
+}
+
+func shortCommitHash(hash string) string {
+	hash = strings.TrimSpace(hash)
+	if hash == "" || hash == "(devel)" {
+		return ""
+	}
+	if len(hash) <= shortCommitHashLength {
+		return hash
+	}
+	return hash[:shortCommitHashLength]
 }
 
 func noteOoTMMUnavailable(unavailableSince *time.Time, now time.Time) time.Duration {
