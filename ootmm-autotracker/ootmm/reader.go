@@ -1045,6 +1045,10 @@ func (r *Reader) readActiveSaveIndex(game ActiveGame) (uint32, error) {
 }
 
 func (r *Reader) readForeignOotSave(oot *OotState) error {
+	if err := r.readPreferredForeignOotSave(oot); err == nil {
+		return nil
+	}
+
 	if r.foreignOotSaveAddr != 0 {
 		data, err := r.mem.Read(r.foreignOotSaveAddr, OotSaveSize)
 		if err == nil {
@@ -1067,6 +1071,14 @@ func (r *Reader) readForeignOotSave(oot *OotState) error {
 	}
 
 	return r.readOotSaveAt(addr, oot)
+}
+
+func (r *Reader) readPreferredForeignOotSave(oot *OotState) error {
+	if err := r.readOotSaveAt(AddrMmForeignOotSaveLive, oot); err != nil {
+		return err
+	}
+	r.foreignOotSaveAddr = AddrMmForeignOotSaveLive
+	return nil
 }
 
 func (r *Reader) readOotSaveAt(addr uint32, oot *OotState) error {
@@ -1612,6 +1624,11 @@ func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
 		return 0, fmt.Errorf("read MM payload: %w", err)
 	}
 
+	if addr, ok := locatePreferredForeignOotSave(payload, AddrMmPayload); ok {
+		r.foreignOotSaveAddr = addr
+		return addr, nil
+	}
+
 	addr, ok := locateForeignOotSave(payload, AddrMmPayload)
 	if !ok {
 		return 0, fmt.Errorf("foreign OoT save not found in MM payload")
@@ -1713,6 +1730,36 @@ func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
 	}
 	if bestOffset >= 0 {
 		return payloadBase + uint32(bestOffset), true
+	}
+
+	return 0, false
+}
+
+func locatePreferredForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
+	if AddrMmForeignOotSaveLive < payloadBase {
+		return 0, false
+	}
+
+	offset := int(AddrMmForeignOotSaveLive - payloadBase)
+	if offset < 0 || offset+OotSaveSize > len(payload) {
+		return 0, false
+	}
+
+	candidate := payload[offset : offset+OotSaveSize]
+	if err := validateOotSave(candidate); err == nil {
+		if isPlausibleOotSave(candidate) {
+			return AddrMmForeignOotSaveLive, true
+		}
+		return 0, false
+	}
+	if !isPlausibleOotSave(candidate) {
+		return 0, false
+	}
+	if foreignOotSaveHasPlausibleSharedPrefix(payload, offset) {
+		return AddrMmForeignOotSaveLive, true
+	}
+	if err := validateForeignOotSave(candidate); err == nil {
+		return AddrMmForeignOotSaveLive, true
 	}
 
 	return 0, false

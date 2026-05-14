@@ -65,7 +65,7 @@ func TestForeignSaveAddrRejectsOutOfRangeIndex(t *testing.T) {
 
 func TestLocateForeignOotSaveFindsChecksummedCandidate(t *testing.T) {
 	payload := make([]byte, 0x50000)
-	offset := 0x429f0
+	offset := int(AddrMmForeignOotSaveLive - AddrMmPayload)
 	candidate := payload[offset : offset+OotSaveSize]
 	binary.BigEndian.PutUint32(candidate[OotOffAge:], 1)
 	binary.BigEndian.PutUint16(candidate[OotOffSceneID:], 0x20)
@@ -87,6 +87,74 @@ func TestLocateForeignOotSaveFindsChecksummedCandidate(t *testing.T) {
 	}
 	if want := AddrMmPayload + uint32(offset); addr != want {
 		t.Fatalf("unexpected foreign OoT addr: got %08x want %08x", addr, want)
+	}
+}
+
+func TestFindForeignOotSaveAddrPrefersFixedPrimaryAddress(t *testing.T) {
+	payload := make([]byte, MmPayloadSize)
+	primaryOffset := int(AddrMmForeignOotSaveLive - AddrMmPayload)
+	primary := payload[primaryOffset : primaryOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(primary[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(primary[OotOffSceneID:], 0x20)
+	for i := 0; i < 24; i++ {
+		primary[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 17; i++ {
+		primary[OotOffInvItems+i] = byte(i)
+	}
+	binary.BigEndian.PutUint16(primary[OotOffChecksum:], ootChecksum(primary))
+
+	otherOffset := 0x12000
+	other := payload[otherOffset : otherOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(other[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(other[OotOffSceneID:], 0x21)
+	for i := 0; i < 24; i++ {
+		other[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 12; i++ {
+		other[OotOffInvItems+i] = byte(i)
+	}
+	binary.BigEndian.PutUint16(other[OotOffChecksum:], ootChecksum(other))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPayload, data: payload}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	addr, err := r.findForeignOotSaveAddr()
+	if err != nil {
+		t.Fatalf("findForeignOotSaveAddr: %v", err)
+	}
+	if addr != AddrMmForeignOotSaveLive {
+		t.Fatalf("findForeignOotSaveAddr = %08x, want %08x", addr, AddrMmForeignOotSaveLive)
+	}
+}
+
+func TestFindForeignOotSaveAddrFallsBackWhenFixedPrimaryInvalid(t *testing.T) {
+	payload := make([]byte, MmPayloadSize)
+	fallbackOffset := 0x12000
+	fallback := payload[fallbackOffset : fallbackOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(fallback[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(fallback[OotOffSceneID:], 0x20)
+	for i := 0; i < 24; i++ {
+		fallback[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 14; i++ {
+		fallback[OotOffInvItems+i] = byte(i)
+	}
+	binary.BigEndian.PutUint16(fallback[OotOffChecksum:], ootChecksum(fallback))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPayload, data: payload}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	addr, err := r.findForeignOotSaveAddr()
+	if err != nil {
+		t.Fatalf("findForeignOotSaveAddr: %v", err)
+	}
+	if want := AddrMmPayload + uint32(fallbackOffset); addr != want {
+		t.Fatalf("findForeignOotSaveAddr = %08x, want %08x", addr, want)
 	}
 }
 
@@ -481,7 +549,7 @@ func TestIsPlausibleOotPlayStateSample(t *testing.T) {
 	}
 }
 
-func TestReadForeignOotSavePrefersChecksummedCandidateOverWeakCachedAddress(t *testing.T) {
+func TestReadForeignOotSavePrefersFixedPrimaryAddressOverWeakCachedAddress(t *testing.T) {
 	payload := make([]byte, MmPayloadSize)
 	weakOffset := 0x408a0
 	weak := payload[weakOffset : weakOffset+OotSaveSize]
@@ -494,7 +562,7 @@ func TestReadForeignOotSavePrefersChecksummedCandidateOverWeakCachedAddress(t *t
 		weak[OotOffInvItems+i] = byte(i)
 	}
 
-	exactOffset := 0x429f0
+	exactOffset := int(AddrMmForeignOotSaveLive - AddrMmPayload)
 	exact := payload[exactOffset : exactOffset+OotSaveSize]
 	binary.BigEndian.PutUint32(exact[OotOffAge:], 1)
 	binary.BigEndian.PutUint16(exact[OotOffSceneID:], 0x20)
@@ -524,8 +592,8 @@ func TestReadForeignOotSavePrefersChecksummedCandidateOverWeakCachedAddress(t *t
 		t.Fatalf("readForeignOotSave: %v", err)
 	}
 
-	if want := AddrMmPayload + uint32(exactOffset); r.foreignOotSaveAddr != want {
-		t.Fatalf("foreignOotSaveAddr = %08x, want %08x", r.foreignOotSaveAddr, want)
+	if r.foreignOotSaveAddr != AddrMmForeignOotSaveLive {
+		t.Fatalf("foreignOotSaveAddr = %08x, want %08x", r.foreignOotSaveAddr, AddrMmForeignOotSaveLive)
 	}
 	if oot.SceneID != 0x20 {
 		t.Fatalf("OoT scene = %#x, want 0x20", oot.SceneID)
