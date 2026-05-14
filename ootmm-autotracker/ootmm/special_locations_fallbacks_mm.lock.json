@@ -994,6 +994,17 @@
     "bit": 14
   },
   {
+    "symbol": "MM_SONG_AWAKENING",
+    "name": "Deku Palace Sonata of Awakening",
+    "source": {
+      "group": "weekEventReg",
+      "field": "gMmSave.info.weekEventReg[9]",
+      "mask": "0x80"
+    },
+    "byteIndex": 9,
+    "mask": 128
+  },
+  {
     "symbol": "MM_SONG_EMPTINESS",
     "name": "Ancient Castle of Ikana Song Emptiness",
     "source": {

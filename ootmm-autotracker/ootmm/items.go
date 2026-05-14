@@ -79,6 +79,8 @@ const (
 	mmExtraFlags3Lottery1                      = 29
 	mmExtraFlags3Lottery2                      = 28
 	mmExtraFlags3Lottery3                      = 27
+	mmWeekEventMonkeyPunishedByte              = 9
+	mmWeekEventMonkeyPunishedMask              = 0x80
 	mmWeekEventTingleMapsByte                  = 0x118 >> 3
 	mmWeekEventTingleMapClockTownMask          = 1 << (0x118 & 7)
 	mmWeekEventTingleMapWoodfallMask           = 1 << (0x119 & 7)

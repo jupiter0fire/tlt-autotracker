@@ -34,13 +34,16 @@
     "symbol": "MM_SONG_AWAKENING",
     "sources": [
       {
-        "group": "inventoryQuest",
-        "field": "gMmSave.info.inventory.quest.value",
-        "mask": "0x02000000"
+        "group": "weekEventReg",
+        "field": "gMmSave.info.weekEventReg[9]",
+        "mask": "0x80"
       }
     ],
-    "note": "owned song bit; no separate local extra flag",
-    "name": "Deku Palace Sonata of Awakening"
+    "note": "monkey reward cutscene week event set before the randomizer item is granted",
+    "name": "Deku Palace Sonata of Awakening",
+    "bits": [79],
+    "byteIndex": 9,
+    "mask": 128
   },
   {
     "code": "0x03",

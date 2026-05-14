@@ -14,6 +14,8 @@ SUPPORTED_EXTRA_GROUPS = {"gMmExtraFlags", "gMmExtraFlags2", "gMmExtraFlags3"}
 SUPPORTED_GROUPS = SUPPORTED_EXTRA_GROUPS | {"weekEventReg", "gMmOwlFlags", "sharedNpcBitmap", "inventoryQuest", "gMmExtraBoss"}
 SUPPORTED_OOT_GROUPS = {"gOotExtraFlags", "inventoryQuest", "gOotTradeSave", "eventsChk", "eventsItem", "eventsMisc"}
 MM_RUNTIME_FALLBACK_GROUPS = SUPPORTED_EXTRA_GROUPS | {"weekEventReg", "gMmOwlFlags"}
+MM_RUNTIME_SUPPORTED_GROUPS = MM_RUNTIME_FALLBACK_GROUPS | {"gMmExtraBoss"}
+MM_HINT_ONLY_GROUPS = {"inventoryQuest", "sharedNpcBitmap"}
 OOT_RUNTIME_FALLBACK_GROUPS = SUPPORTED_OOT_GROUPS
 
 EXTRA_STRUCTS = {
@@ -407,6 +409,17 @@ def source_groups(sources: list[dict[str, Any]]) -> set[str]:
     return {source.get("group", "") for source in sources}
 
 
+def should_prefer_discovered_mm_sources(
+    hinted_sources: list[dict[str, Any]],
+    discovered_sources: list[dict[str, Any]],
+) -> bool:
+    if not hinted_sources or not discovered_sources:
+        return False
+    hinted_groups = source_groups(hinted_sources)
+    discovered_groups = source_groups(discovered_sources)
+    return bool(discovered_groups & MM_RUNTIME_SUPPORTED_GROUPS) and hinted_groups <= MM_HINT_ONLY_GROUPS
+
+
 def event_suffix(macro: str) -> str:
     return re.sub(r"^(?:EV|EN)_OOT_(?:CHK|ITEM|INF)_", "", macro)
 
@@ -722,19 +735,25 @@ def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> 
 
     for symbol, code in sorted(npc_ids.items(), key=lambda item: item[1]):
         hint = hints.get(symbol, {})
-        sources: list[dict[str, Any]] = []
+        hinted_sources: list[dict[str, Any]] = []
         for source in hint.get("sources", []):
             if source.get("group") in SUPPORTED_GROUPS:
+                append_unique_source(hinted_sources, source)
+
+        discovered_sources = discovered.get(symbol, [])
+        sources: list[dict[str, Any]] = []
+        if hinted_sources and not should_prefer_discovered_mm_sources(hinted_sources, discovered_sources):
+            sources = hinted_sources
+        else:
+            for source in discovered_sources:
                 append_unique_source(sources, source)
-        if not sources:
-            for source in discovered.get(symbol, []):
-                append_unique_source(sources, source)
-            q_source = quest_source(symbol, quest_fields)
-            if q_source is not None:
-                append_unique_source(sources, q_source)
-            b_source = boss_source(symbol)
-            if b_source is not None:
-                append_unique_source(sources, b_source)
+            if not discovered_sources:
+                q_source = quest_source(symbol, quest_fields)
+                if q_source is not None:
+                    append_unique_source(sources, q_source)
+                b_source = boss_source(symbol)
+                if b_source is not None:
+                    append_unique_source(sources, b_source)
 
         entry: dict[str, Any] = {
             "code": f"0x{code:02x}",

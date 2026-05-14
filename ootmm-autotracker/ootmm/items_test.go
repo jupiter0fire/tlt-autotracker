@@ -2089,6 +2089,30 @@ func TestExtractChecksIncludesMmWeekEventSymbolChecks(t *testing.T) {
 	}
 }
 
+func TestExtractChecksUsesMonkeyWeekEventForSongAwakening(t *testing.T) {
+	withoutState := &GameState{}
+	withoutState.Mm.QuestItems = 1 << QuestMmSongAwakening
+
+	withoutChecks := checkNameSet(ExtractChecks(withoutState))
+	if _, ok := withoutChecks["Deku Palace Sonata of Awakening"]; ok {
+		t.Fatal("unexpected Deku Palace Sonata of Awakening check from MM song inventory bit alone")
+	}
+
+	withState := &GameState{}
+	withState.Mm.WeekEventReg[mmWeekEventMonkeyPunishedByte] = mmWeekEventMonkeyPunishedMask
+
+	withChecks := checkNameSet(ExtractChecks(withState))
+	if _, ok := withChecks["Deku Palace Sonata of Awakening"]; !ok {
+		t.Fatal("missing Deku Palace Sonata of Awakening check from monkey week event")
+	}
+	if len(withChecks) != 1 {
+		t.Fatalf("unexpected MM monkey week event check count: got %d, want 1", len(withChecks))
+	}
+	if _, ok := withChecks["Laboratory Zora Song"]; ok {
+		t.Fatal("unexpected Laboratory Zora Song check from monkey week event")
+	}
+}
+
 func TestExtractChecksIncludesMmTingleMapWeekEventFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
