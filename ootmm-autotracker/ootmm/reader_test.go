@@ -762,6 +762,32 @@ func TestParseSharedStateReadsCaughtFishWeights(t *testing.T) {
 	}
 }
 
+func TestParseSharedStateReadsSongNoteCounts(t *testing.T) {
+	ootTime := mustCatalogItemSource("OOT_SONG_NOTE_TIME")
+	mmSoaring := mustCatalogItemSource("MM_SONG_NOTE_SOARING")
+	if ootTime.Kind != "shared-song-note" {
+		t.Fatalf("OOT_SONG_NOTE_TIME kind = %s, want shared-song-note", ootTime.Kind)
+	}
+	if mmSoaring.Kind != "shared-song-note" {
+		t.Fatalf("MM_SONG_NOTE_SOARING kind = %s, want shared-song-note", mmSoaring.Kind)
+	}
+
+	data := make([]byte, SharedCustomSaveSize)
+	data[sharedSongNotesOffset+ootTime.Index] = 2
+	data[sharedSongNotesOffset+mmSoaring.Index] = 1
+
+	shared, err := parseSharedState(data)
+	if err != nil {
+		t.Fatalf("parseSharedState: %v", err)
+	}
+	if got := shared.SongNotes[ootTime.Index]; got != 2 {
+		t.Fatalf("SongNotes[OOT Time] = %d, want 2", got)
+	}
+	if got := shared.SongNotes[mmSoaring.Index]; got != 1 {
+		t.Fatalf("SongNotes[MM Soaring] = %d, want 1", got)
+	}
+}
+
 func TestSelectSharedStateCandidatePrefersRicherCheckState(t *testing.T) {
 	r := &Reader{}
 

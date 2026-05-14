@@ -65,6 +65,8 @@ type catalogItemSource struct {
 	Kind   string `json:"kind"`
 	Block  string `json:"block,omitempty"`
 	Byte   int    `json:"byte,omitempty"`
+	Index  int    `json:"index,omitempty"`
+	Max    int    `json:"max,omitempty"`
 	Record int    `json:"record,omitempty"`
 	Bit    int    `json:"bit,omitempty"`
 }
@@ -180,6 +182,13 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			}
 			if source.Bit+1 > usedBits[source.Block] {
 				usedBits[source.Block] = source.Bit + 1
+			}
+		case "shared-song-note":
+			if source.Index < 0 || source.Index >= sharedSongNoteCount {
+				panic(fmt.Sprintf("catalog item %s references out-of-range song note %d", item.ItemID, source.Index))
+			}
+			if source.Max <= 0 {
+				panic(fmt.Sprintf("catalog item %s has invalid song note max %d", item.ItemID, source.Max))
 			}
 		case "oot-extra-bit":
 			if source.Record < 0 {

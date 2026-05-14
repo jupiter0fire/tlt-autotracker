@@ -10,6 +10,10 @@ import sys
 SLOT_DEFINE_RE = re.compile(r"^#define\s+(ITS_(OOT|MM)_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
 GI_ID_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),")
 SOUL_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),\s+type:\s+SOUL,\s+add:\s+\[[A-Z_]+,\s+0x([0-9a-fA-F]+)\]")
+SONG_NOTE_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),.*add:\s+\[SONG_NOTE,\s+(NOTES_SONG_[A-Z0-9_]+)\]")
+NOTE_DEFINE_RE = re.compile(r"^#define\s+(NOTES_SONG_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
+NOTES_MAX_RE = re.compile(r"^#define\s+NOTES_MAX\s+0x([0-9a-fA-F]+)\s*$")
+MAX_SONG_NOTE_RE = re.compile(r"^\s*(\d+),\s*//\s*(NOTES_SONG_[A-Z0-9_]+)\s*$")
 
 OOT_OVERRIDES = {
     "STICKS": "STICK",
@@ -251,6 +255,111 @@ def extract_soul_entries(gi_defs: pathlib.Path) -> list[dict[str, int | str]]:
     return soul_entries
 
 
+def extract_note_indices(notes_header: pathlib.Path) -> dict[str, int]:
+    note_indices: dict[str, int] = {}
+    note_count: int | None = None
+
+    for line in notes_header.read_text(encoding="utf-8").splitlines():
+        match = NOTE_DEFINE_RE.match(line)
+        if match:
+            symbol, raw_index = match.groups()
+            note_indices[symbol] = int(raw_index, 16)
+            continue
+
+        match = NOTES_MAX_RE.match(line)
+        if match:
+            note_count = int(match.group(1), 16)
+
+    if note_count is None:
+        raise ValueError(f"missing NOTES_MAX in {notes_header}")
+    if len(note_indices) != note_count:
+        raise ValueError(
+            f"expected {note_count} song note defines in {notes_header}, found {len(note_indices)}"
+        )
+
+    indices = sorted(note_indices.values())
+    if indices != list(range(note_count)):
+        raise ValueError(f"song note indices are not contiguous: {indices}")
+
+    return note_indices
+
+
+def extract_note_max_counts(item_add_source: pathlib.Path) -> dict[str, int]:
+    note_max_counts: dict[str, int] = {}
+    in_song_note_array = False
+
+    for line in item_add_source.read_text(encoding="utf-8").splitlines():
+        if not in_song_note_array:
+            if "const u8 kMaxSongNotes[] = {" in line:
+                in_song_note_array = True
+            continue
+
+        if line.strip() == "};":
+            break
+
+        match = MAX_SONG_NOTE_RE.match(line)
+        if not match:
+            continue
+
+        raw_count, symbol = match.groups()
+        note_max_counts[symbol] = int(raw_count)
+
+    if not note_max_counts:
+        raise ValueError(f"missing kMaxSongNotes entries in {item_add_source}")
+
+    return note_max_counts
+
+
+def extract_song_note_entries(
+    gi_defs: pathlib.Path,
+    notes_header: pathlib.Path,
+    item_add_source: pathlib.Path,
+) -> list[dict[str, object]]:
+    note_indices = extract_note_indices(notes_header)
+    note_max_counts = extract_note_max_counts(item_add_source)
+
+    missing_max_counts = sorted(set(note_indices) - set(note_max_counts))
+    if missing_max_counts:
+        raise ValueError(
+            f"missing song note max counts in {item_add_source}: {', '.join(missing_max_counts)}"
+        )
+
+    entries: list[dict[str, object]] = []
+    seen_ids: set[str] = set()
+    seen_symbols: set[str] = set()
+    for line in gi_defs.read_text(encoding="utf-8").splitlines():
+        match = SONG_NOTE_GI_RE.match(line)
+        if not match:
+            continue
+
+        item_id, note_symbol = match.groups()
+        if item_id in seen_ids:
+            raise ValueError(f"duplicate song note item {item_id} in {gi_defs}")
+        if note_symbol not in note_indices:
+            raise ValueError(f"unknown song note symbol {note_symbol} in {gi_defs}")
+        if note_symbol in seen_symbols:
+            raise ValueError(f"duplicate song note symbol {note_symbol} in {gi_defs}")
+
+        entries.append(
+            {
+                "itemId": item_id,
+                "source": {
+                    "kind": "shared-song-note",
+                    "index": note_indices[note_symbol],
+                    "max": note_max_counts[note_symbol],
+                },
+            }
+        )
+        seen_ids.add(item_id)
+        seen_symbols.add(note_symbol)
+
+    missing_symbols = sorted(set(note_indices) - seen_symbols)
+    if missing_symbols:
+        raise ValueError(f"missing song note GI entries in {gi_defs}: {', '.join(missing_symbols)}")
+
+    return entries
+
+
 def collect_prefixed_ids(gi_ids: list[str], prefix: str) -> list[str]:
     return [item_id for item_id in gi_ids if item_id.startswith(prefix)]
 
@@ -262,9 +371,14 @@ def ensure_ids_exist(gi_ids: list[str], required_ids: list[str], label: str) -> 
         raise ValueError(f"missing {label} IDs in gi.yml: {', '.join(missing)}")
 
 
-def build_catalog(gi_defs: pathlib.Path) -> dict[str, object]:
+def build_catalog(
+    gi_defs: pathlib.Path,
+    notes_header: pathlib.Path,
+    item_add_source: pathlib.Path,
+) -> dict[str, object]:
     gi_ids = extract_gi_ids(gi_defs)
     soul_entries = extract_soul_entries(gi_defs)
+    song_note_entries = extract_song_note_entries(gi_defs, notes_header, item_add_source)
     bitmap_sizes = {bitmap["name"]: bitmap["size"] for bitmap in SHARED_STORAGE["bitmaps"]}
 
     items: list[dict[str, object]] = []
@@ -293,6 +407,8 @@ def build_catalog(gi_defs: pathlib.Path) -> dict[str, object]:
                 }
             )
 
+    items.extend(song_note_entries)
+
     ensure_ids_exist(gi_ids, [entry["itemId"] for entry in SPECIAL_ITEM_SOURCES], "special item")
     items.extend(SPECIAL_ITEM_SOURCES)
 
@@ -307,6 +423,8 @@ def main() -> int:
     repo_root = pathlib.Path(args.ootmm_repo).resolve()
     items_header = repo_root / "packages/generator/include/combo/data/items.h"
     gi_defs = repo_root / "packages/data/src/defs/gi.yml"
+    notes_header = repo_root / "packages/generator/include/combo/notes.h"
+    item_add_source = repo_root / "packages/generator/src/common/item/item_add.c"
     output_path = pathlib.Path(args.output).resolve()
 
     if not items_header.is_file():
@@ -315,9 +433,15 @@ def main() -> int:
     if not gi_defs.is_file():
         print(f"gi definitions not found: {gi_defs}", file=sys.stderr)
         return 1
+    if not notes_header.is_file():
+        print(f"notes header not found: {notes_header}", file=sys.stderr)
+        return 1
+    if not item_add_source.is_file():
+        print(f"item add source not found: {item_add_source}", file=sys.stderr)
+        return 1
 
     mapping = extract_slots(items_header)
-    mapping["catalog"] = build_catalog(gi_defs)
+    mapping["catalog"] = build_catalog(gi_defs, notes_header, item_add_source)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(mapping, indent=2) + "\n", encoding="utf-8")
     return 0

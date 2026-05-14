@@ -844,6 +844,54 @@ func TestExtractItemsIncludesSharedOcarinaAButtonFromLiveMask(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesSongNoteCounts(t *testing.T) {
+	ootTime := mustCatalogItemSource("OOT_SONG_NOTE_TIME")
+	ootTpLight := mustCatalogItemSource("OOT_SONG_NOTE_TP_LIGHT")
+	mmSoaring := mustCatalogItemSource("MM_SONG_NOTE_SOARING")
+
+	state := &GameState{}
+	state.Shared.SongNotes[ootTime.Index] = 2
+	state.Shared.SongNotes[ootTpLight.Index] = 6
+	state.Shared.SongNotes[mmSoaring.Index] = 1
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_SONG_NOTE_TIME"]; got != 2 {
+		t.Fatalf("OOT_SONG_NOTE_TIME = %d, want 2", got)
+	}
+	if got := items["OOT_SONG_NOTE_TP_LIGHT"]; got != 6 {
+		t.Fatalf("OOT_SONG_NOTE_TP_LIGHT = %d, want 6", got)
+	}
+	if got := items["MM_SONG_NOTE_SOARING"]; got != 1 {
+		t.Fatalf("MM_SONG_NOTE_SOARING = %d, want 1", got)
+	}
+}
+
+func TestCatalogSongNoteSources(t *testing.T) {
+	tests := []struct {
+		itemID string
+		index  int
+		max    int
+	}{
+		{itemID: "OOT_SONG_NOTE_TP_FIRE", index: 0x01, max: 8},
+		{itemID: "OOT_SONG_NOTE_TIME", index: 0x0a, max: 6},
+		{itemID: "MM_SONG_NOTE_SOARING", index: 0x15, max: 6},
+	}
+
+	for _, tt := range tests {
+		source := mustCatalogItemSource(tt.itemID)
+		if source.Kind != "shared-song-note" {
+			t.Fatalf("%s kind = %s, want shared-song-note", tt.itemID, source.Kind)
+		}
+		if source.Index != tt.index {
+			t.Fatalf("%s index = %d, want %d", tt.itemID, source.Index, tt.index)
+		}
+		if source.Max != tt.max {
+			t.Fatalf("%s max = %d, want %d", tt.itemID, source.Max, tt.max)
+		}
+	}
+}
+
 func TestExtractItemsIncludesOotFishingPondItems(t *testing.T) {
 	state := &GameState{}
 	state.Shared.CaughtChildFishWeights[0] = 3

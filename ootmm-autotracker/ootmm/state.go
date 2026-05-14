@@ -19,6 +19,7 @@ type SharedCustomState struct {
 	OcarinaButtonMaskMm    uint16
 	BombchuBagOot          uint8
 	BombchuBagMm           uint8
+	SongNotes              [sharedSongNoteCount]uint8
 	CaughtChildFishWeights [20]uint8
 	CaughtAdultFishWeights [20]uint8
 }
@@ -30,6 +31,7 @@ func (s SharedCustomState) Clone() SharedCustomState {
 			OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
 			BombchuBagOot:          s.BombchuBagOot,
 			BombchuBagMm:           s.BombchuBagMm,
+			SongNotes:              s.SongNotes,
 			CaughtChildFishWeights: s.CaughtChildFishWeights,
 			CaughtAdultFishWeights: s.CaughtAdultFishWeights,
 		}
@@ -41,6 +43,7 @@ func (s SharedCustomState) Clone() SharedCustomState {
 		OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
 		BombchuBagOot:          s.BombchuBagOot,
 		BombchuBagMm:           s.BombchuBagMm,
+		SongNotes:              s.SongNotes,
 		CaughtChildFishWeights: s.CaughtChildFishWeights,
 		CaughtAdultFishWeights: s.CaughtAdultFishWeights,
 	}

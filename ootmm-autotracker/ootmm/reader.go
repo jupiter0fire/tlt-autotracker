@@ -17,6 +17,10 @@ const (
 	sharedCaughtChildFishWeightOffset = 2037
 	sharedCaughtAdultFishWeightOffset = 2057
 	sharedCaughtFishWeightCount       = 20
+	// OoTMM's target build packs the post-respawn bitfield tail differently
+	// than host compilers; live dumps place gSharedCustomSave.notes at 0x84d.
+	sharedSongNotesOffset = 2125
+	sharedSongNoteCount   = 24
 
 	// SharedCustomSave stores bombchu bag progression in the flag byte after
 	// the souls, fish, and respawn blocks.
@@ -1501,6 +1505,9 @@ func sharedStateReadSize() int {
 	if readSize < sharedStorage.TrackedSize {
 		readSize = sharedStorage.TrackedSize
 	}
+	if readSize < sharedSongNotesOffset+sharedSongNoteCount {
+		readSize = sharedSongNotesOffset + sharedSongNoteCount
+	}
 	if readSize < sharedBombchuBagFlagsOffset+1 {
 		readSize = sharedBombchuBagFlagsOffset + 1
 	}
@@ -1541,6 +1548,9 @@ func parseSharedStateUnchecked(data []byte) (SharedCustomState, error) {
 		flags := data[sharedBombchuBagFlagsOffset]
 		parsed.BombchuBagOot = uint8((flags >> sharedBombchuBagOotShift) & sharedBombchuBagMask)
 		parsed.BombchuBagMm = uint8((flags >> sharedBombchuBagMmShift) & sharedBombchuBagMask)
+	}
+	if len(data) >= sharedSongNotesOffset+sharedSongNoteCount {
+		copy(parsed.SongNotes[:], data[sharedSongNotesOffset:sharedSongNotesOffset+sharedSongNoteCount])
 	}
 	return parsed, nil
 }
