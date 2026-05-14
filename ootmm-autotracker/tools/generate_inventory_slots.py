@@ -10,10 +10,13 @@ import sys
 SLOT_DEFINE_RE = re.compile(r"^#define\s+(ITS_(OOT|MM)_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
 GI_ID_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),")
 SOUL_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),\s+type:\s+SOUL,\s+add:\s+\[[A-Z_]+,\s+0x([0-9a-fA-F]+)\]")
+COIN_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),.*add:\s+\[COIN,\s+([0-9]+)\]")
 SONG_NOTE_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),.*add:\s+\[SONG_NOTE,\s+(NOTES_SONG_[A-Z0-9_]+)\]")
 NOTE_DEFINE_RE = re.compile(r"^#define\s+(NOTES_SONG_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
 NOTES_MAX_RE = re.compile(r"^#define\s+NOTES_MAX\s+0x([0-9a-fA-F]+)\s*$")
 MAX_SONG_NOTE_RE = re.compile(r"^\s*(\d+),\s*//\s*(NOTES_SONG_[A-Z0-9_]+)\s*$")
+
+SHARED_COIN_COUNT = 4
 
 OOT_OVERRIDES = {
     "STICKS": "STICK",
@@ -255,6 +258,47 @@ def extract_soul_entries(gi_defs: pathlib.Path) -> list[dict[str, int | str]]:
     return soul_entries
 
 
+def extract_coin_entries(gi_defs: pathlib.Path) -> list[dict[str, object]]:
+    entries: list[dict[str, object]] = []
+    seen_ids: set[str] = set()
+    seen_indices: set[int] = set()
+
+    for line in gi_defs.read_text(encoding="utf-8").splitlines():
+        match = COIN_GI_RE.match(line)
+        if not match:
+            continue
+
+        item_id, raw_index = match.groups()
+        index = int(raw_index)
+        if item_id in seen_ids:
+            raise ValueError(f"duplicate coin item {item_id} in {gi_defs}")
+        if index < 0 or index >= SHARED_COIN_COUNT:
+            raise ValueError(f"coin item {item_id} has out-of-range index {index}")
+        if index in seen_indices:
+            raise ValueError(f"duplicate coin index {index} in {gi_defs}")
+
+        entries.append(
+            {
+                "itemId": item_id,
+                "source": {
+                    "kind": "shared-coin-count",
+                    "index": index,
+                },
+            }
+        )
+        seen_ids.add(item_id)
+        seen_indices.add(index)
+
+    missing_indices = sorted(set(range(SHARED_COIN_COUNT)) - seen_indices)
+    if missing_indices:
+        raise ValueError(
+            f"missing coin GI entries in {gi_defs} for indices: {', '.join(str(index) for index in missing_indices)}"
+        )
+
+    entries.sort(key=lambda entry: int(entry["source"]["index"]))
+    return entries
+
+
 def extract_note_indices(notes_header: pathlib.Path) -> dict[str, int]:
     note_indices: dict[str, int] = {}
     note_count: int | None = None
@@ -378,6 +422,7 @@ def build_catalog(
 ) -> dict[str, object]:
     gi_ids = extract_gi_ids(gi_defs)
     soul_entries = extract_soul_entries(gi_defs)
+    coin_entries = extract_coin_entries(gi_defs)
     song_note_entries = extract_song_note_entries(gi_defs, notes_header, item_add_source)
     bitmap_sizes = {bitmap["name"]: bitmap["size"] for bitmap in SHARED_STORAGE["bitmaps"]}
 
@@ -408,6 +453,7 @@ def build_catalog(
             )
 
     items.extend(song_note_entries)
+    items.extend(coin_entries)
 
     ensure_ids_exist(gi_ids, [entry["itemId"] for entry in SPECIAL_ITEM_SOURCES], "special item")
     items.extend(SPECIAL_ITEM_SOURCES)

@@ -12,6 +12,8 @@ const (
 	maxForeignOotChecksumDelta        = 0x1000
 	maxForeignMmChecksumDelta         = 0x400
 	minPlausibleOotEmptyInventorySlot = 4
+	sharedCoinsOffset                 = 0x7c0
+	sharedCoinCount                   = 4
 	sharedOcarinaButtonMaskOotOffset  = 0x7c8
 	sharedOcarinaButtonMaskMmOffset   = 0x7ca
 	sharedCaughtChildFishWeightOffset = 2037
@@ -1533,6 +1535,12 @@ func parseSharedStateUnchecked(data []byte) (SharedCustomState, error) {
 			return SharedCustomState{}, fmt.Errorf("shared bitmap %s out of bounds", bitmap.Name)
 		}
 		parsed.SetBitmap(bitmap.Name, data[bitmap.Offset:end])
+	}
+	if len(data) >= sharedCoinsOffset+sharedCoinCount*2 {
+		for index := range parsed.Coins {
+			off := sharedCoinsOffset + index*2
+			parsed.Coins[index] = binary.BigEndian.Uint16(data[off:])
+		}
 	}
 	if len(data) >= sharedOcarinaButtonMaskMmOffset+2 {
 		parsed.OcarinaButtonMaskOot = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskOotOffset:])

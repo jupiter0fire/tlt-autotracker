@@ -2472,6 +2472,34 @@
         }
       },
       {
+        "itemId": "OOT_COIN_RED",
+        "source": {
+          "kind": "shared-coin-count",
+          "index": 0
+        }
+      },
+      {
+        "itemId": "OOT_COIN_GREEN",
+        "source": {
+          "kind": "shared-coin-count",
+          "index": 1
+        }
+      },
+      {
+        "itemId": "OOT_COIN_BLUE",
+        "source": {
+          "kind": "shared-coin-count",
+          "index": 2
+        }
+      },
+      {
+        "itemId": "OOT_COIN_YELLOW",
+        "source": {
+          "kind": "shared-coin-count",
+          "index": 3
+        }
+      },
+      {
         "itemId": "OOT_KEY_RING_FOREST",
         "source": {
           "kind": "oot-derived-key-ring",

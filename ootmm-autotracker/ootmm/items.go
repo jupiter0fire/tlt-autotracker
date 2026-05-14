@@ -1163,6 +1163,10 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 			qty = boolToInt(hasOotMagicalRupee(&state.Oot))
 		case "shared-bitmap-bit":
 			qty = boolToInt(bitmapHasBit(state.Shared.Bitmap(entry.Source.Block), entry.Source.Bit))
+		case "shared-coin-count":
+			if entry.Source.Index >= 0 && entry.Source.Index < len(state.Shared.Coins) {
+				qty = int(state.Shared.Coins[entry.Source.Index])
+			}
 		case "shared-song-note":
 			if entry.Source.Index >= 0 && entry.Source.Index < len(state.Shared.SongNotes) {
 				qty = int(state.Shared.SongNotes[entry.Source.Index])

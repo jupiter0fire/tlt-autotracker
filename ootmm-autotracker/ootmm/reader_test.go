@@ -718,6 +718,22 @@ func TestParseSharedStateReadsBombchuBagBits(t *testing.T) {
 	}
 }
 
+func TestParseSharedStateReadsCoinCounts(t *testing.T) {
+	data := make([]byte, SharedCustomSaveSize)
+	binary.BigEndian.PutUint16(data[sharedCoinsOffset:], 2)
+	binary.BigEndian.PutUint16(data[sharedCoinsOffset+2:], 4)
+	binary.BigEndian.PutUint16(data[sharedCoinsOffset+4:], 6)
+	binary.BigEndian.PutUint16(data[sharedCoinsOffset+6:], 8)
+
+	shared, err := parseSharedState(data)
+	if err != nil {
+		t.Fatalf("parseSharedState: %v", err)
+	}
+	if got := shared.Coins; got != [4]uint16{2, 4, 6, 8} {
+		t.Fatalf("Coins = %#v, want [4]uint16{2, 4, 6, 8}", got)
+	}
+}
+
 func TestParseSharedStateReadsOcarinaButtonMasks(t *testing.T) {
 	data := make([]byte, SharedCustomSaveSize)
 	binary.BigEndian.PutUint16(data[sharedOcarinaButtonMaskOotOffset:], sharedOcarinaButtonMaskDisabled)

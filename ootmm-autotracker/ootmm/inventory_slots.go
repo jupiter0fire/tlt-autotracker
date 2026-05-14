@@ -183,6 +183,10 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			if source.Bit+1 > usedBits[source.Block] {
 				usedBits[source.Block] = source.Bit + 1
 			}
+		case "shared-coin-count":
+			if source.Index < 0 || source.Index >= sharedCoinCount {
+				panic(fmt.Sprintf("catalog item %s references out-of-range shared coin index %d", item.ItemID, source.Index))
+			}
 		case "shared-song-note":
 			if source.Index < 0 || source.Index >= sharedSongNoteCount {
 				panic(fmt.Sprintf("catalog item %s references out-of-range song note %d", item.ItemID, source.Index))

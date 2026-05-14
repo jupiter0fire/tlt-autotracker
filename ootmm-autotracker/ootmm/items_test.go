@@ -767,6 +767,26 @@ func TestExtractItemsTreatsSharedBombchuBagAsOwnedBombchu(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesSharedCoinCounts(t *testing.T) {
+	state := &GameState{}
+	state.Shared.Coins = [4]uint16{1, 3, 5, 7}
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["OOT_COIN_RED"]; got != 1 {
+		t.Fatalf("OOT_COIN_RED = %d, want 1", got)
+	}
+	if got := items["OOT_COIN_GREEN"]; got != 3 {
+		t.Fatalf("OOT_COIN_GREEN = %d, want 3", got)
+	}
+	if got := items["OOT_COIN_BLUE"]; got != 5 {
+		t.Fatalf("OOT_COIN_BLUE = %d, want 5", got)
+	}
+	if got := items["OOT_COIN_YELLOW"]; got != 7 {
+		t.Fatalf("OOT_COIN_YELLOW = %d, want 7", got)
+	}
+}
+
 func TestExtractItemsIncludesRequestedMissingItems(t *testing.T) {
 	state := &GameState{}
 	state.Mm.SkullTokensSwamp = 17
@@ -888,6 +908,28 @@ func TestCatalogSongNoteSources(t *testing.T) {
 		}
 		if source.Max != tt.max {
 			t.Fatalf("%s max = %d, want %d", tt.itemID, source.Max, tt.max)
+		}
+	}
+}
+
+func TestCatalogCoinSources(t *testing.T) {
+	tests := []struct {
+		itemID string
+		index  int
+	}{
+		{itemID: "OOT_COIN_RED", index: 0},
+		{itemID: "OOT_COIN_GREEN", index: 1},
+		{itemID: "OOT_COIN_BLUE", index: 2},
+		{itemID: "OOT_COIN_YELLOW", index: 3},
+	}
+
+	for _, tt := range tests {
+		source := mustCatalogItemSource(tt.itemID)
+		if source.Kind != "shared-coin-count" {
+			t.Fatalf("%s kind = %s, want shared-coin-count", tt.itemID, source.Kind)
+		}
+		if source.Index != tt.index {
+			t.Fatalf("%s index = %d, want %d", tt.itemID, source.Index, tt.index)
 		}
 	}
 }

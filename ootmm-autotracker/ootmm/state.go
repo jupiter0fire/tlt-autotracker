@@ -15,6 +15,7 @@ type GameState struct {
 // relevant for item tracking across both games.
 type SharedCustomState struct {
 	Bitmaps                map[string][]uint8
+	Coins                  [4]uint16
 	OcarinaButtonMaskOot   uint16
 	OcarinaButtonMaskMm    uint16
 	BombchuBagOot          uint8
@@ -27,6 +28,7 @@ type SharedCustomState struct {
 func (s SharedCustomState) Clone() SharedCustomState {
 	if len(s.Bitmaps) == 0 {
 		return SharedCustomState{
+			Coins:                  s.Coins,
 			OcarinaButtonMaskOot:   s.OcarinaButtonMaskOot,
 			OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
 			BombchuBagOot:          s.BombchuBagOot,
@@ -39,6 +41,7 @@ func (s SharedCustomState) Clone() SharedCustomState {
 
 	clone := SharedCustomState{
 		Bitmaps:                make(map[string][]uint8, len(s.Bitmaps)),
+		Coins:                  s.Coins,
 		OcarinaButtonMaskOot:   s.OcarinaButtonMaskOot,
 		OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
 		BombchuBagOot:          s.BombchuBagOot,
