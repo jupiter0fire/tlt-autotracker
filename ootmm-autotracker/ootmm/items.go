@@ -411,9 +411,12 @@ func ExtractItems(state *GameState) []TrackedItem {
 
 	// OoT swords and shields are published as raw ownership bitmasks so the
 	// tracker can distinguish Kokiri/Deku ownership from later upgrades.
+	ootTunics := (oot.Equipment >> 8) & 0xF
 	items = append(items, TrackedItem{"OOT_SWORD", int(oot.Equipment & 0xF)})
 	items = append(items, TrackedItem{"OOT_SHIELD", int((oot.Equipment >> 4) & 0xF)})
-	items = append(items, TrackedItem{"OOT_TUNIC", ootEquipmentLevel((oot.Equipment >> 8) & 0xF)})
+	items = append(items, TrackedItem{"OOT_TUNIC", ootEquipmentLevel(ootTunics)})
+	items = append(items, TrackedItem{"OOT_TUNIC_GORON", boolToInt(ootTunics&0x2 != 0)})
+	items = append(items, TrackedItem{"OOT_TUNIC_ZORA", boolToInt(ootTunics&0x4 != 0)})
 	items = append(items, TrackedItem{"OOT_BOOTS", ootEquipmentLevel((oot.Equipment >> 12) & 0xF)})
 
 	// Upgrades

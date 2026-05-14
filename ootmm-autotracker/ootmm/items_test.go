@@ -89,8 +89,48 @@ func TestExtractItemsPublishesOotSwordAndShieldBitmasks(t *testing.T) {
 	if got := items["OOT_TUNIC"]; got != 3 {
 		t.Fatalf("OOT_TUNIC = %d, want 3", got)
 	}
+	if got := items["OOT_TUNIC_GORON"]; got != 0 {
+		t.Fatalf("OOT_TUNIC_GORON = %d, want 0", got)
+	}
+	if got := items["OOT_TUNIC_ZORA"]; got != 1 {
+		t.Fatalf("OOT_TUNIC_ZORA = %d, want 1", got)
+	}
 	if got := items["OOT_BOOTS"]; got != 1 {
 		t.Fatalf("OOT_BOOTS = %d, want 1", got)
+	}
+}
+
+func TestExtractItemsPublishesOotIndividualTunics(t *testing.T) {
+	tests := []struct {
+		name          string
+		tunicMask      uint16
+		wantCombined   int
+		wantGoron      int
+		wantZora       int
+	}{
+		{name: "kokiri only", tunicMask: 0x1, wantCombined: 1, wantGoron: 0, wantZora: 0},
+		{name: "goron only", tunicMask: 0x3, wantCombined: 2, wantGoron: 1, wantZora: 0},
+		{name: "zora only", tunicMask: 0x5, wantCombined: 3, wantGoron: 0, wantZora: 1},
+		{name: "goron and zora", tunicMask: 0x7, wantCombined: 3, wantGoron: 1, wantZora: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := &GameState{}
+			state.Oot.Equipment = tt.tunicMask << 8
+
+			items := itemQtyMap(ExtractItems(state))
+
+			if got := items["OOT_TUNIC"]; got != tt.wantCombined {
+				t.Fatalf("OOT_TUNIC = %d, want %d", got, tt.wantCombined)
+			}
+			if got := items["OOT_TUNIC_GORON"]; got != tt.wantGoron {
+				t.Fatalf("OOT_TUNIC_GORON = %d, want %d", got, tt.wantGoron)
+			}
+			if got := items["OOT_TUNIC_ZORA"]; got != tt.wantZora {
+				t.Fatalf("OOT_TUNIC_ZORA = %d, want %d", got, tt.wantZora)
+			}
+		})
 	}
 }
 

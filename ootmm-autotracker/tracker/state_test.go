@@ -7,6 +7,14 @@ import (
 	"ootmm-autotracker/ootmm"
 )
 
+func itemDiffMap(items []ItemDiff) map[string]int {
+	mapped := make(map[string]int, len(items))
+	for _, item := range items {
+		mapped[item.ID] = item.Qty
+	}
+	return mapped
+}
+
 func TestUpdateRetainsCheckNameForUncheckedDiffs(t *testing.T) {
 	state := NewState()
 	now := time.Unix(0, 0)
@@ -116,5 +124,36 @@ func TestUpdateEmitsBothMirroredMmSkullKidCheckDiffs(t *testing.T) {
 	}
 	if _, ok := seen["Clock Tower Roof Skull Kid Song of Time"]; !ok {
 		t.Fatal("missing Clock Tower Roof Skull Kid Song of Time diff")
+	}
+}
+
+func TestUpdateEmitsSeparateOotTunicDiffWhenCombinedLevelIsUnchanged(t *testing.T) {
+	state := NewState()
+	gs := &ootmm.GameState{}
+	gs.Oot.Equipment = 0x0500
+
+	items, _, _ := state.Update(gs)
+	initial := itemDiffMap(items)
+	if got := initial["OOT_TUNIC"]; got != 3 {
+		t.Fatalf("initial OOT_TUNIC diff = %d, want 3", got)
+	}
+	if got := initial["OOT_TUNIC_ZORA"]; got != 1 {
+		t.Fatalf("initial OOT_TUNIC_ZORA diff = %d, want 1", got)
+	}
+	if got := initial["OOT_TUNIC_GORON"]; got != 0 {
+		t.Fatalf("initial OOT_TUNIC_GORON diff = %d, want 0", got)
+	}
+
+	gs.Oot.Equipment = 0x0700
+	items, _, _ = state.Update(gs)
+	updated := itemDiffMap(items)
+	if _, ok := updated["OOT_TUNIC"]; ok {
+		t.Fatalf("unexpected OOT_TUNIC diff when combined level is unchanged: %#v", updated)
+	}
+	if got := updated["OOT_TUNIC_GORON"]; got != 1 {
+		t.Fatalf("OOT_TUNIC_GORON diff = %d, want 1", got)
+	}
+	if _, ok := updated["OOT_TUNIC_ZORA"]; ok {
+		t.Fatalf("unexpected OOT_TUNIC_ZORA diff when Zora ownership is unchanged: %#v", updated)
 	}
 }
