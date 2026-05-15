@@ -2,13 +2,12 @@ package ootmm
 
 // N64 RDRAM addresses for OoTMM structures.
 // All addresses are virtual (0x80-prefixed); the n64.Memory layer translates them.
-// Source: OoTMM/packages/generator/include/combo/defs.h
+// Fixed OoTMM addresses that can be derived directly from source are loaded
+// from live_addrs.json. Link-time payload globals remain hardcoded here because
+// they cannot be recovered from uncompiled source alone.
 
 const (
-	// ComboContext — shared between OoT and MM, written to a known fixed address.
-	AddrComboCtxOot uint32 = 0x80006584
-	AddrComboCtxMm  uint32 = 0x80098280
-	ComboCtxSize    int    = 0x20 // 32 bytes
+	ComboCtxSize int = 0x20 // 32 bytes
 
 	// OoT PlayState / GamePlay context. OoTMM currently runs on the NTSC 1.0
 	// gameplay state layout, but we probe a small set of known retail/debug
@@ -23,35 +22,32 @@ const (
 	// MM PlayState heap address (deterministic SystemArena allocation).
 	AddrMmPlayState1 uint32 = 0x803E6B20
 
-	// OoT gSaveContext
-	AddrOotSaveCtx uint32 = 0x8011A5D0
-	OotSaveCtxSize int    = 0x1450 // 5200 bytes
-	OotSaveSize    int    = 0x1354 // OotSave within context
+	OotSaveCtxSize int = 0x1450 // 5200 bytes
+	OotSaveSize    int = 0x1354 // OotSave within context
 
-	// MM gSaveContext
-	AddrMmSaveCtx uint32 = 0x801EF670
-	MmSaveCtxSize int    = 0x48D0 // 18640 bytes
-	MmSaveSize    int    = 0x3CA0 // MmSave within context
+	MmSaveCtxSize int = 0x48D0 // 18640 bytes
+	MmSaveSize    int = 0x3CA0 // MmSave within context
 
 	// Payload region where gSharedCustomSave lives (OoT side)
-	AddrOotPayload uint32 = 0x80400000
-	OotPayloadSize int    = 0x80000 // 512KB
+	OotPayloadSize int = 0x80000 // 512KB
 	// Current OoTMM builds keep the OoT-side live payload data at stable
-	// addresses.
-	AddrOotForeignMmSaveLive          uint32 = 0x80443970
-	AddrOotSharedCustomSaveLive       uint32 = 0x80443100
-	AddrOotRuntimeMaxKeysLive         uint32 = 0x80441C78
-	AddrOotRuntimeOotComboConfigLive  uint32 = 0x804416C8
-	AddrOotRuntimeSilverRupeeDataLive uint32 = 0x8042EC10
+	// addresses, but these are link-time outputs rather than source-level
+	// constants.
+	AddrOotForeignMmSaveLive    uint32 = 0x80443970
+	AddrOotSharedCustomSaveLive uint32 = 0x80443100
 
 	// Payload region in MM where the foreign OoT save is kept.
-	AddrMmPayload uint32 = 0x80730000
-	MmPayloadSize int    = 0x50000 // 320KB
+	MmPayloadSize int = 0x50000 // 320KB
 	// Current OoTMM builds keep the MM-side live payload data at stable
-	// addresses.
-	AddrMmForeignOotSaveLive        uint32 = 0x807729F0
-	AddrMmSharedCustomSaveLive      uint32 = 0x80772180
-	AddrMmRuntimeOotComboConfigLive uint32 = 0x80770B18
+	// addresses, but these are link-time outputs rather than source-level
+	// constants.
+	AddrMmForeignOotSaveLive   uint32 = 0x807729F0
+	AddrMmSharedCustomSaveLive uint32 = 0x80772180
+
+	defaultAddrOotRuntimeMaxKeysLive         uint32 = 0x80441C78
+	defaultAddrOotRuntimeOotComboConfigLive  uint32 = 0x804416C8
+	defaultAddrOotRuntimeSilverRupeeDataLive uint32 = 0x8042EC10
+	defaultAddrMmRuntimeOotComboConfigLive   uint32 = 0x80770B18
 
 	// SharedCustomSave is 0x870 bytes in the current OoTMM build.
 	// It sits immediately before the inactive game's foreign save inside

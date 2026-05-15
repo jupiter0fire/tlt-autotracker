@@ -1,6 +1,7 @@
 BINARY_NAME=ootmm-autotracker
 VERSION=0.1.0
 OOTMM_REPO?=../OoTMM
+OOTMM_PATCHFILE?=
 GO?=go
 BUILD_FLAGS?=-trimpath -buildvcs=false
 LDFLAGS?=-s -w
@@ -10,12 +11,15 @@ ifneq ($(strip $(GIT_COMMIT)),)
 LDFLAGS += -X main.commitHash=$(GIT_COMMIT)
 endif
 
-.PHONY: all build build-all clean deps generate-slot-mapping generate-location-mapping generate-special-locations update-special-location-fallback-baselines
+.PHONY: all build build-all clean deps generate-live-addrs generate-slot-mapping generate-location-mapping generate-special-locations update-special-location-fallback-baselines
 
 all: build
 
 deps:
 	go mod tidy
+
+generate-live-addrs:
+	python3 tools/export_ootmm_live_addrs.py --ootmm-repo $(OOTMM_REPO) $(if $(OOTMM_PATCHFILE),--patchfile $(OOTMM_PATCHFILE),) --output ootmm/live_addrs.json
 
 generate-slot-mapping:
 	python3 tools/generate_inventory_slots.py --ootmm-repo $(OOTMM_REPO) --output ootmm/inventory_slots.json
