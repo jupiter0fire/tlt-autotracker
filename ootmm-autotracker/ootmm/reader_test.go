@@ -18,6 +18,30 @@ func (failingCoreReader) ReadMemoryLarge(addr uint32, size int) ([]byte, error) 
 	return nil, os.ErrNotExist
 }
 
+func makeValidOotComboConfig(mqBits uint32) []byte {
+	data := make([]byte, OotComboConfigSize)
+	data[0] = 1
+	binary.BigEndian.PutUint32(data[OotComboConfigMqOffset:], mqBits)
+	for index := 0; index < OotComboConfigBossCount; index++ {
+		data[OotComboConfigBossOffset+index] = byte(index)
+	}
+	return data
+}
+
+func setRawSharedBitmapBit(t *testing.T, data []byte, name string, bit int) {
+	t.Helper()
+
+	bitmap, ok := sharedBitmaps[name]
+	if !ok {
+		t.Fatalf("shared bitmap %q not found", name)
+	}
+	byteIndex := bitmap.Offset + bit/8
+	if byteIndex < 0 || byteIndex >= len(data) {
+		t.Fatalf("shared bitmap %q bit %d is out of bounds", name, bit)
+	}
+	data[byteIndex] |= 1 << uint(bit%8)
+}
+
 func TestForeignOotSaveAddrUsesSaveIndex(t *testing.T) {
 	addr, err := foreignOotSaveAddr(0)
 	if err != nil {
@@ -63,101 +87,6 @@ func TestForeignSaveAddrRejectsOutOfRangeIndex(t *testing.T) {
 	}
 }
 
-func TestLocateForeignOotSaveFindsChecksummedCandidate(t *testing.T) {
-	payload := make([]byte, 0x50000)
-	offset := int(AddrMmForeignOotSaveLive - AddrMmPayload)
-	candidate := payload[offset : offset+OotSaveSize]
-	binary.BigEndian.PutUint32(candidate[OotOffAge:], 1)
-	binary.BigEndian.PutUint16(candidate[OotOffSceneID:], 0x20)
-	for i := 0; i < 24; i++ {
-		candidate[OotOffInvItems+i] = emptyInventoryItem
-	}
-	candidate[OotOffInvItems] = 0x00
-	candidate[OotOffInvItems+1] = 0x01
-	candidate[OotOffInvItems+5] = 0x05
-	candidate[OotOffInvItems+6] = 0x06
-	candidate[OotOffInvItems+7] = 0x08
-	candidate[OotOffInvItems+9] = 0x0A
-	candidate[OotOffInvItems+22] = 0x33
-	binary.BigEndian.PutUint16(candidate[OotOffChecksum:], ootChecksum(candidate))
-
-	addr, ok := locateForeignOotSave(payload, AddrMmPayload)
-	if !ok {
-		t.Fatal("expected foreign OoT save candidate")
-	}
-	if want := AddrMmPayload + uint32(offset); addr != want {
-		t.Fatalf("unexpected foreign OoT addr: got %08x want %08x", addr, want)
-	}
-}
-
-func TestFindForeignOotSaveAddrPrefersFixedPrimaryAddress(t *testing.T) {
-	payload := make([]byte, MmPayloadSize)
-	primaryOffset := int(AddrMmForeignOotSaveLive - AddrMmPayload)
-	primary := payload[primaryOffset : primaryOffset+OotSaveSize]
-	binary.BigEndian.PutUint32(primary[OotOffAge:], 1)
-	binary.BigEndian.PutUint16(primary[OotOffSceneID:], 0x20)
-	for i := 0; i < 24; i++ {
-		primary[OotOffInvItems+i] = emptyInventoryItem
-	}
-	for i := 0; i < 17; i++ {
-		primary[OotOffInvItems+i] = byte(i)
-	}
-	binary.BigEndian.PutUint16(primary[OotOffChecksum:], ootChecksum(primary))
-
-	otherOffset := 0x12000
-	other := payload[otherOffset : otherOffset+OotSaveSize]
-	binary.BigEndian.PutUint32(other[OotOffAge:], 1)
-	binary.BigEndian.PutUint16(other[OotOffSceneID:], 0x21)
-	for i := 0; i < 24; i++ {
-		other[OotOffInvItems+i] = emptyInventoryItem
-	}
-	for i := 0; i < 12; i++ {
-		other[OotOffInvItems+i] = byte(i)
-	}
-	binary.BigEndian.PutUint16(other[OotOffChecksum:], ootChecksum(other))
-
-	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPayload, data: payload}}})
-	mem.SetBaseShift(n64.VirtualBase)
-	mem.SetSwizzle(false)
-
-	r := NewReader(mem)
-	addr, err := r.findForeignOotSaveAddr()
-	if err != nil {
-		t.Fatalf("findForeignOotSaveAddr: %v", err)
-	}
-	if addr != AddrMmForeignOotSaveLive {
-		t.Fatalf("findForeignOotSaveAddr = %08x, want %08x", addr, AddrMmForeignOotSaveLive)
-	}
-}
-
-func TestFindForeignOotSaveAddrFallsBackWhenFixedPrimaryInvalid(t *testing.T) {
-	payload := make([]byte, MmPayloadSize)
-	fallbackOffset := 0x12000
-	fallback := payload[fallbackOffset : fallbackOffset+OotSaveSize]
-	binary.BigEndian.PutUint32(fallback[OotOffAge:], 1)
-	binary.BigEndian.PutUint16(fallback[OotOffSceneID:], 0x20)
-	for i := 0; i < 24; i++ {
-		fallback[OotOffInvItems+i] = emptyInventoryItem
-	}
-	for i := 0; i < 14; i++ {
-		fallback[OotOffInvItems+i] = byte(i)
-	}
-	binary.BigEndian.PutUint16(fallback[OotOffChecksum:], ootChecksum(fallback))
-
-	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPayload, data: payload}}})
-	mem.SetBaseShift(n64.VirtualBase)
-	mem.SetSwizzle(false)
-
-	r := NewReader(mem)
-	addr, err := r.findForeignOotSaveAddr()
-	if err != nil {
-		t.Fatalf("findForeignOotSaveAddr: %v", err)
-	}
-	if want := AddrMmPayload + uint32(fallbackOffset); addr != want {
-		t.Fatalf("findForeignOotSaveAddr = %08x, want %08x", addr, want)
-	}
-}
-
 func TestIsPlausibleOotSaveRejectsInvalidSceneID(t *testing.T) {
 	data := make([]byte, OotSaveSize)
 	binary.BigEndian.PutUint32(data[OotOffAge:], 1)
@@ -184,47 +113,6 @@ func TestIsPlausibleOotSaveAllowsRicherInventory(t *testing.T) {
 
 	if !isPlausibleOotSave(data) {
 		t.Fatal("expected OoT save with 17 filled inventory slots to remain plausible")
-	}
-}
-
-func TestLocateForeignOotSaveFindsRewardMutatedCandidate(t *testing.T) {
-	payload := make([]byte, 0x50000)
-
-	garbageOffset := 0x39030
-	garbage := payload[garbageOffset : garbageOffset+OotSaveSize]
-	binary.BigEndian.PutUint32(garbage[OotOffAge:], 0)
-	binary.BigEndian.PutUint16(garbage[OotOffSceneID:], 0xFFFF)
-	for i := 0; i < 24; i++ {
-		garbage[OotOffInvItems+i] = emptyInventoryItem
-	}
-	binary.BigEndian.PutUint16(garbage[OotOffChecksum:], ootChecksum(garbage)+0x0200)
-
-	validOffset := 0x429f0
-	valid := payload[validOffset : validOffset+OotSaveSize]
-	binary.BigEndian.PutUint32(valid[OotOffAge:], 1)
-	binary.BigEndian.PutUint16(valid[OotOffSceneID:], 0x20)
-	for i := 0; i < 24; i++ {
-		valid[OotOffInvItems+i] = emptyInventoryItem
-	}
-	valid[OotOffInvItems] = 0x00
-	valid[OotOffInvItems+1] = 0x01
-	valid[OotOffInvItems+7] = 0x08
-	valid[OotOffInvItems+12] = 0x0E
-	valid[OotOffInvItems+13] = 0x0F
-	binary.BigEndian.PutUint32(valid[OotOffUpgrades:], 0x00162040)
-	binary.BigEndian.PutUint16(valid[OotOffChecksum:], ootChecksum(valid))
-	binary.BigEndian.PutUint32(valid[OotOffUpgrades:], 0x00163040)
-
-	if delta, ok := ootChecksumDelta(valid); !ok || delta != 0x1000 {
-		t.Fatalf("reward-mutated OoT checksum delta = %d, %v, want 0x1000", delta, ok)
-	}
-
-	addr, ok := locateForeignOotSave(payload, AddrMmPayload)
-	if !ok {
-		t.Fatal("expected foreign OoT save candidate with reward-sized checksum delta")
-	}
-	if want := AddrMmPayload + uint32(validOffset); addr != want {
-		t.Fatalf("unexpected foreign OoT addr: got %08x want %08x", addr, want)
 	}
 }
 
@@ -603,6 +491,137 @@ func TestReadForeignOotSavePrefersFixedPrimaryAddressOverWeakCachedAddress(t *te
 	}
 	if oot.GoldTokens != 31 {
 		t.Fatalf("OoT gold tokens = %d, want 31", oot.GoldTokens)
+	}
+}
+
+func TestReadForeignOotSaveFailsWhenFixedPrimaryInvalid(t *testing.T) {
+	payload := make([]byte, MmPayloadSize)
+	primaryOffset := int(AddrMmForeignOotSaveLive - AddrMmPayload)
+	payload[primaryOffset+OotOffInvItems] = 0x01
+	fallbackOffset := 0x12000
+	fallback := payload[fallbackOffset : fallbackOffset+OotSaveSize]
+	binary.BigEndian.PutUint32(fallback[OotOffAge:], 1)
+	binary.BigEndian.PutUint16(fallback[OotOffSceneID:], 0x20)
+	for i := 0; i < 24; i++ {
+		fallback[OotOffInvItems+i] = emptyInventoryItem
+	}
+	for i := 0; i < 14; i++ {
+		fallback[OotOffInvItems+i] = byte(i)
+	}
+	binary.BigEndian.PutUint16(fallback[OotOffChecksum:], ootChecksum(fallback))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPayload, data: payload}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	err := r.readForeignOotSave(&oot)
+	if err == nil {
+		t.Fatal("expected invalid fixed MM foreign OoT save to fail without scan fallback")
+	}
+	if r.foreignOotSaveAddr != 0 {
+		t.Fatalf("foreignOotSaveAddr = %08x, want 0", r.foreignOotSaveAddr)
+	}
+}
+
+func TestReadOotComboConfigGameMmUsesFixedAddressWithoutPayload(t *testing.T) {
+	config := makeValidOotComboConfig(1 << OotMqDodongosCavern)
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrMmRuntimeOotComboConfigLive,
+		data:    config,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotComboConfig(GameMm, &oot)
+
+	if !oot.HasRuntimeMqBits {
+		t.Fatal("expected MM combo config read to set runtime MQ bits")
+	}
+	if got, want := oot.RuntimeMqBits, uint32(1<<OotMqDodongosCavern); got != want {
+		t.Fatalf("RuntimeMqBits = %#x, want %#x", got, want)
+	}
+	if r.comboConfigMmAddr != AddrMmRuntimeOotComboConfigLive {
+		t.Fatalf("comboConfigMmAddr = %08x, want %08x", r.comboConfigMmAddr, AddrMmRuntimeOotComboConfigLive)
+	}
+}
+
+func TestReadOotComboConfigGameMmDoesNotFallbackToPayloadScan(t *testing.T) {
+	payload := make([]byte, MmPayloadSize)
+	off := 0x1000
+	copy(payload[off:], makeValidOotComboConfig(1<<OotMqTempleFire))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrMmPayload,
+		data:    payload,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotComboConfig(GameMm, &oot)
+
+	if oot.HasRuntimeMqBits {
+		t.Fatal("expected MM combo config read to skip payload scan fallback")
+	}
+	if r.comboConfigMmAddr != 0 {
+		t.Fatalf("comboConfigMmAddr = %08x, want 0", r.comboConfigMmAddr)
+	}
+}
+
+func TestReadSharedStateGameMmUsesFixedLiveAddressWithoutForeignSave(t *testing.T) {
+	sharedData := make([]byte, sharedStateReadSize())
+	setRawSharedBitmapBit(t, sharedData, "npcOot", 4)
+	setRawSharedBitmapBit(t, sharedData, "xflagsMm", 17)
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrMmSharedCustomSaveLive,
+		data:    sharedData,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var shared SharedCustomState
+	if err := r.readSharedState(GameMm, 0, &shared); err != nil {
+		t.Fatalf("readSharedState: %v", err)
+	}
+
+	if !bitmapHasBit(shared.Bitmap("npcOot"), 4) {
+		t.Fatal("expected MM shared-state read to keep fixed-address npcOot bit")
+	}
+	if !bitmapHasBit(shared.Bitmap("xflagsMm"), 17) {
+		t.Fatal("expected MM shared-state read to keep fixed-address xflagsMm bit")
+	}
+}
+
+func TestReadSharedStateGameMmDoesNotFallbackToAlternateNearForeign(t *testing.T) {
+	alternateShared := make([]byte, sharedStateReadSize())
+	setRawSharedBitmapBit(t, alternateShared, "npcOot", 4)
+	alternateForeign := AddrMmPayload + 0x12000
+	alternateSharedAddr := alternateForeign - SharedCustomSaveSize
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{
+		{address: AddrMmSharedCustomSaveLive, data: []byte{0x00}},
+		{address: alternateSharedAddr, data: alternateShared},
+	}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	r.foreignOotSaveAddr = alternateForeign
+	var shared SharedCustomState
+	if err := r.readSharedState(GameMm, 0, &shared); err != nil {
+		t.Fatalf("readSharedState: %v", err)
+	}
+
+	if bitmapHasBit(shared.Bitmap("npcOot"), 4) {
+		t.Fatal("expected MM shared-state read to skip alternate near-foreign fallback")
 	}
 }
 

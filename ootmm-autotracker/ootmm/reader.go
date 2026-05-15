@@ -517,6 +517,18 @@ func (r *Reader) readOotComboConfig(activeGame ActiveGame, oot *OotState) {
 		return
 	}
 
+	if activeGame == GameMm {
+		data, err := r.mem.Read(AddrMmRuntimeOotComboConfigLive, OotComboConfigSize)
+		if err != nil || !validateOotComboConfig(data) {
+			r.comboConfigMmAddr = 0
+			return
+		}
+		r.comboConfigMmAddr = AddrMmRuntimeOotComboConfigLive
+		oot.RuntimeMqBits = binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
+		oot.HasRuntimeMqBits = true
+		return
+	}
+
 	payloadAddr := uint32(0)
 	payloadSize := 0
 	cachedAddr := (*uint32)(nil)
@@ -1051,32 +1063,11 @@ func (r *Reader) readActiveSaveIndex(game ActiveGame) (uint32, error) {
 }
 
 func (r *Reader) readForeignOotSave(oot *OotState) error {
-	if err := r.readPreferredForeignOotSave(oot); err == nil {
-		return nil
-	}
-
-	if r.foreignOotSaveAddr != 0 {
-		data, err := r.mem.Read(r.foreignOotSaveAddr, OotSaveSize)
-		if err == nil {
-			if err := r.validateForeignOotSaveAt(r.foreignOotSaveAddr, data); err == nil {
-				if validateOotSave(data) != nil {
-					if exactAddr, ok, exactErr := r.findChecksummedForeignOotSaveAddr(); exactErr == nil && ok && exactAddr != r.foreignOotSaveAddr {
-						r.foreignOotSaveAddr = exactAddr
-						return r.readOotSaveAt(exactAddr, oot)
-					}
-				}
-				return parseOotSave(oot, data)
-			}
-		}
+	if err := r.readPreferredForeignOotSave(oot); err != nil {
 		r.foreignOotSaveAddr = 0
-	}
-
-	addr, err := r.findForeignOotSaveAddr()
-	if err != nil {
 		return err
 	}
-
-	return r.readOotSaveAt(addr, oot)
+	return nil
 }
 
 func (r *Reader) readPreferredForeignOotSave(oot *OotState) error {
@@ -1234,11 +1225,10 @@ func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *Shar
 		nearForeignChecks = &liveChecksCopy
 	}
 
-	// Prefer the near-foreign candidate (adjacent to the validated foreign
-	// save in BSS) — it reads the live gSharedCustomSave. Fixed payload-slot
-	// addresses are not reliable live save storage in RDRAM; when the
-	// near-foreign read is temporarily unavailable, keep the last known
-	// shared state rather than switching to a garbage payload candidate.
+	// MM now reads the live shared block only from its fixed address. OoT still
+	// reads the near-foreign window because its fixed payload anchors are not
+	// settled yet. When the active-path read is temporarily unavailable, keep
+	// the last known shared state rather than switching to a payload slot copy.
 	if candidate, err := r.readSharedStateNearForeignSaveCandidate(game); err == nil {
 		*shared = candidate.state
 	} else if r.hasLastKnownShared {
@@ -1317,6 +1307,19 @@ func (r *Reader) readSharedStateNearForeignRaw(game ActiveGame) ([]byte, uint32,
 }
 
 func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedCustomState) error {
+	if game == GameMm {
+		data, err := r.mem.Read(AddrMmSharedCustomSaveLive, sharedStateReadSize())
+		if err != nil {
+			return fmt.Errorf("read shared custom save at fixed MM address %#x: %w", AddrMmSharedCustomSaveLive, err)
+		}
+		parsed, err := parseSharedState(data)
+		if err != nil {
+			return fmt.Errorf("parse shared custom save at fixed MM address %#x: %w", AddrMmSharedCustomSaveLive, err)
+		}
+		*shared = parsed
+		return nil
+	}
+
 	data, foreignSaveAddr, err := r.readSharedStateNearForeignRaw(game)
 	if err != nil {
 		return err
@@ -1340,6 +1343,18 @@ func (r *Reader) readSharedStateNearForeignSaveCandidate(game ActiveGame) (share
 }
 
 func (r *Reader) readSharedCheckStateNearForeign(game ActiveGame) (SharedCustomState, error) {
+	if game == GameMm {
+		data, err := r.mem.Read(AddrMmSharedCustomSaveLive, sharedStateReadSize())
+		if err != nil {
+			return SharedCustomState{}, fmt.Errorf("read shared custom save checks at fixed MM address %#x: %w", AddrMmSharedCustomSaveLive, err)
+		}
+		shared, err := parseSharedCheckState(data)
+		if err != nil {
+			return SharedCustomState{}, fmt.Errorf("parse shared custom save checks at fixed MM address %#x: %w", AddrMmSharedCustomSaveLive, err)
+		}
+		return shared, nil
+	}
+
 	data, foreignSaveAddr, err := r.readSharedStateNearForeignRaw(game)
 	if err != nil {
 		return SharedCustomState{}, err
@@ -1632,40 +1647,6 @@ func foreignOotSaveAddr(saveIndex uint32) (uint32, error) {
 	return foreignSaveAddr(AddrMmPayload, MmPayloadSize, ForeignOotSaveBaseOff, ForeignOotSaveStride, OotSaveSize, saveIndex)
 }
 
-func (r *Reader) findForeignOotSaveAddr() (uint32, error) {
-	if r.foreignOotSaveAddr != 0 {
-		return r.foreignOotSaveAddr, nil
-	}
-
-	payload, err := r.mem.Read(AddrMmPayload, MmPayloadSize)
-	if err != nil {
-		return 0, fmt.Errorf("read MM payload: %w", err)
-	}
-
-	if addr, ok := locatePreferredForeignOotSave(payload, AddrMmPayload); ok {
-		r.foreignOotSaveAddr = addr
-		return addr, nil
-	}
-
-	addr, ok := locateForeignOotSave(payload, AddrMmPayload)
-	if !ok {
-		return 0, fmt.Errorf("foreign OoT save not found in MM payload")
-	}
-
-	r.foreignOotSaveAddr = addr
-	return addr, nil
-}
-
-func (r *Reader) findChecksummedForeignOotSaveAddr() (uint32, bool, error) {
-	payload, err := r.mem.Read(AddrMmPayload, MmPayloadSize)
-	if err != nil {
-		return 0, false, fmt.Errorf("read MM payload: %w", err)
-	}
-
-	addr, ok := locateChecksummedForeignOotSave(payload, AddrMmPayload)
-	return addr, ok, nil
-}
-
 func (r *Reader) findForeignMmSaveAddr() (uint32, error) {
 	if r.foreignMmSaveAddr != 0 {
 		return r.foreignMmSaveAddr, nil
@@ -1702,106 +1683,6 @@ func foreignSaveAddr(payloadBase uint32, payloadSize int, baseOffset, stride uin
 	return payloadBase + uint32(offset), nil
 }
 
-func locateForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
-	if addr, ok := locateChecksummedForeignOotSave(payload, payloadBase); ok {
-		return addr, true
-	}
-
-	bestOffset := -1
-	bestDelta := 0x10000
-	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
-		candidate := payload[offset : offset+OotSaveSize]
-		delta, ok := ootChecksumDelta(candidate)
-		if !ok {
-			continue
-		}
-		if !isPlausibleOotSave(candidate) {
-			continue
-		}
-		if !foreignOotSaveHasPlausibleSharedPrefix(payload, offset) {
-			continue
-		}
-		if delta < bestDelta {
-			bestDelta = delta
-			bestOffset = offset
-		}
-	}
-	if bestOffset >= 0 {
-		return payloadBase + uint32(bestOffset), true
-	}
-
-	bestOffset = -1
-	bestDelta = maxForeignOotChecksumDelta + 1
-	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
-		candidate := payload[offset : offset+OotSaveSize]
-		delta, ok := ootChecksumDelta(candidate)
-		if !ok || delta > maxForeignOotChecksumDelta {
-			continue
-		}
-		if !isPlausibleOotSave(candidate) {
-			continue
-		}
-		if delta < bestDelta {
-			bestDelta = delta
-			bestOffset = offset
-		}
-	}
-	if bestOffset >= 0 {
-		return payloadBase + uint32(bestOffset), true
-	}
-
-	return 0, false
-}
-
-func locatePreferredForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
-	if AddrMmForeignOotSaveLive < payloadBase {
-		return 0, false
-	}
-
-	offset := int(AddrMmForeignOotSaveLive - payloadBase)
-	if offset < 0 || offset+OotSaveSize > len(payload) {
-		return 0, false
-	}
-
-	candidate := payload[offset : offset+OotSaveSize]
-	if err := validateOotSave(candidate); err == nil {
-		if isPlausibleOotSave(candidate) {
-			return AddrMmForeignOotSaveLive, true
-		}
-		return 0, false
-	}
-	if !isPlausibleOotSave(candidate) {
-		return 0, false
-	}
-	if foreignOotSaveHasPlausibleSharedPrefix(payload, offset) {
-		return AddrMmForeignOotSaveLive, true
-	}
-	if err := validateForeignOotSave(candidate); err == nil {
-		return AddrMmForeignOotSaveLive, true
-	}
-
-	return 0, false
-}
-
-func locateChecksummedForeignOotSave(payload []byte, payloadBase uint32) (uint32, bool) {
-	for offset := 0; offset+OotSaveSize <= len(payload); offset += 16 {
-		candidate := payload[offset : offset+OotSaveSize]
-		expected := binary.BigEndian.Uint16(candidate[OotOffChecksum:])
-		if expected == 0 {
-			continue
-		}
-		if err := validateOotSave(candidate); err != nil {
-			continue
-		}
-		if !isPlausibleOotSave(candidate) {
-			continue
-		}
-		return payloadBase + uint32(offset), true
-	}
-
-	return 0, false
-}
-
 func isPlausibleOotSave(data []byte) bool {
 	age := binary.BigEndian.Uint32(data[OotOffAge:])
 	if age > 1 {
@@ -1835,19 +1716,6 @@ func isPlausibleOotSave(data []byte) bool {
 	}
 
 	return true
-}
-
-func foreignOotSaveHasPlausibleSharedPrefix(payload []byte, offset int) bool {
-	if offset < int(SharedCustomSaveSize) {
-		return false
-	}
-	start := offset - int(SharedCustomSaveSize)
-	end := start + sharedStateReadSize()
-	if end > len(payload) {
-		return false
-	}
-	_, err := parseSharedState(payload[start:end])
-	return err == nil
 }
 
 func locateForeignMmSave(payload []byte, payloadBase uint32) (uint32, bool) {

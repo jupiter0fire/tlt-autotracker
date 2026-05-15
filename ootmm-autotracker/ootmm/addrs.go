@@ -40,10 +40,12 @@ const (
 	// Payload region in MM where the foreign OoT save is kept.
 	AddrMmPayload uint32 = 0x80730000
 	MmPayloadSize int    = 0x50000 // 320KB
-	// Current OoTMM builds keep the live foreign OoT save in MM's payload/BSS
-	// at a stable address; the reader still keeps scanning fallback for build
-	// drift and invalid/transient reads.
-	AddrMmForeignOotSaveLive uint32 = 0x807729F0
+	// Current OoTMM builds keep the MM-side live payload data at stable
+	// addresses. The reader still keeps narrow fallbacks for build drift and
+	// invalid/transient reads.
+	AddrMmForeignOotSaveLive        uint32 = 0x807729F0
+	AddrMmSharedCustomSaveLive      uint32 = 0x80772180
+	AddrMmRuntimeOotComboConfigLive uint32 = 0x80770B18
 
 	// SharedCustomSave is 0x870 bytes in the current OoTMM build.
 	// It sits immediately before the inactive game's foreign save inside
