@@ -471,44 +471,26 @@ func (r *Reader) readOotRuntimeConfig(activeGame ActiveGame, oot *OotState) {
 		return
 	}
 
-	var payload []byte
-	if r.ootSilverDataAddr == 0 || r.ootMaxKeysAddr == 0 {
-		data, err := r.mem.Read(AddrOotPayload, OotPayloadSize)
-		if err == nil {
-			payload = data
+	oot.RuntimeSilverRupeeCounts = [OotSilverRupeeSetCount]uint8{}
+	oot.HasRuntimeSilverRupeeCounts = false
+	if data, err := r.mem.Read(AddrOotRuntimeSilverRupeeDataLive, OotSilverRupeeDataSize); err == nil && validateSilverRupeeData(data) {
+		r.ootSilverDataAddr = AddrOotRuntimeSilverRupeeDataLive
+		for index := 0; index < OotSilverRupeeSetCount; index++ {
+			oot.RuntimeSilverRupeeCounts[index] = data[index*4+3]
 		}
+		oot.HasRuntimeSilverRupeeCounts = true
+	} else {
+		r.ootSilverDataAddr = 0
 	}
 
-	if r.ootSilverDataAddr == 0 && len(payload) >= OotSilverRupeeDataSize {
-		if off, ok := locateSilverRupeeData(payload); ok {
-			r.ootSilverDataAddr = AddrOotPayload + uint32(off)
-		}
-	}
-	if r.ootSilverDataAddr != 0 {
-		if data, err := r.mem.Read(r.ootSilverDataAddr, OotSilverRupeeDataSize); err == nil && validateSilverRupeeData(data) {
-			for index := 0; index < OotSilverRupeeSetCount; index++ {
-				oot.RuntimeSilverRupeeCounts[index] = data[index*4+3]
-			}
-			oot.HasRuntimeSilverRupeeCounts = true
-		}
-	}
-
-	if r.ootMaxKeysAddr == 0 && r.ootSilverDataAddr != 0 {
-		candidate := r.ootSilverDataAddr + ootMaxKeysFromSilverDelta
-		if data, err := r.mem.Read(candidate, OotMaxKeysBlockSize); err == nil && validateOotMaxKeyBlock(data) {
-			r.ootMaxKeysAddr = candidate
-		}
-	}
-	if r.ootMaxKeysAddr == 0 && len(payload) >= OotMaxKeysBlockSize {
-		if off, ok := locateOotMaxKeys(payload); ok {
-			r.ootMaxKeysAddr = AddrOotPayload + uint32(off)
-		}
-	}
-	if r.ootMaxKeysAddr != 0 {
-		if data, err := r.mem.Read(r.ootMaxKeysAddr, OotMaxKeysBlockSize); err == nil && validateOotMaxKeyBlock(data) {
-			copy(oot.RuntimeMaxKeys[:], data[:OotRuntimeSceneCount])
-			oot.HasRuntimeMaxKeys = true
-		}
+	oot.RuntimeMaxKeys = [OotRuntimeSceneCount]uint8{}
+	oot.HasRuntimeMaxKeys = false
+	if data, err := r.mem.Read(AddrOotRuntimeMaxKeysLive, OotMaxKeysBlockSize); err == nil && validateOotMaxKeyBlock(data) {
+		r.ootMaxKeysAddr = AddrOotRuntimeMaxKeysLive
+		copy(oot.RuntimeMaxKeys[:], data[:OotRuntimeSceneCount])
+		oot.HasRuntimeMaxKeys = true
+	} else {
+		r.ootMaxKeysAddr = 0
 	}
 }
 
@@ -517,54 +499,28 @@ func (r *Reader) readOotComboConfig(activeGame ActiveGame, oot *OotState) {
 		return
 	}
 
-	if activeGame == GameMm {
-		data, err := r.mem.Read(AddrMmRuntimeOotComboConfigLive, OotComboConfigSize)
-		if err != nil || !validateOotComboConfig(data) {
-			r.comboConfigMmAddr = 0
-			return
-		}
-		r.comboConfigMmAddr = AddrMmRuntimeOotComboConfigLive
-		oot.RuntimeMqBits = binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
-		oot.HasRuntimeMqBits = true
-		return
-	}
-
-	payloadAddr := uint32(0)
-	payloadSize := 0
-	cachedAddr := (*uint32)(nil)
+	var addr uint32
+	var cachedAddr *uint32
 	switch activeGame {
 	case GameOot:
-		payloadAddr = AddrOotPayload
-		payloadSize = OotPayloadSize
+		addr = AddrOotRuntimeOotComboConfigLive
 		cachedAddr = &r.comboConfigOotAddr
 	case GameMm:
-		payloadAddr = AddrMmPayload
-		payloadSize = MmPayloadSize
+		addr = AddrMmRuntimeOotComboConfigLive
 		cachedAddr = &r.comboConfigMmAddr
 	default:
 		return
 	}
 
-	if *cachedAddr != 0 {
-		if data, err := r.mem.Read(*cachedAddr, OotComboConfigSize); err == nil && validateOotComboConfig(data) {
-			oot.RuntimeMqBits = binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
-			oot.HasRuntimeMqBits = true
-			return
-		}
+	data, err := r.mem.Read(addr, OotComboConfigSize)
+	if err != nil || !validateOotComboConfig(data) {
 		*cachedAddr = 0
-	}
-
-	payload, err := r.mem.Read(payloadAddr, payloadSize)
-	if err != nil || len(payload) < OotComboConfigSize {
+		oot.RuntimeMqBits = 0
+		oot.HasRuntimeMqBits = false
 		return
 	}
-
-	off, ok := locateOotComboConfig(payload)
-	if !ok {
-		return
-	}
-	*cachedAddr = payloadAddr + uint32(off)
-	oot.RuntimeMqBits = binary.BigEndian.Uint32(payload[off+OotComboConfigMqOffset:])
+	*cachedAddr = addr
+	oot.RuntimeMqBits = binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
 	oot.HasRuntimeMqBits = true
 }
 
@@ -1091,19 +1047,12 @@ func (r *Reader) readOotSaveAt(addr uint32, oot *OotState) error {
 }
 
 func (r *Reader) readForeignMmSave(mm *MmState) error {
-	if r.foreignMmSaveAddr != 0 {
-		if err := r.readMmSaveAt(r.foreignMmSaveAddr, mm); err == nil {
-			return nil
-		}
+	if err := r.readMmSaveAt(AddrOotForeignMmSaveLive, mm); err != nil {
 		r.foreignMmSaveAddr = 0
-	}
-
-	addr, err := r.findForeignMmSaveAddr()
-	if err != nil {
 		return err
 	}
-
-	return r.readMmSaveAt(addr, mm)
+	r.foreignMmSaveAddr = AddrOotForeignMmSaveLive
+	return nil
 }
 
 func (r *Reader) readMmSaveAt(addr uint32, mm *MmState) error {
@@ -1225,10 +1174,10 @@ func (r *Reader) readSharedState(game ActiveGame, saveIndex uint32, shared *Shar
 		nearForeignChecks = &liveChecksCopy
 	}
 
-	// MM now reads the live shared block only from its fixed address. OoT still
-	// reads the near-foreign window because its fixed payload anchors are not
-	// settled yet. When the active-path read is temporarily unavailable, keep
-	// the last known shared state rather than switching to a payload slot copy.
+	// Both active-game paths now read the live shared block only from fixed
+	// addresses from the dump summaries. When the fixed-address read is
+	// temporarily unavailable, keep the last known shared state rather than
+	// switching to a payload slot copy.
 	if candidate, err := r.readSharedStateNearForeignSaveCandidate(game); err == nil {
 		*shared = candidate.state
 	} else if r.hasLastKnownShared {
@@ -1307,6 +1256,19 @@ func (r *Reader) readSharedStateNearForeignRaw(game ActiveGame) ([]byte, uint32,
 }
 
 func (r *Reader) readSharedStateNearForeignSave(game ActiveGame, shared *SharedCustomState) error {
+	if game == GameOot {
+		data, err := r.mem.Read(AddrOotSharedCustomSaveLive, sharedStateReadSize())
+		if err != nil {
+			return fmt.Errorf("read shared custom save at fixed OoT address %#x: %w", AddrOotSharedCustomSaveLive, err)
+		}
+		parsed, err := parseSharedState(data)
+		if err != nil {
+			return fmt.Errorf("parse shared custom save at fixed OoT address %#x: %w", AddrOotSharedCustomSaveLive, err)
+		}
+		*shared = parsed
+		return nil
+	}
+
 	if game == GameMm {
 		data, err := r.mem.Read(AddrMmSharedCustomSaveLive, sharedStateReadSize())
 		if err != nil {
@@ -1343,6 +1305,18 @@ func (r *Reader) readSharedStateNearForeignSaveCandidate(game ActiveGame) (share
 }
 
 func (r *Reader) readSharedCheckStateNearForeign(game ActiveGame) (SharedCustomState, error) {
+	if game == GameOot {
+		data, err := r.mem.Read(AddrOotSharedCustomSaveLive, sharedStateReadSize())
+		if err != nil {
+			return SharedCustomState{}, fmt.Errorf("read shared custom save checks at fixed OoT address %#x: %w", AddrOotSharedCustomSaveLive, err)
+		}
+		shared, err := parseSharedCheckState(data)
+		if err != nil {
+			return SharedCustomState{}, fmt.Errorf("parse shared custom save checks at fixed OoT address %#x: %w", AddrOotSharedCustomSaveLive, err)
+		}
+		return shared, nil
+	}
+
 	if game == GameMm {
 		data, err := r.mem.Read(AddrMmSharedCustomSaveLive, sharedStateReadSize())
 		if err != nil {

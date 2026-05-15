@@ -28,6 +28,20 @@ func makeValidOotComboConfig(mqBits uint32) []byte {
 	return data
 }
 
+func makeValidOotSilverRupeeData() []byte {
+	data := make([]byte, OotSilverRupeeDataSize)
+	for index := 0; index < OotSilverRupeeSetCount; index++ {
+		allowed := ootSilverRupeeAllowed[index][0]
+		data[index*4+2] = allowed.flag
+		data[index*4+3] = allowed.count
+	}
+	return data
+}
+
+func makeValidOotMaxKeysBlock() []byte {
+	return []byte{0, 0, 0, 5, 7, 5, 5, 5, 3, 0, 0, 9, 4, 2, 0, 0, 6, 1, 3, 1, 4}
+}
+
 func setRawSharedBitmapBit(t *testing.T, data []byte, name string, bit int) {
 	t.Helper()
 
@@ -326,6 +340,232 @@ func TestLocateForeignMmSaveFindsNearChecksummedCandidate(t *testing.T) {
 	}
 	if want := AddrOotPayload + uint32(offset); addr != want {
 		t.Fatalf("unexpected foreign MM addr: got %08x want %08x", addr, want)
+	}
+}
+
+func TestReadForeignMmSaveUsesFixedAddressWithoutPayload(t *testing.T) {
+	data := make([]byte, MmSaveSize)
+	data[MmOffPlayerForm] = 4
+	binary.BigEndian.PutUint32(data[MmOffDay:], 1)
+	binary.BigEndian.PutUint16(data[MmOffTime:], 0x60B1)
+	for i := 0; i < 48; i++ {
+		data[MmOffInvItems+i] = emptyInventoryItem
+	}
+	data[MmOffInvItems] = 0x00
+	data[MmOffInvItems+15] = 0x0F
+	data[MmOffInvItems+42] = 0x37
+	binary.BigEndian.PutUint16(data[MmOffChecksum:], mmChecksum(data))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrOotForeignMmSaveLive,
+		data:    data,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var mm MmState
+	if err := r.readForeignMmSave(&mm); err != nil {
+		t.Fatalf("readForeignMmSave: %v", err)
+	}
+	if r.foreignMmSaveAddr != AddrOotForeignMmSaveLive {
+		t.Fatalf("foreignMmSaveAddr = %08x, want %08x", r.foreignMmSaveAddr, AddrOotForeignMmSaveLive)
+	}
+	if mm.Day != 1 || mm.Time != 0x60B1 {
+		t.Fatalf("unexpected MM basic state: day=%d time=%#x", mm.Day, mm.Time)
+	}
+}
+
+func TestReadForeignMmSaveFailsWhenFixedPrimaryInvalid(t *testing.T) {
+	payload := make([]byte, OotPayloadSize)
+	fixedOffset := int(AddrOotForeignMmSaveLive - AddrOotPayload)
+	payload[fixedOffset] = 0x01
+
+	fallbackOffset := 0x12000
+	fallback := payload[fallbackOffset : fallbackOffset+MmSaveSize]
+	fallback[MmOffPlayerForm] = 4
+	binary.BigEndian.PutUint32(fallback[MmOffDay:], 1)
+	binary.BigEndian.PutUint16(fallback[MmOffTime:], 0x60B1)
+	for i := 0; i < 48; i++ {
+		fallback[MmOffInvItems+i] = emptyInventoryItem
+	}
+	binary.BigEndian.PutUint16(fallback[MmOffChecksum:], mmChecksum(fallback))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrOotPayload, data: payload}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var mm MmState
+	err := r.readForeignMmSave(&mm)
+	if err == nil {
+		t.Fatal("expected invalid fixed OoT foreign MM save to fail without scan fallback")
+	}
+	if r.foreignMmSaveAddr != 0 {
+		t.Fatalf("foreignMmSaveAddr = %08x, want 0", r.foreignMmSaveAddr)
+	}
+}
+
+func TestReadOotComboConfigGameOotUsesFixedAddressWithoutPayload(t *testing.T) {
+	config := makeValidOotComboConfig(1 << OotMqTempleFire)
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrOotRuntimeOotComboConfigLive,
+		data:    config,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotComboConfig(GameOot, &oot)
+
+	if !oot.HasRuntimeMqBits {
+		t.Fatal("expected OoT combo config read to set runtime MQ bits")
+	}
+	if got, want := oot.RuntimeMqBits, uint32(1<<OotMqTempleFire); got != want {
+		t.Fatalf("RuntimeMqBits = %#x, want %#x", got, want)
+	}
+	if r.comboConfigOotAddr != AddrOotRuntimeOotComboConfigLive {
+		t.Fatalf("comboConfigOotAddr = %08x, want %08x", r.comboConfigOotAddr, AddrOotRuntimeOotComboConfigLive)
+	}
+}
+
+func TestReadOotComboConfigGameOotDoesNotFallbackToPayloadScan(t *testing.T) {
+	payload := make([]byte, OotPayloadSize)
+	off := 0x1000
+	copy(payload[off:], makeValidOotComboConfig(1<<OotMqTempleSpirit))
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrOotPayload,
+		data:    payload,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotComboConfig(GameOot, &oot)
+
+	if oot.HasRuntimeMqBits {
+		t.Fatal("expected OoT combo config read to skip payload scan fallback")
+	}
+	if r.comboConfigOotAddr != 0 {
+		t.Fatalf("comboConfigOotAddr = %08x, want 0", r.comboConfigOotAddr)
+	}
+}
+
+func TestReadOotRuntimeConfigGameOotUsesFixedAddressesWithoutPayload(t *testing.T) {
+	silver := makeValidOotSilverRupeeData()
+	maxKeys := makeValidOotMaxKeysBlock()
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{
+		{address: AddrOotRuntimeSilverRupeeDataLive, data: silver},
+		{address: AddrOotRuntimeMaxKeysLive, data: maxKeys},
+	}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotRuntimeConfig(GameOot, &oot)
+
+	if !oot.HasRuntimeSilverRupeeCounts {
+		t.Fatal("expected OoT runtime silver data to load from fixed address")
+	}
+	if !oot.HasRuntimeMaxKeys {
+		t.Fatal("expected OoT runtime max keys to load from fixed address")
+	}
+	if r.ootSilverDataAddr != AddrOotRuntimeSilverRupeeDataLive {
+		t.Fatalf("ootSilverDataAddr = %08x, want %08x", r.ootSilverDataAddr, AddrOotRuntimeSilverRupeeDataLive)
+	}
+	if r.ootMaxKeysAddr != AddrOotRuntimeMaxKeysLive {
+		t.Fatalf("ootMaxKeysAddr = %08x, want %08x", r.ootMaxKeysAddr, AddrOotRuntimeMaxKeysLive)
+	}
+	if got := oot.RuntimeSilverRupeeCounts[0]; got != ootSilverRupeeAllowed[0][0].count {
+		t.Fatalf("unexpected silver rupee count 0: got %d want %d", got, ootSilverRupeeAllowed[0][0].count)
+	}
+	if got := oot.RuntimeMaxKeys[OotSceneTempleFire]; got != 7 {
+		t.Fatalf("unexpected Fire Temple max keys: got %d want 7", got)
+	}
+}
+
+func TestReadOotRuntimeConfigGameOotDoesNotFallbackToPayloadScan(t *testing.T) {
+	payload := make([]byte, OotPayloadSize)
+	copy(payload[0x1000:], makeValidOotComboConfig(1<<OotMqTempleShadow))
+	copy(payload[0x2000:], makeValidOotSilverRupeeData())
+	copy(payload[0x3000:], makeValidOotMaxKeysBlock())
+	payload[int(AddrOotRuntimeOotComboConfigLive-AddrOotPayload)] = 0xFF
+	payload[int(AddrOotRuntimeSilverRupeeDataLive-AddrOotPayload)+2] = 0xFF
+	payload[int(AddrOotRuntimeMaxKeysLive-AddrOotPayload)] = 0x01
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrOotPayload,
+		data:    payload,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotRuntimeConfig(GameOot, &oot)
+
+	if oot.HasRuntimeMqBits || oot.HasRuntimeSilverRupeeCounts || oot.HasRuntimeMaxKeys {
+		t.Fatal("expected OoT runtime config to skip payload scan fallbacks")
+	}
+	if r.comboConfigOotAddr != 0 || r.ootSilverDataAddr != 0 || r.ootMaxKeysAddr != 0 {
+		t.Fatalf("unexpected cached OoT runtime addresses: combo=%08x silver=%08x max=%08x", r.comboConfigOotAddr, r.ootSilverDataAddr, r.ootMaxKeysAddr)
+	}
+}
+
+func TestReadSharedStateGameOotUsesFixedLiveAddressWithoutForeignSave(t *testing.T) {
+	sharedData := make([]byte, sharedStateReadSize())
+	setRawSharedBitmapBit(t, sharedData, "npcOot", 4)
+	setRawSharedBitmapBit(t, sharedData, "xflagsMm", 17)
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrOotSharedCustomSaveLive,
+		data:    sharedData,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var shared SharedCustomState
+	if err := r.readSharedState(GameOot, 0, &shared); err != nil {
+		t.Fatalf("readSharedState: %v", err)
+	}
+
+	if !bitmapHasBit(shared.Bitmap("npcOot"), 4) {
+		t.Fatal("expected OoT shared-state read to keep fixed-address npcOot bit")
+	}
+	if !bitmapHasBit(shared.Bitmap("xflagsMm"), 17) {
+		t.Fatal("expected OoT shared-state read to keep fixed-address xflagsMm bit")
+	}
+}
+
+func TestReadSharedStateGameOotDoesNotFallbackToAlternateNearForeign(t *testing.T) {
+	alternateShared := make([]byte, sharedStateReadSize())
+	setRawSharedBitmapBit(t, alternateShared, "npcOot", 4)
+	alternateForeign := AddrOotPayload + 0x12000
+	alternateSharedAddr := alternateForeign - SharedCustomSaveSize
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{
+		{address: AddrOotSharedCustomSaveLive, data: []byte{0x00}},
+		{address: alternateSharedAddr, data: alternateShared},
+	}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	r.foreignMmSaveAddr = alternateForeign
+	var shared SharedCustomState
+	if err := r.readSharedState(GameOot, 0, &shared); err != nil {
+		t.Fatalf("readSharedState: %v", err)
+	}
+
+	if bitmapHasBit(shared.Bitmap("npcOot"), 4) {
+		t.Fatal("expected OoT shared-state read to skip alternate near-foreign fallback")
 	}
 }
 

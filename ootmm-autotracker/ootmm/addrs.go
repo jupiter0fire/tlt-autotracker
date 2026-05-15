@@ -36,13 +36,19 @@ const (
 	// Payload region where gSharedCustomSave lives (OoT side)
 	AddrOotPayload uint32 = 0x80400000
 	OotPayloadSize int    = 0x80000 // 512KB
+	// Current OoTMM builds keep the OoT-side live payload data at stable
+	// addresses.
+	AddrOotForeignMmSaveLive          uint32 = 0x80443970
+	AddrOotSharedCustomSaveLive       uint32 = 0x80443100
+	AddrOotRuntimeMaxKeysLive         uint32 = 0x80441C78
+	AddrOotRuntimeOotComboConfigLive  uint32 = 0x804416C8
+	AddrOotRuntimeSilverRupeeDataLive uint32 = 0x8042EC10
 
 	// Payload region in MM where the foreign OoT save is kept.
 	AddrMmPayload uint32 = 0x80730000
 	MmPayloadSize int    = 0x50000 // 320KB
 	// Current OoTMM builds keep the MM-side live payload data at stable
-	// addresses. The reader still keeps narrow fallbacks for build drift and
-	// invalid/transient reads.
+	// addresses.
 	AddrMmForeignOotSaveLive        uint32 = 0x807729F0
 	AddrMmSharedCustomSaveLive      uint32 = 0x80772180
 	AddrMmRuntimeOotComboConfigLive uint32 = 0x80770B18
