@@ -194,6 +194,10 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			if source.Max <= 0 {
 				panic(fmt.Sprintf("catalog item %s has invalid song note max %d", item.ItemID, source.Max))
 			}
+		case "shared-half-day-bit":
+			if source.Bit < 0 || source.Bit >= 8 {
+				panic(fmt.Sprintf("catalog item %s has invalid half-day bit %d", item.ItemID, source.Bit))
+			}
 		case "oot-extra-bit":
 			if source.Record < 0 {
 				panic(fmt.Sprintf("catalog item %s has invalid extra record %d", item.ItemID, source.Record))
@@ -217,14 +221,19 @@ func buildCatalogTables(items []catalogItemEntry, bitmaps map[string]sharedBitma
 			panic(fmt.Sprintf("catalog item %s has unsupported source kind %s", item.ItemID, source.Kind))
 		}
 		sources[item.ItemID] = source
-		if shouldTrackCatalogItem(source) {
+		if shouldTrackCatalogItem(item.ItemID, source) {
 			tracked = append(tracked, item)
 		}
 	}
 	return tracked, sources, usedBits
 }
 
-func shouldTrackCatalogItem(source catalogItemSource) bool {
+func shouldTrackCatalogItem(itemID string, source catalogItemSource) bool {
+	switch itemID {
+	case "OOT_SCALE_BRONZE", "MM_SCALE_BRONZE":
+		return false
+	}
+
 	switch source.Kind {
 	case "oot-derived-key-ring", "mm-derived-key-ring", "oot-derived-skeleton-key", "oot-derived-platinum-token", "mm-derived-platinum-token", "oot-derived-magical-rupee", "mm-derived-skeleton-key", "mm-derived-transcendent-fairy":
 		return false
@@ -236,7 +245,7 @@ func shouldTrackCatalogItem(source catalogItemSource) bool {
 func markSharedCheckBitmapsUsed(usedBits map[string]int, bitmaps map[string]sharedBitmapInfo) {
 	for name, bitmap := range bitmaps {
 		switch name {
-		case "xflagsOot", "npcOot", "shopsOot", "scrubsOot", "srOot", "xflagsMm", "npcMm", "shopsMm":
+		case "xflagsOot", "npcOot", "shopsOot", "scrubsOot", "srOot", "xflagsMm", "npcMm", "shopsMm", "progressiveFlags":
 			usedBits[name] = bitmap.Size * 8
 		}
 	}

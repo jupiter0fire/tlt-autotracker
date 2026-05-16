@@ -28,6 +28,14 @@ func makeValidOotComboConfig(mqBits uint32) []byte {
 	return data
 }
 
+func setOotComboConfigFlag(data []byte, flag int) {
+	byteIndex := OotComboConfigFlagsOffset + flag/8
+	if byteIndex < 0 || byteIndex >= len(data) {
+		return
+	}
+	data[byteIndex] |= 1 << uint(flag%8)
+}
+
 func makeValidOotSilverRupeeData() []byte {
 	data := make([]byte, OotSilverRupeeDataSize)
 	for index := 0; index < OotSilverRupeeSetCount; index++ {
@@ -428,6 +436,26 @@ func TestReadOotComboConfigGameOotUsesFixedAddressWithoutPayload(t *testing.T) {
 	}
 	if r.comboConfigOotAddr != AddrOotRuntimeOotComboConfigLive {
 		t.Fatalf("comboConfigOotAddr = %08x, want %08x", r.comboConfigOotAddr, AddrOotRuntimeOotComboConfigLive)
+	}
+}
+
+func TestReadOotComboConfigReadsBronzeScaleFlag(t *testing.T) {
+	config := makeValidOotComboConfig(0)
+	setOotComboConfigFlag(config, OotComboConfigFlagBronzeScale)
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{
+		address: AddrOotRuntimeOotComboConfigLive,
+		data:    config,
+	}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	var oot OotState
+	r.readOotComboConfig(GameOot, &oot)
+
+	if !oot.BronzeScaleEnabled {
+		t.Fatal("expected OoT combo config read to enable Bronze Scale tracking")
 	}
 }
 
@@ -1060,6 +1088,24 @@ func TestParseSharedStateReadsSongNoteCounts(t *testing.T) {
 	}
 	if got := shared.SongNotes[mmSoaring.Index]; got != 1 {
 		t.Fatalf("SongNotes[MM Soaring] = %d, want 1", got)
+	}
+}
+
+func TestParseSharedStateReadsHalfDays(t *testing.T) {
+	clock5 := mustCatalogItemSource("MM_CLOCK5")
+	if clock5.Kind != "shared-half-day-bit" {
+		t.Fatalf("MM_CLOCK5 kind = %s, want shared-half-day-bit", clock5.Kind)
+	}
+
+	data := make([]byte, SharedCustomSaveSize)
+	data[sharedHalfDaysOffset] = 1 << uint(clock5.Bit)
+
+	shared, err := parseSharedState(data)
+	if err != nil {
+		t.Fatalf("parseSharedState: %v", err)
+	}
+	if got := shared.HalfDays; got != 1<<uint(clock5.Bit) {
+		t.Fatalf("HalfDays = %#x, want %#x", got, 1<<uint(clock5.Bit))
 	}
 }
 

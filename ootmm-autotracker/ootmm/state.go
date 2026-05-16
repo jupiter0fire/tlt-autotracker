@@ -15,6 +15,7 @@ type GameState struct {
 // relevant for item tracking across both games.
 type SharedCustomState struct {
 	Bitmaps                map[string][]uint8
+	HalfDays               uint8
 	Coins                  [4]uint16
 	OcarinaButtonMaskOot   uint16
 	OcarinaButtonMaskMm    uint16
@@ -28,6 +29,7 @@ type SharedCustomState struct {
 func (s SharedCustomState) Clone() SharedCustomState {
 	if len(s.Bitmaps) == 0 {
 		return SharedCustomState{
+			HalfDays:               s.HalfDays,
 			Coins:                  s.Coins,
 			OcarinaButtonMaskOot:   s.OcarinaButtonMaskOot,
 			OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
@@ -41,6 +43,7 @@ func (s SharedCustomState) Clone() SharedCustomState {
 
 	clone := SharedCustomState{
 		Bitmaps:                make(map[string][]uint8, len(s.Bitmaps)),
+		HalfDays:               s.HalfDays,
 		Coins:                  s.Coins,
 		OcarinaButtonMaskOot:   s.OcarinaButtonMaskOot,
 		OcarinaButtonMaskMm:    s.OcarinaButtonMaskMm,
@@ -131,6 +134,7 @@ type OotState struct {
 	HasRuntimeMqBits            bool
 	HasRuntimeMaxKeys           bool
 	HasRuntimeSilverRupeeCounts bool
+	BronzeScaleEnabled          bool
 
 	// Scene flags: chests/switches/collectibles per scene
 	SceneFlags [124]SceneFlags

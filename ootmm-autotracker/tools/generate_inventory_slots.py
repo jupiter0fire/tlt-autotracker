@@ -11,6 +11,7 @@ SLOT_DEFINE_RE = re.compile(r"^#define\s+(ITS_(OOT|MM)_[A-Z0-9_]+)\s+0x([0-9a-fA
 GI_ID_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),")
 SOUL_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),\s+type:\s+SOUL,\s+add:\s+\[[A-Z_]+,\s+0x([0-9a-fA-F]+)\]")
 COIN_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),.*add:\s+\[COIN,\s+([0-9]+)\]")
+CLOCK_GI_RE = re.compile(r"^-\s+\{\s+id:\s+(MM_CLOCK[1-6]),.*add:\s+\[MM_CLOCK,\s+([0-9]+)\]")
 SONG_NOTE_GI_RE = re.compile(r"^-\s+\{\s+id:\s+([A-Z0-9_]+),.*add:\s+\[SONG_NOTE,\s+(NOTES_SONG_[A-Z0-9_]+)\]")
 NOTE_DEFINE_RE = re.compile(r"^#define\s+(NOTES_SONG_[A-Z0-9_]+)\s+0x([0-9a-fA-F]+)\s*$")
 NOTES_MAX_RE = re.compile(r"^#define\s+NOTES_MAX\s+0x([0-9a-fA-F]+)\s*$")
@@ -87,7 +88,7 @@ SLOT_QUANTITY_RULES = {
 SHARED_STORAGE = {
     "baseOffset": 0x18000,
     "stride": 0x4000,
-    "trackedSize": 0x800,
+    "trackedSize": 0x846,
     "bitmaps": [
         {"name": "xflagsOot", "offset": 0x000, "size": 0x2E8},
         {"name": "npcOot", "offset": 0x2E8, "size": 0x20},
@@ -107,6 +108,7 @@ SHARED_STORAGE = {
         {"name": "soulsAnimalMm", "offset": 0x7F1, "size": 2},
         {"name": "soulsMiscOot", "offset": 0x7F3, "size": 1},
         {"name": "soulsMiscMm", "offset": 0x7F4, "size": 1},
+        {"name": "progressiveFlags", "offset": 0x845, "size": 1},
     ],
 }
 
@@ -144,6 +146,8 @@ SPECIAL_ITEM_SOURCES = [
     {"itemId": "OOT_RUPEE_MAGICAL", "source": {"kind": "oot-derived-magical-rupee"}},
     {"itemId": "MM_SKELETON_KEY", "source": {"kind": "mm-derived-skeleton-key"}},
     {"itemId": "MM_TRANSCENDENT_FAIRY", "source": {"kind": "mm-derived-transcendent-fairy"}},
+    {"itemId": "OOT_SCALE_BRONZE", "source": {"kind": "shared-bitmap-bit", "block": "progressiveFlags", "bit": 4}},
+    {"itemId": "MM_SCALE_BRONZE", "source": {"kind": "shared-bitmap-bit", "block": "progressiveFlags", "bit": 3}},
     {"itemId": "MM_HAMMER", "source": {"kind": "oot-extra-bit", "record": 4, "bit": 6}},
     {"itemId": "MM_SPELL_FIRE", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 10}},
     {"itemId": "MM_MOON_TEAR", "source": {"kind": "oot-extra-bit", "record": 5, "bit": 11}},
@@ -299,6 +303,47 @@ def extract_coin_entries(gi_defs: pathlib.Path) -> list[dict[str, object]]:
     return entries
 
 
+def extract_clock_entries(gi_defs: pathlib.Path) -> list[dict[str, object]]:
+    entries: list[dict[str, object]] = []
+    seen_ids: set[str] = set()
+    seen_bits: set[int] = set()
+
+    for line in gi_defs.read_text(encoding="utf-8").splitlines():
+        match = CLOCK_GI_RE.match(line)
+        if not match:
+            continue
+
+        item_id, raw_bit = match.groups()
+        bit = int(raw_bit)
+        if item_id in seen_ids:
+            raise ValueError(f"duplicate clock item {item_id} in {gi_defs}")
+        if bit < 0 or bit >= 8:
+            raise ValueError(f"clock item {item_id} has out-of-range bit {bit}")
+        if bit in seen_bits:
+            raise ValueError(f"duplicate clock bit {bit} in {gi_defs}")
+
+        entries.append(
+            {
+                "itemId": item_id,
+                "source": {
+                    "kind": "shared-half-day-bit",
+                    "bit": bit,
+                },
+            }
+        )
+        seen_ids.add(item_id)
+        seen_bits.add(bit)
+
+    missing_bits = sorted(set(range(6)) - seen_bits)
+    if missing_bits:
+        raise ValueError(
+            f"missing clock GI entries in {gi_defs} for bits: {', '.join(str(bit) for bit in missing_bits)}"
+        )
+
+    entries.sort(key=lambda entry: int(entry["source"]["bit"]))
+    return entries
+
+
 def extract_note_indices(notes_header: pathlib.Path) -> dict[str, int]:
     note_indices: dict[str, int] = {}
     note_count: int | None = None
@@ -423,6 +468,7 @@ def build_catalog(
     gi_ids = extract_gi_ids(gi_defs)
     soul_entries = extract_soul_entries(gi_defs)
     coin_entries = extract_coin_entries(gi_defs)
+    clock_entries = extract_clock_entries(gi_defs)
     song_note_entries = extract_song_note_entries(gi_defs, notes_header, item_add_source)
     bitmap_sizes = {bitmap["name"]: bitmap["size"] for bitmap in SHARED_STORAGE["bitmaps"]}
 
@@ -454,6 +500,7 @@ def build_catalog(
 
     items.extend(song_note_entries)
     items.extend(coin_entries)
+    items.extend(clock_entries)
 
     ensure_ids_exist(gi_ids, [entry["itemId"] for entry in SPECIAL_ITEM_SOURCES], "special item")
     items.extend(SPECIAL_ITEM_SOURCES)

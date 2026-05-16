@@ -62,6 +62,8 @@ const (
 	OotComboConfigSize        = 0x2dc
 	ootMaxKeysFromSilverDelta = 0x13068
 
+	OotComboConfigFlagsOffset                 = 0x0ec
+	OotComboConfigFlagsCount                  = 0x40
 	OotComboConfigMqOffset                    = 0x09c
 	OotComboConfigTriforcePiecesOffset        = 0x276
 	OotComboConfigTriforceGoalOffset          = 0x278
@@ -80,6 +82,7 @@ const (
 	OotComboConfigBombchuBehaviorMmOffset     = 0x2c8
 	OotComboConfigSongEventsOffset            = 0x2c9
 	OotComboConfigSongEventCount              = 18
+	OotComboConfigFlagBronzeScale             = 192
 )
 
 // OoT scene IDs used by OoTMM's runtime key and silver-rupee metadata.

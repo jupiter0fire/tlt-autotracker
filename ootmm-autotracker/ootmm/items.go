@@ -319,6 +319,36 @@ func mmWalletLevel(state *GameState) int {
 	return GetUpgradeLevel(state.Mm.Upgrades, 12, 2) + 1
 }
 
+func ootScaleLevel(state *GameState) int {
+	if state == nil {
+		return 0
+	}
+	level := GetUpgradeLevel(state.Oot.Upgrades, 9, 3)
+	if !state.Oot.BronzeScaleEnabled {
+		return level
+	}
+	bronze := mustCatalogItemSource("OOT_SCALE_BRONZE")
+	if bitmapHasBit(state.Shared.Bitmap(bronze.Block), bronze.Bit) {
+		return level + 1
+	}
+	return level
+}
+
+func mmScaleLevel(state *GameState) int {
+	if state == nil {
+		return 0
+	}
+	level := GetUpgradeLevel(state.Mm.Upgrades, 9, 3)
+	if !state.Oot.BronzeScaleEnabled {
+		return level
+	}
+	bronze := mustCatalogItemSource("MM_SCALE_BRONZE")
+	if bitmapHasBit(state.Shared.Bitmap(bronze.Block), bronze.Bit) {
+		return level + 1
+	}
+	return level
+}
+
 func mmExtraFlags2(state *GameState) uint32 {
 	if state == nil {
 		return 0
@@ -423,7 +453,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_QUIVER", GetUpgradeLevel(oot.Upgrades, 0, 3)})
 	items = append(items, TrackedItem{"OOT_BOMB_BAG", GetUpgradeLevel(oot.Upgrades, 3, 3)})
 	items = append(items, TrackedItem{"OOT_STRENGTH", GetUpgradeLevel(oot.Upgrades, 6, 3)})
-	items = append(items, TrackedItem{"OOT_SCALE", GetUpgradeLevel(oot.Upgrades, 9, 3)})
+	items = append(items, TrackedItem{"OOT_SCALE", ootScaleLevel(state)})
 	items = append(items, TrackedItem{"OOT_MAGIC_UPGRADE", magicUpgradeLevel(oot.HasMagic, oot.HasDoubleMagic)})
 	items = append(items, TrackedItem{"OOT_WALLET", ootWalletLevel(oot)})
 	items = append(items, TrackedItem{"OOT_BULLET_BAG", GetUpgradeLevel(oot.Upgrades, 14, 3)})
@@ -555,7 +585,7 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"MM_QUIVER", GetUpgradeLevel(mm.Upgrades, 0, 3)})
 	items = append(items, TrackedItem{"MM_BOMB_BAG", GetUpgradeLevel(mm.Upgrades, 3, 3)})
 	items = append(items, TrackedItem{"MM_STRENGTH", GetUpgradeLevel(mm.Upgrades, 6, 3)})
-	items = append(items, TrackedItem{"MM_SCALE", GetUpgradeLevel(mm.Upgrades, 9, 3)})
+	items = append(items, TrackedItem{"MM_SCALE", mmScaleLevel(state)})
 	items = append(items, TrackedItem{"MM_MAGIC_UPGRADE", magicUpgradeLevel(mm.HasMagic, mm.HasDoubleMagic)})
 	items = append(items, TrackedItem{"MM_WALLET", mmWalletLevel(state)})
 
@@ -1171,6 +1201,8 @@ func appendCatalogItems(items []TrackedItem, state *GameState) []TrackedItem {
 			if entry.Source.Index >= 0 && entry.Source.Index < len(state.Shared.SongNotes) {
 				qty = int(state.Shared.SongNotes[entry.Source.Index])
 			}
+		case "shared-half-day-bit":
+			qty = boolToInt(state.Shared.HalfDays&(1<<uint(entry.Source.Bit)) != 0)
 		case "oot-extra-bit":
 			if entry.Source.Record >= 0 && entry.Source.Record < len(state.Oot.ExtraRecords) {
 				qty = boolToInt(state.Oot.ExtraRecords[entry.Source.Record]&(1<<uint(entry.Source.Bit)) != 0)

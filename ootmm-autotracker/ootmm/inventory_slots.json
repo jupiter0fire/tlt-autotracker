@@ -464,7 +464,7 @@
     "shared": {
       "baseOffset": 98304,
       "stride": 16384,
-      "trackedSize": 2048,
+      "trackedSize": 2118,
       "bitmaps": [
         {
           "name": "xflagsOot",
@@ -554,6 +554,11 @@
         {
           "name": "soulsMiscMm",
           "offset": 2036,
+          "size": 1
+        },
+        {
+          "name": "progressiveFlags",
+          "offset": 2117,
           "size": 1
         }
       ]
@@ -2500,6 +2505,48 @@
         }
       },
       {
+        "itemId": "MM_CLOCK1",
+        "source": {
+          "kind": "shared-half-day-bit",
+          "bit": 0
+        }
+      },
+      {
+        "itemId": "MM_CLOCK2",
+        "source": {
+          "kind": "shared-half-day-bit",
+          "bit": 1
+        }
+      },
+      {
+        "itemId": "MM_CLOCK3",
+        "source": {
+          "kind": "shared-half-day-bit",
+          "bit": 2
+        }
+      },
+      {
+        "itemId": "MM_CLOCK4",
+        "source": {
+          "kind": "shared-half-day-bit",
+          "bit": 3
+        }
+      },
+      {
+        "itemId": "MM_CLOCK5",
+        "source": {
+          "kind": "shared-half-day-bit",
+          "bit": 4
+        }
+      },
+      {
+        "itemId": "MM_CLOCK6",
+        "source": {
+          "kind": "shared-half-day-bit",
+          "bit": 5
+        }
+      },
+      {
         "itemId": "OOT_KEY_RING_FOREST",
         "source": {
           "kind": "oot-derived-key-ring",
@@ -2631,6 +2678,22 @@
         "itemId": "MM_TRANSCENDENT_FAIRY",
         "source": {
           "kind": "mm-derived-transcendent-fairy"
+        }
+      },
+      {
+        "itemId": "OOT_SCALE_BRONZE",
+        "source": {
+          "kind": "shared-bitmap-bit",
+          "block": "progressiveFlags",
+          "bit": 4
+        }
+      },
+      {
+        "itemId": "MM_SCALE_BRONZE",
+        "source": {
+          "kind": "shared-bitmap-bit",
+          "block": "progressiveFlags",
+          "bit": 3
         }
       },
       {

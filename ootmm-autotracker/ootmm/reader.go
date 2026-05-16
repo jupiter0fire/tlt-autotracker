@@ -16,6 +16,7 @@ const (
 	sharedCoinCount                   = 4
 	sharedOcarinaButtonMaskOotOffset  = 0x7c8
 	sharedOcarinaButtonMaskMmOffset   = 0x7ca
+	sharedHalfDaysOffset              = 0x6de
 	sharedCaughtChildFishWeightOffset = 2037
 	sharedCaughtAdultFishWeightOffset = 2057
 	sharedCaughtFishWeightCount       = 20
@@ -50,6 +51,7 @@ var sharedCheckBitmapNames = [...]string{
 	"xflagsMm",
 	"npcMm",
 	"shopsMm",
+	"progressiveFlags",
 }
 
 type sharedStateCandidate struct {
@@ -517,11 +519,25 @@ func (r *Reader) readOotComboConfig(activeGame ActiveGame, oot *OotState) {
 		*cachedAddr = 0
 		oot.RuntimeMqBits = 0
 		oot.HasRuntimeMqBits = false
+		oot.BronzeScaleEnabled = false
 		return
 	}
 	*cachedAddr = addr
 	oot.RuntimeMqBits = binary.BigEndian.Uint32(data[OotComboConfigMqOffset:])
 	oot.HasRuntimeMqBits = true
+	configFlags := data[OotComboConfigFlagsOffset : OotComboConfigFlagsOffset+OotComboConfigFlagsCount]
+	oot.BronzeScaleEnabled = ootComboConfigFlagEnabled(configFlags, OotComboConfigFlagBronzeScale)
+}
+
+func ootComboConfigFlagEnabled(config []byte, flag int) bool {
+	if flag < 0 {
+		return false
+	}
+	byteIndex := flag / 8
+	if byteIndex < 0 || byteIndex >= len(config) {
+		return false
+	}
+	return config[byteIndex]&(1<<uint(flag%8)) != 0
 }
 
 type ootPlayStateSample struct {
@@ -1534,6 +1550,9 @@ func parseSharedStateUnchecked(data []byte) (SharedCustomState, error) {
 	if len(data) >= sharedOcarinaButtonMaskMmOffset+2 {
 		parsed.OcarinaButtonMaskOot = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskOotOffset:])
 		parsed.OcarinaButtonMaskMm = binary.BigEndian.Uint16(data[sharedOcarinaButtonMaskMmOffset:])
+	}
+	if len(data) > sharedHalfDaysOffset {
+		parsed.HalfDays = data[sharedHalfDaysOffset]
 	}
 	if len(data) >= sharedCaughtChildFishWeightOffset+sharedCaughtFishWeightCount {
 		copy(parsed.CaughtChildFishWeights[:], data[sharedCaughtChildFishWeightOffset:sharedCaughtChildFishWeightOffset+sharedCaughtFishWeightCount])

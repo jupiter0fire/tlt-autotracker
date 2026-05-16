@@ -254,6 +254,65 @@ func TestExtractItemsReconstructsWalletLevelsFromLiveRawFlags(t *testing.T) {
 	}
 }
 
+func TestBronzeScaleCatalogSourcesUseSharedProgressiveFlags(t *testing.T) {
+	ootBronze := mustCatalogItemSource("OOT_SCALE_BRONZE")
+	mmBronze := mustCatalogItemSource("MM_SCALE_BRONZE")
+
+	if got := ootBronze.Kind; got != "shared-bitmap-bit" {
+		t.Fatalf("OOT_SCALE_BRONZE source kind = %q, want shared-bitmap-bit", got)
+	}
+	if got := ootBronze.Block; got != "progressiveFlags" {
+		t.Fatalf("OOT_SCALE_BRONZE source block = %q, want progressiveFlags", got)
+	}
+	if got := ootBronze.Bit; got != 4 {
+		t.Fatalf("OOT_SCALE_BRONZE source bit = %d, want 4", got)
+	}
+	if got := mmBronze.Kind; got != "shared-bitmap-bit" {
+		t.Fatalf("MM_SCALE_BRONZE source kind = %q, want shared-bitmap-bit", got)
+	}
+	if got := mmBronze.Block; got != "progressiveFlags" {
+		t.Fatalf("MM_SCALE_BRONZE source block = %q, want progressiveFlags", got)
+	}
+	if got := mmBronze.Bit; got != 3 {
+		t.Fatalf("MM_SCALE_BRONZE source bit = %d, want 3", got)
+	}
+}
+
+func TestExtractItemsReconstructsScaleLevelsFromBronzeFlags(t *testing.T) {
+	state := &GameState{}
+	ootBronze := mustCatalogItemSource("OOT_SCALE_BRONZE")
+	mmBronze := mustCatalogItemSource("MM_SCALE_BRONZE")
+	state.Shared.SetBit(ootBronze.Block, ootBronze.Bit)
+	state.Shared.SetBit(mmBronze.Block, mmBronze.Bit)
+
+	items := itemQtyMap(ExtractItems(state))
+	if got := items["OOT_SCALE"]; got != 0 {
+		t.Fatalf("OOT_SCALE with Bronze disabled = %d, want 0", got)
+	}
+	if got := items["MM_SCALE"]; got != 0 {
+		t.Fatalf("MM_SCALE with Bronze disabled = %d, want 0", got)
+	}
+
+	state.Oot.BronzeScaleEnabled = true
+	items = itemQtyMap(ExtractItems(state))
+	if got := items["OOT_SCALE"]; got != 1 {
+		t.Fatalf("OOT_SCALE with Bronze enabled = %d, want 1", got)
+	}
+	if got := items["MM_SCALE"]; got != 1 {
+		t.Fatalf("MM_SCALE with Bronze enabled = %d, want 1", got)
+	}
+
+	state.Oot.Upgrades = 1 << 9
+	state.Mm.Upgrades = 2 << 9
+	items = itemQtyMap(ExtractItems(state))
+	if got := items["OOT_SCALE"]; got != 2 {
+		t.Fatalf("OOT_SCALE with Bronze+Silver = %d, want 2", got)
+	}
+	if got := items["MM_SCALE"]; got != 3 {
+		t.Fatalf("MM_SCALE with Bronze+Golden = %d, want 3", got)
+	}
+}
+
 func TestParseOotSaveReadsMagicFlags(t *testing.T) {
 	data := make([]byte, OotSaveSize)
 	data[OotOffMagicAcquired] = 1
@@ -627,6 +686,25 @@ func TestExtractItemsIncludesSpinUpgradeSpecialItems(t *testing.T) {
 	}
 }
 
+func TestExtractItemsIncludesClockItemsFromSharedHalfDays(t *testing.T) {
+	state := &GameState{}
+	clock3 := mustCatalogItemSource("MM_CLOCK3")
+	clock6 := mustCatalogItemSource("MM_CLOCK6")
+	state.Shared.HalfDays = (1 << uint(clock3.Bit)) | (1 << uint(clock6.Bit))
+
+	items := itemQtyMap(ExtractItems(state))
+
+	if got := items["MM_CLOCK3"]; got != 1 {
+		t.Fatalf("MM_CLOCK3 = %d, want 1", got)
+	}
+	if got := items["MM_CLOCK6"]; got != 1 {
+		t.Fatalf("MM_CLOCK6 = %d, want 1", got)
+	}
+	if got := items["MM_CLOCK2"]; got != 0 {
+		t.Fatalf("MM_CLOCK2 = %d, want 0", got)
+	}
+}
+
 func TestExtractItemsIgnoresActiveMmTradeBitsForSpecialItems(t *testing.T) {
 	state := &GameState{}
 	// The upper 16 bits of MmExtraTrade store active slot contents, not obtained items.
@@ -930,6 +1008,27 @@ func TestCatalogCoinSources(t *testing.T) {
 		}
 		if source.Index != tt.index {
 			t.Fatalf("%s index = %d, want %d", tt.itemID, source.Index, tt.index)
+		}
+	}
+}
+
+func TestCatalogClockSources(t *testing.T) {
+	tests := []struct {
+		itemID string
+		bit    int
+	}{
+		{itemID: "MM_CLOCK1", bit: 0},
+		{itemID: "MM_CLOCK4", bit: 3},
+		{itemID: "MM_CLOCK6", bit: 5},
+	}
+
+	for _, tt := range tests {
+		source := mustCatalogItemSource(tt.itemID)
+		if source.Kind != "shared-half-day-bit" {
+			t.Fatalf("%s kind = %s, want shared-half-day-bit", tt.itemID, source.Kind)
+		}
+		if source.Bit != tt.bit {
+			t.Fatalf("%s bit = %d, want %d", tt.itemID, source.Bit, tt.bit)
 		}
 	}
 }
