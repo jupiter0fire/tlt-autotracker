@@ -107,6 +107,7 @@ const (
 	ootEventRutoLetter                         = 0x31
 	ootEventZoraDivingGame                     = 0x38
 	ootEventSongSariaCustom                    = 0x58
+	ootEventSongZelda                          = 0x59
 	ootEventItemAnjuBottle                     = 0x0c
 	ootEventItemTalonBottle                    = 0x02
 	ootEventItemLostWoodsMemoryOrShootingChild = 0x0d

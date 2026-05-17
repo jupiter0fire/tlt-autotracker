@@ -3272,8 +3272,7 @@ func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
-			"WEIRD_EGG":    "Hatch Chicken",
-			"ZELDA_LETTER": "Zelda's Letter",
+			"WEIRD_EGG": "Hatch Chicken",
 		},
 		"MM": {},
 	}
@@ -3287,23 +3286,43 @@ func TestExtractChecksIncludesOotChildTradeFallbacks(t *testing.T) {
 	if _, ok := checks["Hatch Chicken"]; ok {
 		t.Fatal("unexpected Hatch Chicken check from Weird Egg alone")
 	}
-	if _, ok := checks["Zelda's Letter"]; ok {
-		t.Fatal("unexpected Zelda's Letter check from Weird Egg alone")
-	}
 
 	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] |= uint32(1 << (16 + 1))
 	checks = checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Hatch Chicken"]; !ok {
 		t.Fatal("missing Hatch Chicken check from persistent child trade progression")
 	}
+}
+
+func TestExtractChecksTracksZeldaLetterWithZeldaSongEvent(t *testing.T) {
+	originalSymbols := npcSymbolTables
+	npcSymbolTables = map[string]map[string]string{
+		"OOT": {
+			"ZELDA_LETTER": "Zelda's Letter",
+			"ZELDA_SONG":   "Zelda's Song",
+		},
+		"MM": {},
+	}
+	t.Cleanup(func() {
+		npcSymbolTables = originalSymbols
+	})
+
+	state := &GameState{}
+	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Zelda's Letter"]; ok {
-		t.Fatal("unexpected Zelda's Letter check before Zelda's Letter progression")
+		t.Fatal("unexpected Zelda's Letter check before Zelda's Song event")
+	}
+	if _, ok := checks["Zelda's Song"]; ok {
+		t.Fatal("unexpected Zelda's Song check before Zelda's Song event")
 	}
 
-	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] |= uint32(1 << (16 + 2))
+	state.Oot.EventsChk[ootEventSongZelda>>4] = 1 << (ootEventSongZelda & 0xF)
 	checks = checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Zelda's Letter"]; !ok {
-		t.Fatal("missing Zelda's Letter check from persistent child trade progression")
+		t.Fatal("missing Zelda's Letter check from Zelda's Song event")
+	}
+	if _, ok := checks["Zelda's Song"]; !ok {
+		t.Fatal("missing Zelda's Song check from Zelda's Song event")
 	}
 }
 
@@ -3322,17 +3341,14 @@ func TestExtractChecksPreservesGroupedOotSymbolCheckKeys(t *testing.T) {
 
 	state := &GameState{}
 	state.Oot.ExtraRecords[ExtraIdxOotFlags] = 1 << ootExtraFlagsFireArrowBit
-	state.Oot.ExtraRecords[ExtraIdxOotTradeSave] =
-		uint32(1<<(16+ootChildTradeWeirdEggBit)) |
-			uint32(1<<(16+2))
-	state.Oot.EventsChk[0x40>>4] = 1 << (0x40 & 0xF)
+	state.Oot.EventsChk[ootEventSongZelda>>4] = 1 << (ootEventSongZelda & 0xF)
 
 	checks := ExtractChecks(state)
 	if got, ok := checkKeyByName(checks, "Lake Hylia Fire Arrow"); !ok || got != "OOT_extra_2_19" {
 		t.Fatalf("Lake Hylia Fire Arrow key = %q, want %q", got, "OOT_extra_2_19")
 	}
-	if got, ok := checkKeyByName(checks, "Zelda's Letter"); !ok || got != "OOT_child_trade_ZELDA_LETTER" {
-		t.Fatalf("Zelda's Letter key = %q, want %q", got, "OOT_child_trade_ZELDA_LETTER")
+	if got, ok := checkKeyByName(checks, "Zelda's Letter"); !ok || got != "OOT_event_ZELDA_LETTER" {
+		t.Fatalf("Zelda's Letter key = %q, want %q", got, "OOT_event_ZELDA_LETTER")
 	}
 }
 

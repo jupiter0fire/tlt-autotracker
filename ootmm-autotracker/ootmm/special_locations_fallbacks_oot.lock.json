@@ -602,9 +602,9 @@
   {
     "symbol": "ZELDA_LETTER",
     "source": {
-      "group": "gOotTradeSave",
-      "field": "gOotTradeSave.child",
-      "mask": "0x1FFC"
+      "group": "eventsChk",
+      "field": "gOotSave.context.eventsChk",
+      "flag": 89
     }
   },
   {

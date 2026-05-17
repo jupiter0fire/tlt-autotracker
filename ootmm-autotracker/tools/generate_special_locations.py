@@ -18,6 +18,18 @@ MM_RUNTIME_SUPPORTED_GROUPS = MM_RUNTIME_FALLBACK_GROUPS | {"gMmExtraBoss"}
 MM_HINT_ONLY_GROUPS = {"inventoryQuest", "sharedNpcBitmap"}
 OOT_RUNTIME_FALLBACK_GROUPS = SUPPORTED_OOT_GROUPS
 
+# Explicit runtime mapping overrides for OoT symbols where gameplay timing
+# requires a different signal than naive source discovery would pick.
+OOT_SOURCE_OVERRIDES = {
+    "ZELDA_LETTER": [
+        {
+            "group": "eventsChk",
+            "field": "gOotSave.context.eventsChk",
+            "flag": 89,
+        }
+    ],
+}
+
 EXTRA_STRUCTS = {
     "gMmExtraFlags": "MmExtraFlags",
     "gMmExtraFlags2": "MmExtraFlags2",
@@ -82,13 +94,13 @@ def parse_args() -> argparse.Namespace:
         description="Generate special location metadata for the autotracker from an OoTMM checkout."
     )
     parser.add_argument("--ootmm-repo", required=True, help="Path to the OoTMM repository root.")
-    parser.add_argument("--output", required=True, help="Path to write MM special_locations_mm.json.")
+    parser.add_argument("--mm-output", required=True, help="Path to write MM special_locations_mm.json.")
     parser.add_argument("--oot-output", help="Optional path to write OoT special_locations_oot.json.")
     parser.add_argument(
         "--hints",
         help=(
             "Optional existing special_locations_mm.json to preserve manual source hints/notes. "
-            "Defaults to --output when that file exists."
+            "Defaults to --mm-output when that file exists."
         ),
     )
     parser.add_argument(
@@ -617,7 +629,11 @@ def build_oot_entries(
     hints: dict[str, dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[str], int]:
     discovered = discover_oot_sources(repo_root, hints)
-    symbols = list(hints) if hints else sorted(discovered)
+    if hints:
+        symbols = list(hints)
+        symbols.extend(sorted(set(OOT_SOURCE_OVERRIDES) - set(hints)))
+    else:
+        symbols = sorted(set(discovered) | set(OOT_SOURCE_OVERRIDES))
     warnings: list[str] = []
     no_discovered_hinted_symbols: list[str] = []
     preserved_hint_source_count = 0
@@ -627,6 +643,7 @@ def build_oot_entries(
         hint = hints.get(symbol, {})
         hinted_sources = supported_hint_sources(hint)
         discovered_sources = discovered.get(symbol, [])
+        override_sources = OOT_SOURCE_OVERRIDES.get(symbol, [])
         if hinted_sources and source_groups(discovered_sources) >= source_groups(hinted_sources):
             sources = discovered_sources
         elif hinted_sources:
@@ -638,6 +655,9 @@ def build_oot_entries(
                 no_discovered_hinted_symbols.append(f"OOT_{symbol}")
         else:
             sources = discovered_sources
+
+        if override_sources:
+            sources = override_sources
 
         if not sources:
             continue
@@ -997,7 +1017,7 @@ def check_or_update_fallback_baseline(
 def main() -> int:
     args = parse_args()
     repo_root = pathlib.Path(args.ootmm_repo).resolve()
-    output_path = pathlib.Path(args.output).resolve()
+    mm_output_path = pathlib.Path(args.mm_output).resolve()
     oot_output_path = pathlib.Path(args.oot_output).resolve() if args.oot_output else None
     fallback_baseline_path = pathlib.Path(args.fallback_baseline).resolve() if args.fallback_baseline else None
     oot_fallback_baseline_path = (
@@ -1011,8 +1031,8 @@ def main() -> int:
     hint_path: pathlib.Path | None = None
     if args.hints:
         hint_path = pathlib.Path(args.hints).resolve()
-    elif not args.no_existing_hints and output_path.is_file():
-        hint_path = output_path
+    elif not args.no_existing_hints and mm_output_path.is_file():
+        hint_path = mm_output_path
 
     oot_hint_path: pathlib.Path | None = None
     if args.oot_hints:
@@ -1029,8 +1049,8 @@ def main() -> int:
         print(f"failed to generate special locations: {exc}", file=sys.stderr)
         return 1
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(format_json(entries) + "\n", encoding="utf-8")
+    mm_output_path.parent.mkdir(parents=True, exist_ok=True)
+    mm_output_path.write_text(format_json(entries) + "\n", encoding="utf-8")
     if oot_output_path is not None:
         oot_output_path.parent.mkdir(parents=True, exist_ok=True)
         oot_output_path.write_text(format_json(oot_entries) + "\n", encoding="utf-8")

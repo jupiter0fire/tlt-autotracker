@@ -179,12 +179,12 @@
     "symbol": "ZELDA_LETTER",
     "sources": [
       {
-        "group": "gOotTradeSave",
-        "field": "gOotTradeSave.child",
-        "mask": "0x1FFC"
+        "group": "eventsChk",
+        "field": "gOotSave.context.eventsChk",
+        "flag": 89
       }
     ],
-    "note": "Zelda's Letter child trade progression"
+    "note": "Zelda's Letter tracked with Zelda's Song learned event"
   },
   {
     "symbol": "MALON_EGG",
