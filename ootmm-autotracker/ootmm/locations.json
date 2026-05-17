@@ -1463,6 +1463,42 @@
     {
       "key": "OOT_collect_98_31",
       "name": "Goron City Big Pot HP"
+    },
+    {
+      "key": "OOT_cow_0",
+      "name": "Kokiri Forest Cow"
+    },
+    {
+      "key": "OOT_cow_1",
+      "name": "Hyrule Field Cow"
+    },
+    {
+      "key": "OOT_cow_2",
+      "name": "Lon Lon Ranch Stables Cow Left"
+    },
+    {
+      "key": "OOT_cow_3",
+      "name": "Lon Lon Ranch Stables Cow Right"
+    },
+    {
+      "key": "OOT_cow_4",
+      "name": "Lon Lon Ranch Silo Cow Front"
+    },
+    {
+      "key": "OOT_cow_5",
+      "name": "Lon Lon Ranch Silo Cow Back"
+    },
+    {
+      "key": "OOT_cow_6",
+      "name": "Kakariko Cow"
+    },
+    {
+      "key": "OOT_cow_7",
+      "name": "Death Mountain Trail Cow"
+    },
+    {
+      "key": "OOT_cow_8",
+      "name": "Gerudo Valley Cow"
     }
   ],
   "scene_conflicts": [

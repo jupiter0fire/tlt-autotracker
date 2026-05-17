@@ -13,6 +13,7 @@ from collections import defaultdict
 SCENE_TYPES = {
     "chest": "chest",
     "collectible": "collect",
+    "cow": "cow",
 }
 
 XFLAG_TYPES = {
@@ -209,6 +210,8 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
     scene_checks_raw: dict[str, str] = {}
     scene_conflicts: set[str] = set()
     scene_variant_candidates: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    cow_checks_raw: dict[str, str] = {}
+    cow_variant_candidates: dict[str, list[tuple[str, str]]] = defaultdict(list)
     bitmap_checks_raw: dict[tuple[str, int], str] = {}
     bitmap_conflicts: set[tuple[str, int]] = set()
     bitmap_variant_candidates: dict[tuple[str, int], list[tuple[str, str]]] = defaultdict(list)
@@ -229,7 +232,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     symbol_checks_raw.setdefault((game, value), location)
 
                 scene_kind = SCENE_TYPES.get(check_type)
-                if scene_kind is not None:
+                if scene_kind is not None and check_type != "cow":
                     scene_id = scenes.get(f"{game}_{scene_name}")
                     if scene_id is None:
                         continue
@@ -243,6 +246,20 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     if game == "OOT":
                         scene_variant_candidates[key].append((scene_name, location))
                     add_unique_mapping(scene_checks_raw, scene_conflicts, key, location)
+                    continue
+
+                if check_type == "cow":
+                    if game != "OOT":
+                        continue
+                    try:
+                        cow_bit = int(value, 0)
+                    except ValueError:
+                        continue
+                    if cow_bit < 0 or cow_bit > 8:
+                        continue
+                    key = f"OOT_cow_{cow_bit}"
+                    cow_variant_candidates[key].append((scene_name, location))
+                    cow_checks_raw[key] = location
                     continue
 
                 bitmap_block = BITMAP_SPECS.get((game, check_type))
@@ -293,9 +310,14 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     bitmap_variant_candidates[(block, bit_pos)].append((scene_name, location))
                 add_unique_mapping(bitmap_checks_raw, bitmap_conflicts, (block, bit_pos), location)
 
+    all_scene_checks_raw: dict[str, str] = {**scene_checks_raw, **cow_checks_raw}
+    all_scene_conflicts = set(scene_conflicts)
+    all_scene_variant_candidates: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    all_scene_variant_candidates.update(scene_variant_candidates)
+    all_scene_variant_candidates.update(cow_variant_candidates)
     scene_checks = [
         {"key": key, "name": name}
-        for key, name in sorted(finalize_mapping(scene_checks_raw, scene_conflicts).items())
+        for key, name in sorted(finalize_mapping(all_scene_checks_raw, all_scene_conflicts).items())
     ]
     scene_conflict_entries = []
     for key, entries in sorted(scene_variant_candidates.items()):
