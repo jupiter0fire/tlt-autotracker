@@ -1794,6 +1794,9 @@ func TestExtractChecksIncludesMmExtraFlagChecks(t *testing.T) {
 	if _, ok := checks["Kafei Hideout Owner Reward 2"]; !ok {
 		t.Fatal("missing MM extra-flag check for Letter to Mama")
 	}
+	if _, ok := checks["Kafei Hideout Owner Reward 1"]; !ok {
+		t.Fatal("missing MM mirrored check for Owner Reward 1")
+	}
 	if _, ok := checks["Clock Town Blast Mask"]; !ok {
 		t.Fatal("missing MM extra-flag check for Blast Mask")
 	}
@@ -1871,6 +1874,30 @@ func TestExtractChecksUsesDistinctKeysForMirroredMmSymbolChecks(t *testing.T) {
 	}
 	if songKey != "MM_symbol_SKULL_KID_SONG" {
 		t.Fatalf("Skull Kid Song key = %q, want %q", songKey, "MM_symbol_SKULL_KID_SONG")
+	}
+}
+
+func TestExtractChecksUsesDistinctKeysForMirroredKafeiOwnerRewards(t *testing.T) {
+	state := &GameState{}
+	state.Oot.ExtraRecords[ExtraIdxMmFlags2] = 1 << mmExtraFlags2LetterMama
+
+	checks := ExtractChecks(state)
+	reward1Key, ok := checkKeyByName(checks, "Kafei Hideout Owner Reward 1")
+	if !ok {
+		t.Fatal("missing mirrored check for Kafei Hideout Owner Reward 1")
+	}
+	reward2Key, ok := checkKeyByName(checks, "Kafei Hideout Owner Reward 2")
+	if !ok {
+		t.Fatal("missing check for Kafei Hideout Owner Reward 2")
+	}
+	if reward1Key == reward2Key {
+		t.Fatalf("mirrored Kafei owner checks share key %q", reward1Key)
+	}
+	if reward1Key != "MM_symbol_MASK_KEATON" {
+		t.Fatalf("Owner Reward 1 key = %q, want %q", reward1Key, "MM_symbol_MASK_KEATON")
+	}
+	if reward2Key != "MM_symbol_LETTER_TO_MAMA" {
+		t.Fatalf("Owner Reward 2 key = %q, want %q", reward2Key, "MM_symbol_LETTER_TO_MAMA")
 	}
 }
 

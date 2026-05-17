@@ -555,12 +555,11 @@
     "symbol": "MM_MASK_KEATON",
     "name": "Kafei Hideout Owner Reward 1",
     "source": {
-      "group": "weekEventReg",
-      "field": "gMmSave.info.weekEventReg[33]",
-      "mask": "0x04"
+      "group": "gMmExtraFlags2",
+      "field": "gMmExtraFlags2.letterMama",
+      "mask": "0x00000100"
     },
-    "byteIndex": 33,
-    "mask": 4
+    "bit": 23
   },
   {
     "symbol": "MM_MASK_POSTMAN",

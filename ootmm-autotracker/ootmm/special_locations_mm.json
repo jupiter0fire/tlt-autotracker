@@ -1052,16 +1052,14 @@
     "symbol": "MM_MASK_KEATON",
     "sources": [
       {
-        "group": "weekEventReg",
-        "field": "gMmSave.info.weekEventReg[33]",
-        "mask": "0x04"
+        "group": "gMmExtraFlags2",
+        "field": "gMmExtraFlags2.letterMama",
+        "mask": "0x00000100"
       }
     ],
     "note": "Curiosity Shop first reward",
     "name": "Kafei Hideout Owner Reward 1",
-    "bits": [266],
-    "byteIndex": 33,
-    "mask": 4
+    "bits": [23]
   },
   {
     "code": "0x48",

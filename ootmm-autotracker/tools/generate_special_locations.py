@@ -18,6 +18,18 @@ MM_RUNTIME_SUPPORTED_GROUPS = MM_RUNTIME_FALLBACK_GROUPS | {"gMmExtraBoss"}
 MM_HINT_ONLY_GROUPS = {"inventoryQuest", "sharedNpcBitmap"}
 OOT_RUNTIME_FALLBACK_GROUPS = SUPPORTED_OOT_GROUPS
 
+# Explicit runtime mapping overrides for MM symbols where checks must mirror
+# another authoritative signal.
+MM_SOURCE_OVERRIDES = {
+    "MM_MASK_KEATON": [
+        {
+            "group": "gMmExtraFlags2",
+            "field": "gMmExtraFlags2.letterMama",
+            "mask": "0x00000100",
+        }
+    ],
+}
+
 # Explicit runtime mapping overrides for OoT symbols where gameplay timing
 # requires a different signal than naive source discovery would pick.
 OOT_SOURCE_OVERRIDES = {
@@ -761,6 +773,7 @@ def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> 
                 append_unique_source(hinted_sources, source)
 
         discovered_sources = discovered.get(symbol, [])
+        override_sources = MM_SOURCE_OVERRIDES.get(symbol, [])
         sources: list[dict[str, Any]] = []
         if hinted_sources and not should_prefer_discovered_mm_sources(hinted_sources, discovered_sources):
             sources = hinted_sources
@@ -774,6 +787,9 @@ def build_entries(repo_root: pathlib.Path, hints: dict[str, dict[str, Any]]) -> 
                 b_source = boss_source(symbol)
                 if b_source is not None:
                     append_unique_source(sources, b_source)
+
+        if override_sources:
+            sources = list(override_sources)
 
         entry: dict[str, Any] = {
             "code": f"0x{code:02x}",
