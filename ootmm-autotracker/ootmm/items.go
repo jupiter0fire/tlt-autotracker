@@ -440,15 +440,17 @@ func ExtractItems(state *GameState) []TrackedItem {
 	items = append(items, TrackedItem{"OOT_GOLD_TOKENS", int(oot.GoldTokens)})
 	items = append(items, TrackedItem{"OOT_HEART_PIECES", int(oot.HeartPieces)})
 
-	// OoT swords and shields are published as raw ownership bitmasks so the
-	// tracker can distinguish Kokiri/Deku ownership from later upgrades.
+	// OoT swords, shields, tunics, and boots as individual booleans for upgrades
 	ootTunics := (oot.Equipment >> 8) & 0xF
+	ootBoots := (oot.Equipment >> 12) & 0xF
 	items = append(items, TrackedItem{"OOT_SWORD", int(oot.Equipment & 0xF)})
 	items = append(items, TrackedItem{"OOT_SHIELD", int((oot.Equipment >> 4) & 0xF)})
 	items = append(items, TrackedItem{"OOT_TUNIC", ootEquipmentLevel(ootTunics)})
 	items = append(items, TrackedItem{"OOT_TUNIC_GORON", boolToInt(ootTunics&0x2 != 0)})
 	items = append(items, TrackedItem{"OOT_TUNIC_ZORA", boolToInt(ootTunics&0x4 != 0)})
-	items = append(items, TrackedItem{"OOT_BOOTS", ootEquipmentLevel((oot.Equipment >> 12) & 0xF)})
+	// Send boots as individual booleans
+	items = append(items, TrackedItem{"OOT_BOOTS_IRON", boolToInt(ootBoots&0x2 != 0)})
+	items = append(items, TrackedItem{"OOT_BOOTS_HOVER", boolToInt(ootBoots&0x4 != 0)})
 
 	// Upgrades
 	items = append(items, TrackedItem{"OOT_QUIVER", GetUpgradeLevel(oot.Upgrades, 0, 3)})

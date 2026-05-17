@@ -95,8 +95,11 @@ func TestExtractItemsPublishesOotSwordAndShieldBitmasks(t *testing.T) {
 	if got := items["OOT_TUNIC_ZORA"]; got != 1 {
 		t.Fatalf("OOT_TUNIC_ZORA = %d, want 1", got)
 	}
-	if got := items["OOT_BOOTS"]; got != 1 {
-		t.Fatalf("OOT_BOOTS = %d, want 1", got)
+	if got := items["OOT_BOOTS_IRON"]; got != 1 {
+		t.Fatalf("OOT_BOOTS_IRON = %d, want 1", got)
+	}
+	if got := items["OOT_BOOTS_HOVER"]; got != 1 {
+		t.Fatalf("OOT_BOOTS_HOVER = %d, want 1", got)
 	}
 }
 
