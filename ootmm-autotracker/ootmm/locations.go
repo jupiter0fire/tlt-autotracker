@@ -49,6 +49,7 @@ type symbolLocationEntry struct {
 var (
 	checkNameTable         map[string]string
 	ootSceneConflictTable  map[string]sceneConflictEntry
+	fishCheckTables        map[string]map[int]string
 	npcCheckTables         map[string]map[int]string
 	gsCheckTables          map[string]map[int]string
 	xflagCheckTables       map[string]map[int]string
@@ -66,6 +67,7 @@ var embeddedLocations []byte
 func init() {
 	checkNameTable = map[string]string{}
 	ootSceneConflictTable = map[string]sceneConflictEntry{}
+	fishCheckTables = map[string]map[int]string{"OOT": {}}
 	npcCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
 	gsCheckTables = map[string]map[int]string{"OOT": {}}
 	xflagCheckTables = map[string]map[int]string{"OOT": {}, "MM": {}}
@@ -168,6 +170,8 @@ func init() {
 
 func tableForBitmapBlock(block string) map[int]string {
 	switch block {
+	case "caughtFishFlags":
+		return fishCheckTables["OOT"]
 	case "npcOot":
 		return npcCheckTables["OOT"]
 	case "npcMm":
@@ -234,6 +238,14 @@ func npcCheckName(game string, id int) (string, bool) {
 func npcSymbolCheckName(game string, symbol string) (string, bool) {
 	if gameTable, ok := npcSymbolTables[game]; ok {
 		name, ok := gameTable[symbol]
+		return name, ok
+	}
+	return "", false
+}
+
+func fishCheckName(game string, bitPos int) (string, bool) {
+	if gameTable, ok := fishCheckTables[game]; ok {
+		name, ok := gameTable[bitPos]
 		return name, ok
 	}
 	return "", false

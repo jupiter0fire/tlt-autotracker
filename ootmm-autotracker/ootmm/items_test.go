@@ -1346,6 +1346,65 @@ func TestGeneratedLocationsIncludeMmCowChecks(t *testing.T) {
 	}
 }
 
+func TestGeneratedLocationsIncludeOotFishingPondFishChecks(t *testing.T) {
+	if got := fishCheckTables["OOT"][0]; got != "Fishing Pond Child Fish 1" {
+		t.Fatalf("unexpected OoT fishing pond mapping for bit 0: got %q", got)
+	}
+	if got := fishCheckTables["OOT"][14]; got != "Fishing Pond Child Fish 15" {
+		t.Fatalf("unexpected OoT fishing pond mapping for bit 14: got %q", got)
+	}
+	if got := fishCheckTables["OOT"][17]; got != "Fishing Pond Adult Fish 1" {
+		t.Fatalf("unexpected OoT fishing pond mapping for bit 17: got %q", got)
+	}
+	if got := fishCheckTables["OOT"][31]; got != "Fishing Pond Adult Fish 15" {
+		t.Fatalf("unexpected OoT fishing pond mapping for bit 31: got %q", got)
+	}
+	if got := fishCheckTables["OOT"][32]; got != "Fishing Pond Adult Loach" {
+		t.Fatalf("unexpected OoT fishing pond mapping for bit 32: got %q", got)
+	}
+}
+
+func TestExtractChecksIncludesOotFishingPondFishChecks(t *testing.T) {
+	originalFish := fishCheckTables
+	fishCheckTables = map[string]map[int]string{
+		"OOT": {
+			0:  "Fishing Pond Child Fish 1",
+			31: "Fishing Pond Adult Fish 15",
+		},
+	}
+	t.Cleanup(func() {
+		fishCheckTables = originalFish
+	})
+
+	state := &GameState{}
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Fishing Pond Child Fish 1"]; ok {
+		t.Fatal("unexpected OoT fishing pond child fish check before fish flag is set")
+	}
+	if _, ok := checks["Fishing Pond Adult Fish 15"]; ok {
+		t.Fatal("unexpected OoT fishing pond adult fish check before fish flag is set")
+	}
+
+	state.Shared.SetBit("caughtFishFlags", 0)
+	state.Shared.SetBit("caughtFishFlags", 31)
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Fishing Pond Child Fish 1"]; !ok {
+		t.Fatal("missing OoT fishing pond child fish check after fish flag is set")
+	}
+	if _, ok := checks["Fishing Pond Adult Fish 15"]; !ok {
+		t.Fatal("missing OoT fishing pond adult fish check after fish flag is set")
+	}
+	if _, ok := checks["Fishing Pond Child"]; ok {
+		t.Fatal("unexpected generic Fishing Pond Child check from numbered fish flags")
+	}
+	if _, ok := checks["Fishing Pond Adult"]; ok {
+		t.Fatal("unexpected generic Fishing Pond Adult check from numbered fish flags")
+	}
+	if len(checks) != 2 {
+		t.Fatalf("unexpected OoT fishing pond fish check count: got %d, want 2", len(checks))
+	}
+}
+
 func TestExtractChecksFallsBackToStableKey(t *testing.T) {
 	original := checkNameTable
 	checkNameTable = map[string]string{}

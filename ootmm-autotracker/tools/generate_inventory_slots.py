@@ -108,6 +108,7 @@ SHARED_STORAGE = {
         {"name": "soulsAnimalMm", "offset": 0x7F1, "size": 2},
         {"name": "soulsMiscOot", "offset": 0x7F3, "size": 1},
         {"name": "soulsMiscMm", "offset": 0x7F4, "size": 1},
+        {"name": "caughtFishFlags", "offset": 0x81D, "size": 5},
         {"name": "progressiveFlags", "offset": 0x845, "size": 1},
     ],
 }

@@ -39,6 +39,7 @@ XFLAG_TYPES = {
 }
 
 BITMAP_SPECS = {
+    ("OOT", "fish"): "caughtFishFlags",
     ("OOT", "gs"): "gsOot",
     ("OOT", "npc"): "npcOot",
     ("MM", "npc"): "npcMm",

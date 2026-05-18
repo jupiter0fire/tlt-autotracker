@@ -1040,6 +1040,8 @@ func TestParseSharedStateReadsOcarinaButtonMasks(t *testing.T) {
 
 func TestParseSharedStateReadsCaughtFishWeights(t *testing.T) {
 	data := make([]byte, SharedCustomSaveSize)
+	data[sharedBitmaps["caughtFishFlags"].Offset] = 1 << 0
+	data[sharedBitmaps["caughtFishFlags"].Offset+4] = 1 << 0
 	data[sharedCaughtChildFishWeightOffset] = 2
 	data[sharedCaughtChildFishWeightOffset+1] = 7
 	data[sharedCaughtChildFishWeightOffset+2] = fishingPondLoachWeightMask | 19
@@ -1062,6 +1064,12 @@ func TestParseSharedStateReadsCaughtFishWeights(t *testing.T) {
 	}
 	if got := shared.CaughtAdultFishWeights[2]; got != fishingPondLoachWeightMask|36 {
 		t.Fatalf("CaughtAdultFishWeights[2] = %#x, want %#x", got, fishingPondLoachWeightMask|36)
+	}
+	if !bitmapHasBit(shared.Bitmap("caughtFishFlags"), 0) {
+		t.Fatal("missing child fishing pond flag bit 0")
+	}
+	if !bitmapHasBit(shared.Bitmap("caughtFishFlags"), 32) {
+		t.Fatal("missing adult fishing pond flag bit 32")
 	}
 }
 

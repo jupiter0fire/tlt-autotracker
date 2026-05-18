@@ -592,6 +592,8 @@ func sharedBitmapMeaning(name string) string {
 		return "OoT miscellaneous soul ownership bitmap."
 	case "soulsMiscMm":
 		return "MM miscellaneous soul ownership bitmap."
+	case "caughtFishFlags":
+		return "OoT fishing pond numbered-check bitmap for child/adult fish and loach catches."
 	default:
 		return "Shared bitmap stored in SharedCustomSave."
 	}

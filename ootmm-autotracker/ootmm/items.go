@@ -739,6 +739,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 
 	appendBitmapChecks(state.Shared.Bitmap("npcOot"), "OOT", "npc", npcCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("npcMm"), "MM", "npc", npcCheckName)
+	appendBitmapChecks(state.Shared.Bitmap("caughtFishFlags"), "OOT", "fish", fishCheckName)
 	appendOotGsChecks(state.Oot.GsFlags[:], &state.Oot, appendCheck)
 	appendOotXflagChecks(state.Shared.Bitmap("xflagsOot"), &state.Oot, appendCheck)
 	appendBitmapChecks(state.Shared.Bitmap("xflagsMm"), "MM", "xflag", xflagCheckName)

@@ -245,7 +245,7 @@ func shouldTrackCatalogItem(itemID string, source catalogItemSource) bool {
 func markSharedCheckBitmapsUsed(usedBits map[string]int, bitmaps map[string]sharedBitmapInfo) {
 	for name, bitmap := range bitmaps {
 		switch name {
-		case "xflagsOot", "npcOot", "shopsOot", "scrubsOot", "srOot", "xflagsMm", "npcMm", "shopsMm", "progressiveFlags":
+		case "xflagsOot", "npcOot", "shopsOot", "scrubsOot", "srOot", "xflagsMm", "npcMm", "shopsMm", "caughtFishFlags", "progressiveFlags":
 			usedBits[name] = bitmap.Size * 8
 		}
 	}

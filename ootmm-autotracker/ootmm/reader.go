@@ -51,6 +51,7 @@ var sharedCheckBitmapNames = [...]string{
 	"xflagsMm",
 	"npcMm",
 	"shopsMm",
+	"caughtFishFlags",
 	"progressiveFlags",
 }
 
