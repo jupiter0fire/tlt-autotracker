@@ -78,7 +78,7 @@ func TestExtractItemsTracksMmBottledGoldDustSeparately(t *testing.T) {
 
 func TestExtractItemsPublishesOotSwordAndShieldBitmasks(t *testing.T) {
 	state := &GameState{}
-	state.Oot.Equipment = 0x1537
+	state.Oot.Equipment = 0x6537
 
 	items := itemQtyMap(ExtractItems(state))
 
