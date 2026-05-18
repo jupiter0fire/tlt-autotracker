@@ -337,10 +337,9 @@ func parseOotSave(oot *OotState, data []byte) error {
 		off := OotOffPerm + i*OotPermEntrySize
 		oot.SceneFlags[i] = SceneFlags{
 			Chests:        binary.BigEndian.Uint32(data[off:]),
-			Switches:      binary.BigEndian.Uint32(data[off+4:]),
-			RoomClear:     binary.BigEndian.Uint32(data[off+8:]),
+			Switch0:       binary.BigEndian.Uint32(data[off+4:]),
+			ClearedRoom:   binary.BigEndian.Uint32(data[off+8:]),
 			Collectibles:  binary.BigEndian.Uint32(data[off+12:]),
-			Unused:        binary.BigEndian.Uint32(data[off+16:]),
 			VisitedRooms:  binary.BigEndian.Uint32(data[off+20:]),
 			VisitedFloors: binary.BigEndian.Uint32(data[off+24:]),
 		}
@@ -430,12 +429,12 @@ func parseMmSave(mm *MmState, data []byte) error {
 		}
 		mm.SceneFlags[i] = SceneFlags{
 			Chests:        binary.BigEndian.Uint32(data[off:]),
-			Switches:      binary.BigEndian.Uint32(data[off+4:]),
-			RoomClear:     binary.BigEndian.Uint32(data[off+8:]),
-			Collectibles:  binary.BigEndian.Uint32(data[off+12:]),
-			Unused:        binary.BigEndian.Uint32(data[off+16:]),
-			VisitedRooms:  binary.BigEndian.Uint32(data[off+20:]),
-			VisitedFloors: binary.BigEndian.Uint32(data[off+24:]),
+			Switch0:       binary.BigEndian.Uint32(data[off+4:]),
+			Switch1:       binary.BigEndian.Uint32(data[off+8:]),
+			ClearedRoom:   binary.BigEndian.Uint32(data[off+12:]),
+			Collectibles:  binary.BigEndian.Uint32(data[off+16:]),
+			VisitedFloors: binary.BigEndian.Uint32(data[off+20:]),
+			VisitedRooms:  binary.BigEndian.Uint32(data[off+24:]),
 		}
 	}
 
@@ -671,6 +670,8 @@ type mmPlayStateSample struct {
 	actorTotal     uint8
 	currentRoom    uint8
 	gameplayFrames uint32
+	switch0Flags   uint32
+	switch1Flags   uint32
 	chestFlags     uint32
 	collectFlags   uint32
 }
@@ -694,6 +695,8 @@ func (r *Reader) readMmLiveState(mm *MmState) {
 
 	mm.LiveSceneID = sample.sceneID
 	mm.LiveChestFlags = sample.chestFlags
+	mm.LiveSwitch0Flags = sample.switch0Flags
+	mm.LiveSwitch1Flags = sample.switch1Flags
 	mm.LiveCollectFlags = sample.collectFlags
 	mm.HasLiveSceneFlags = true
 }
@@ -736,6 +739,14 @@ func (r *Reader) readMmPlayStateSample(addr uint32) (mmPlayStateSample, error) {
 	if err != nil {
 		return mmPlayStateSample{}, err
 	}
+	switch0Flags, err := r.mem.ReadU32BE(addr + uint32(MmPlayOffSwitch0Flags))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
+	switch1Flags, err := r.mem.ReadU32BE(addr + uint32(MmPlayOffSwitch1Flags))
+	if err != nil {
+		return mmPlayStateSample{}, err
+	}
 	chestFlags, err := r.mem.ReadU32BE(addr + uint32(MmPlayOffChestFlags))
 	if err != nil {
 		return mmPlayStateSample{}, err
@@ -750,6 +761,8 @@ func (r *Reader) readMmPlayStateSample(addr uint32) (mmPlayStateSample, error) {
 		actorTotal:     actorTotal,
 		currentRoom:    currentRoom,
 		gameplayFrames: gameplayFrames,
+		switch0Flags:   switch0Flags,
+		switch1Flags:   switch1Flags,
 		chestFlags:     chestFlags,
 		collectFlags:   collectFlags,
 	}, nil

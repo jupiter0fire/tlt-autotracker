@@ -693,18 +693,24 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	}
 
 	// MM scene flag-based checks: merge permanent + cycle flags.
-	// In MM many collectibles only persist in cycle flags, so we OR
-	// both to catch checks that haven't been flushed to permanent yet.
+	// In MM many checks only persist in cycle flags or live scene switches,
+	// so we OR all available sources before looking up scene-backed checks.
 	for sceneIdx := 0; sceneIdx < MmPermCount; sceneIdx++ {
 		sf := &state.Mm.SceneFlags[sceneIdx]
 		chests := sf.Chests
+		switch0 := sf.Switch0
+		switch1 := sf.Switch1
 		collectibles := sf.Collectibles
 		if sceneIdx < len(state.Mm.CycleFlags) {
 			chests |= state.Mm.CycleFlags[sceneIdx].Chests
+			switch0 |= state.Mm.CycleFlags[sceneIdx].Switch0
+			switch1 |= state.Mm.CycleFlags[sceneIdx].Switch1
 			collectibles |= state.Mm.CycleFlags[sceneIdx].Collectibles
 		}
 		if state.Mm.HasLiveSceneFlags && sceneIdx == int(state.Mm.LiveSceneID) {
 			chests |= state.Mm.LiveChestFlags
+			switch0 |= state.Mm.LiveSwitch0Flags
+			switch1 |= state.Mm.LiveSwitch1Flags
 			collectibles |= state.Mm.LiveCollectFlags
 		}
 		for bit := 0; bit < 32; bit++ {
@@ -718,6 +724,16 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 			if collectibles&(1<<uint(bit)) != 0 {
 				if name, ok := lookupSceneCheckName("MM", sceneIdx, "collect", bit); ok {
 					appendCheck(mmSceneCheckID(sceneIdx, "collect", bit), name)
+				}
+			}
+			if switch0&(1<<uint(bit)) != 0 {
+				if name, ok := lookupSceneCheckName("MM", sceneIdx, "switch0", bit); ok {
+					appendCheck(mmSceneCheckID(sceneIdx, "switch0", bit), name)
+				}
+			}
+			if switch1&(1<<uint(bit)) != 0 {
+				if name, ok := lookupSceneCheckName("MM", sceneIdx, "switch1", bit); ok {
+					appendCheck(mmSceneCheckID(sceneIdx, "switch1", bit), name)
 				}
 			}
 		}

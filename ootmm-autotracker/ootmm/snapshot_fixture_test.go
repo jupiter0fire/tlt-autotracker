@@ -360,6 +360,63 @@ func TestSnapshotFixtureAnjuRoomKeyFallback(t *testing.T) {
 	}
 }
 
+func TestSnapshotFixtureWoodfallTempleFreestandingStrayFairy(t *testing.T) {
+	// The analyzed before/after fairy dumps do not serialize MM PlayState, so
+	// the live switch bit for this fairy is not replayable from a stable fixture.
+	// Regress the observed transition with a constructed live-state delta instead.
+	beforeState := &GameState{}
+	afterState := &GameState{}
+
+	const name = "Woodfall Temple SF Entrance"
+	key, ok := sceneKeyByName("MM", name)
+	if !ok {
+		t.Fatalf("missing generated scene mapping for %s", name)
+	}
+	kind, scene, bit := parseSceneCheckKey(t, key)
+	afterState.Mm.LiveSceneID = uint16(scene)
+	afterState.Mm.HasLiveSceneFlags = true
+	switch kind {
+	case "collect":
+		afterState.Mm.LiveCollectFlags = 1 << uint(bit)
+	case "switch0":
+		afterState.Mm.LiveSwitch0Flags = 1 << uint(bit)
+	case "switch1":
+		afterState.Mm.LiveSwitch1Flags = 1 << uint(bit)
+	default:
+		t.Fatalf("unexpected %s scene kind %q", name, kind)
+	}
+
+	beforeChecks := checkNameSet(ExtractChecks(beforeState))
+	afterChecks := checkNameSet(ExtractChecks(afterState))
+
+	if _, ok := beforeChecks[name]; ok {
+		t.Fatalf("unexpected %s check in before snapshot fixture", name)
+	}
+	if _, ok := afterChecks[name]; !ok {
+		t.Fatalf("missing %s check in after snapshot fixture", name)
+	}
+
+	newChecks := 0
+	for checkName := range afterChecks {
+		if _, ok := beforeChecks[checkName]; ok {
+			continue
+		}
+		newChecks++
+		if checkName != name {
+			t.Fatalf("unexpected new check in after Woodfall fairy snapshot fixture: %s", checkName)
+		}
+	}
+	if newChecks != 1 {
+		t.Fatalf("unexpected new check count across Woodfall fairy snapshot fixtures: got %d, want 1", newChecks)
+	}
+
+	for checkName := range beforeChecks {
+		if _, ok := afterChecks[checkName]; !ok {
+			t.Fatalf("unexpected removed check in after Woodfall fairy snapshot fixture: %s", checkName)
+		}
+	}
+}
+
 func TestSnapshotFixtureArcheryWeekEventFallback(t *testing.T) {
 	beforeState := loadSnapshotFixtureState(t, "before-archery-20260501-170932.json")
 	afterState := loadSnapshotFixtureState(t, "after-archery-20260501-171131.json")

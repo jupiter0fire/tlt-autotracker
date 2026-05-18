@@ -240,6 +240,41 @@ func TestParseMmSaveReadsTownStrayFairyWeekEvent(t *testing.T) {
 	}
 }
 
+func TestParseMmSaveReadsPermanentSceneSwitchAndCollectFlags(t *testing.T) {
+	data := make([]byte, MmSaveSize)
+	scene := 0x55
+	off := MmOffPermScenes + scene*MmPermEntrySize
+	binary.BigEndian.PutUint32(data[off:], 1<<1)
+	binary.BigEndian.PutUint32(data[off+4:], 1<<2)
+	binary.BigEndian.PutUint32(data[off+8:], 1<<3)
+	binary.BigEndian.PutUint32(data[off+12:], 1<<4)
+	binary.BigEndian.PutUint32(data[off+16:], 1<<5)
+	binary.BigEndian.PutUint32(data[off+20:], 1<<6)
+	binary.BigEndian.PutUint32(data[off+24:], 1<<7)
+
+	var mm MmState
+	if err := parseMmSave(&mm, data); err != nil {
+		t.Fatalf("parseMmSave: %v", err)
+	}
+
+	flags := mm.SceneFlags[scene]
+	if flags.Chests != 1<<1 {
+		t.Fatalf("MM chest flags = %#x, want %#x", flags.Chests, uint32(1<<1))
+	}
+	if flags.Switch0 != 1<<2 {
+		t.Fatalf("MM switch0 flags = %#x, want %#x", flags.Switch0, uint32(1<<2))
+	}
+	if flags.Switch1 != 1<<3 {
+		t.Fatalf("MM switch1 flags = %#x, want %#x", flags.Switch1, uint32(1<<3))
+	}
+	if flags.ClearedRoom != 1<<4 {
+		t.Fatalf("MM cleared room flags = %#x, want %#x", flags.ClearedRoom, uint32(1<<4))
+	}
+	if flags.Collectibles != 1<<5 {
+		t.Fatalf("MM collectible flags = %#x, want %#x", flags.Collectibles, uint32(1<<5))
+	}
+}
+
 func TestParseMmSaveReadsOwlActivationFlags(t *testing.T) {
 	data := make([]byte, MmSaveSize)
 	binary.BigEndian.PutUint16(data[MmOffOwlActivationFlags:], 1<<mmOwlClockTownBit)
@@ -702,6 +737,34 @@ func TestIsPlausibleOotPlayStateSample(t *testing.T) {
 	sample.actorTotal = 0
 	if isPlausibleOotPlayStateSample(sample) {
 		t.Fatal("expected sample with zero actors to fail plausibility")
+	}
+}
+
+func TestReadMmPlayStateSampleReadsSwitchFlags(t *testing.T) {
+	playState := make([]byte, MmPlayOffGameplayFrames+4)
+	binary.BigEndian.PutUint16(playState[MmPlayOffSceneID:], 0x55)
+	playState[MmPlayOffActorTotal] = 48
+	playState[MmPlayOffCurrentRoom] = 2
+	binary.BigEndian.PutUint32(playState[MmPlayOffGameplayFrames:], 1234)
+	binary.BigEndian.PutUint32(playState[MmPlayOffSwitch0Flags:], 1<<6)
+	binary.BigEndian.PutUint32(playState[MmPlayOffSwitch1Flags:], 1<<11)
+	binary.BigEndian.PutUint32(playState[MmPlayOffChestFlags:], 1<<3)
+	binary.BigEndian.PutUint32(playState[MmPlayOffCollectFlags:], 1<<9)
+
+	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: []snapshotFixtureRegion{{address: AddrMmPlayState1, data: playState}}})
+	mem.SetBaseShift(n64.VirtualBase)
+	mem.SetSwizzle(false)
+
+	r := NewReader(mem)
+	sample, err := r.readMmPlayStateSample(AddrMmPlayState1)
+	if err != nil {
+		t.Fatalf("readMmPlayStateSample: %v", err)
+	}
+	if sample.switch0Flags != 1<<6 {
+		t.Fatalf("MM live switch0 flags = %#x, want %#x", sample.switch0Flags, uint32(1<<6))
+	}
+	if sample.switch1Flags != 1<<11 {
+		t.Fatalf("MM live switch1 flags = %#x, want %#x", sample.switch1Flags, uint32(1<<11))
 	}
 }
 

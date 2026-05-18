@@ -159,6 +159,8 @@ type MmState struct {
 
 	LiveSceneID       uint16
 	LiveChestFlags    uint32
+	LiveSwitch0Flags  uint32
+	LiveSwitch1Flags  uint32
 	LiveCollectFlags  uint32
 	HasLiveSceneFlags bool
 
@@ -198,10 +200,10 @@ type MmState struct {
 // SceneFlags represents the permanent flags for a single scene.
 type SceneFlags struct {
 	Chests        uint32
-	Switches      uint32
-	RoomClear     uint32
+	Switch0       uint32
+	Switch1       uint32
+	ClearedRoom   uint32
 	Collectibles  uint32
-	Unused        uint32
 	VisitedRooms  uint32
 	VisitedFloors uint32
 }

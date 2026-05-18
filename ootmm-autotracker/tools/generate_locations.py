@@ -216,6 +216,7 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
     bitmap_checks_raw: dict[tuple[str, int], str] = {}
     bitmap_conflicts: set[tuple[str, int]] = set()
     bitmap_variant_candidates: dict[tuple[str, int], list[tuple[str, str]]] = defaultdict(list)
+    bitmap_priorities: dict[tuple[str, int], int] = {}
     symbol_checks_raw: dict[tuple[str, str], str] = {}
 
     for game, pool_name in (("OOT", "pool_oot.csv"), ("MM", "pool_mm.csv")):
@@ -259,6 +260,25 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     key = f"{game}_cow_{cow_bit}"
                     cow_variant_candidates[key].append((scene_name, location))
                     cow_checks_raw[key] = location
+                    continue
+
+                if game == "MM" and check_type == "sf":
+                    scene_id = scenes.get(f"{game}_{scene_name}")
+                    if scene_id is None:
+                        continue
+                    try:
+                        raw_id = int(value, 0)
+                    except ValueError:
+                        continue
+                    if raw_id >= 0x30:
+                        scene_kind = "collect"
+                    elif raw_id >= 0x20:
+                        scene_kind = "switch1"
+                    else:
+                        scene_kind = "switch0"
+                    bit = raw_id & 0x1F
+                    key = scene_check_key(game, scene_id, scene_kind, bit)
+                    add_unique_mapping(scene_checks_raw, scene_conflicts, key, location)
                     continue
 
                 bitmap_block = BITMAP_SPECS.get((game, check_type))
@@ -307,7 +327,8 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                 block = "xflagsOot" if game == "OOT" else "xflagsMm"
                 if game == "OOT":
                     bitmap_variant_candidates[(block, bit_pos)].append((scene_name, location))
-                add_unique_mapping(bitmap_checks_raw, bitmap_conflicts, (block, bit_pos), location)
+                key = (block, bit_pos)
+                add_unique_mapping(bitmap_checks_raw, bitmap_conflicts, key, location)
 
     all_scene_checks_raw: dict[str, str] = {**scene_checks_raw, **cow_checks_raw}
     all_scene_conflicts = set(scene_conflicts)

@@ -239,6 +239,8 @@ const (
 	//     clearedRoomTemp +0x18, collectible[4] +0x1C
 	MmPlayOffSceneID        = 0x00A4
 	MmPlayOffActorTotal     = 0x1CAE // actorCtx + 0x0E (totalLoadedActors)
+	MmPlayOffSwitch0Flags   = 0x1E58 // actorCtx + 0x1B8 (sceneFlags.switches[0])
+	MmPlayOffSwitch1Flags   = 0x1E5C // actorCtx + 0x1BC (sceneFlags.switches[1])
 	MmPlayOffChestFlags     = 0x1E68 // actorCtx + 0x1C8 (sceneFlags.chest)
 	MmPlayOffCollectFlags   = 0x1E74 // actorCtx + 0x1D4 (sceneFlags.collectible[0])
 	MmPlayOffCurrentRoom    = 0x186E0

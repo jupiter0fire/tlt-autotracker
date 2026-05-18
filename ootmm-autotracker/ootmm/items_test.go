@@ -2,6 +2,8 @@ package ootmm
 
 import (
 	"encoding/binary"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -105,11 +107,11 @@ func TestExtractItemsPublishesOotSwordAndShieldBitmasks(t *testing.T) {
 
 func TestExtractItemsPublishesOotIndividualTunics(t *testing.T) {
 	tests := []struct {
-		name          string
-		tunicMask      uint16
-		wantCombined   int
-		wantGoron      int
-		wantZora       int
+		name         string
+		tunicMask    uint16
+		wantCombined int
+		wantGoron    int
+		wantZora     int
 	}{
 		{name: "kokiri only", tunicMask: 0x1, wantCombined: 1, wantGoron: 0, wantZora: 0},
 		{name: "goron only", tunicMask: 0x3, wantCombined: 2, wantGoron: 1, wantZora: 0},
@@ -1459,6 +1461,69 @@ func TestExtractChecksIncludesXflagBitmapChecks(t *testing.T) {
 	}
 }
 
+func TestGeneratedLocationsIncludeMmFreestandingStrayFairyChecks(t *testing.T) {
+	expected := []string{
+		"Woodfall Temple SF Entrance",
+		"Woodfall Temple SF Main Pot",
+		"Woodfall Temple SF Main Deku Baba",
+		"Woodfall Temple SF Main Bubble",
+		"Woodfall Temple SF Maze Skulltula",
+		"Woodfall Temple SF Maze Beehive",
+		"Woodfall Temple SF Maze Bubble",
+		"Woodfall Temple SF Water Room Beehive",
+		"Woodfall Temple SF Pre-Boss Bottom Right",
+		"Woodfall Temple SF Pre-Boss Left",
+		"Woodfall Temple SF Pre-Boss Top Right",
+		"Woodfall Temple SF Pre-Boss Pillar",
+		"Snowhead Temple SF Bridge Under Platform",
+		"Snowhead Temple SF Bridge Pillar",
+		"Snowhead Temple SF Map Room",
+		"Snowhead Temple SF Compass Room Crate",
+		"Snowhead Temple SF Dual Switches",
+		"Snowhead Temple SF Snow Room",
+		"Snowhead Temple SF Dinolfos 1",
+		"Snowhead Temple SF Dinolfos 2",
+		"Great Bay Temple SF Water Wheel Platform",
+		"Great Bay Temple SF Water Wheel Skulltula",
+		"Great Bay Temple SF Central Room Barrel",
+		"Great Bay Temple SF Central Room Underwater Pot",
+		"Great Bay Temple SF Map Room Pot",
+		"Great Bay Temple SF Compass Room Pot",
+		"Great Bay Temple SF Green Pipe 3 Barrel",
+		"Great Bay Temple SF Pre-Boss Above Water",
+		"Great Bay Temple SF Pre-Boss Underwater",
+	}
+
+	state := &GameState{}
+	for _, name := range expected {
+		key, ok := sceneKeyByName("MM", name)
+		if !ok {
+			t.Fatalf("missing MM freestanding stray fairy mapping for %q", name)
+		}
+		kind, scene, bit := parseSceneCheckKey(t, key)
+		switch kind {
+		case "collect":
+			state.Mm.SceneFlags[scene].Collectibles |= 1 << uint(bit)
+		case "switch0":
+			state.Mm.SceneFlags[scene].Switch0 |= 1 << uint(bit)
+		case "switch1":
+			state.Mm.SceneFlags[scene].Switch1 |= 1 << uint(bit)
+		default:
+			t.Fatalf("unexpected MM freestanding stray fairy kind %q for %q", kind, name)
+		}
+	}
+
+	checks := checkNameSet(ExtractChecks(state))
+	for _, name := range expected {
+		if _, ok := checks[name]; !ok {
+			t.Fatalf("missing MM freestanding stray fairy check %q from extracted checks", name)
+		}
+	}
+	if len(checks) != len(expected) {
+		t.Fatalf("unexpected extracted MM freestanding stray fairy check count: got %d, want %d", len(checks), len(expected))
+	}
+}
+
 func TestExtractChecksMapsMmExtraBossItemsToTempleBossChecks(t *testing.T) {
 	state := &GameState{}
 	state.Oot.ExtraRecords[ExtraIdxMmBoss] = mmExtraBossItemsRecord(0x02)
@@ -1509,14 +1574,14 @@ func TestExtractChecksIncludesOotBossChecksFromBossEvents(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
-			"BLUE_WARP_GOHMA": "Deku Tree Boss",
-			"BLUE_WARP_KING_DODONGO": "Dodongo Cavern Boss",
-			"BLUE_WARP_BARINADE": "Jabu-Jabu Boss",
+			"BLUE_WARP_GOHMA":         "Deku Tree Boss",
+			"BLUE_WARP_KING_DODONGO":  "Dodongo Cavern Boss",
+			"BLUE_WARP_BARINADE":      "Jabu-Jabu Boss",
 			"BLUE_WARP_PHANTOM_GANON": "Forest Temple Boss",
-			"BLUE_WARP_VOLVAGIA": "Fire Temple Boss",
-			"BLUE_WARP_MORPHA": "Water Temple Boss",
-			"BLUE_WARP_BONGO_BONGO": "Shadow Temple Boss",
-			"BLUE_WARP_TWINROVA": "Spirit Temple Boss",
+			"BLUE_WARP_VOLVAGIA":      "Fire Temple Boss",
+			"BLUE_WARP_MORPHA":        "Water Temple Boss",
+			"BLUE_WARP_BONGO_BONGO":   "Shadow Temple Boss",
+			"BLUE_WARP_TWINROVA":      "Spirit Temple Boss",
 		},
 		"MM": {},
 	}
@@ -2653,25 +2718,25 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
-			"ANJU_BOTTLE":         "Kakariko Anju Bottle",
-			"BOMBCHU_BOWLING_1":   "Bombchu Bowling Reward 1",
-			"BOMBCHU_BOWLING_2":   "Bombchu Bowling Reward 2",
-			"DARUNIA_BRACELET":    "Darunia",
-			"GERUDO_ARCHERY_2":    "Gerudo Fortress Archery Reward 2",
-			"KAKARIKO_ROOF_MAN":   "Kakariko Man on Roof",
-			"LABORATORY_DIVE":     "Laboratory Dive",
+			"ANJU_BOTTLE":          "Kakariko Anju Bottle",
+			"BOMBCHU_BOWLING_1":    "Bombchu Bowling Reward 1",
+			"BOMBCHU_BOWLING_2":    "Bombchu Bowling Reward 2",
+			"DARUNIA_BRACELET":     "Darunia",
+			"GERUDO_ARCHERY_2":     "Gerudo Fortress Archery Reward 2",
+			"KAKARIKO_ROOF_MAN":    "Kakariko Man on Roof",
+			"LABORATORY_DIVE":      "Laboratory Dive",
 			"LOST_WOODS_SKULL_KID": "Lost Woods Skull Kid",
-			"LOST_WOODS_MEMORY":   "Lost Woods Memory Game",
-			"LOST_WOODS_TARGET":   "Lost Woods Target",
-			"THEATER_NUTS":        "Deku Theater Nuts Upgrade",
-			"THEATER_STICKS":      "Deku Theater Sticks Upgrade",
-			"TALON_BOTTLE":        "Lon Lon Ranch Talon Bottle",
-			"SHOOTING_GAME_ADULT": "Shooting Gallery Adult",
-			"SHOOTING_GAME_CHILD": "Shooting Gallery Child",
-			"MASK_SELL_BUNNY":     "Hyrule Field Sell Bunny Mask",
-			"MASK_SELL_KEATON":    "Kakariko Sell Keaton Mask",
-			"MASK_SELL_SKULL":     "Lost Woods Sell Skull Mask",
-			"MASK_SELL_SPOOKY":    "Graveyard Sell Spooky Mask",
+			"LOST_WOODS_MEMORY":    "Lost Woods Memory Game",
+			"LOST_WOODS_TARGET":    "Lost Woods Target",
+			"THEATER_NUTS":         "Deku Theater Nuts Upgrade",
+			"THEATER_STICKS":       "Deku Theater Sticks Upgrade",
+			"TALON_BOTTLE":         "Lon Lon Ranch Talon Bottle",
+			"SHOOTING_GAME_ADULT":  "Shooting Gallery Adult",
+			"SHOOTING_GAME_CHILD":  "Shooting Gallery Child",
+			"MASK_SELL_BUNNY":      "Hyrule Field Sell Bunny Mask",
+			"MASK_SELL_KEATON":     "Kakariko Sell Keaton Mask",
+			"MASK_SELL_SKULL":      "Lost Woods Sell Skull Mask",
+			"MASK_SELL_SPOOKY":     "Graveyard Sell Spooky Mask",
 		},
 		"MM": {},
 	}
@@ -2694,11 +2759,11 @@ func TestExtractChecksIncludesOotEventItemSymbolFallbacks(t *testing.T) {
 			(1 << (ootEventItemBombchuBowling2 & 0xF))
 	state.Oot.EventsItem[ootEventItemKakarikoRoofMan>>4] |=
 		(1 << (ootEventItemKakarikoRoofMan & 0xF)) |
-		(1 << (0x16 & 0xF))
+			(1 << (0x16 & 0xF))
 	state.Oot.EventsItem[ootEventItemLostWoodsTarget>>4] |=
 		(1 << (ootEventItemLostWoodsTarget & 0xF)) |
-		(1 << (0x1E & 0xF)) |
-		(1 << (0x1F & 0xF))
+			(1 << (0x1E & 0xF)) |
+			(1 << (0x1F & 0xF))
 	state.Oot.EventsItem[ootEventItemGoronBracelet>>4] = 1 << (ootEventItemGoronBracelet & 0xF)
 	state.Oot.EventsItem[ootEventItemMaskSellKeaton>>4] =
 		(1 << (ootEventItemMaskSellKeaton & 0xF)) |
@@ -3454,8 +3519,8 @@ func TestExtractChecksPreservesGroupedOotSymbolCheckKeys(t *testing.T) {
 	originalSymbols := npcSymbolTables
 	npcSymbolTables = map[string]map[string]string{
 		"OOT": {
-			"FIRE_ARROW":       "Lake Hylia Fire Arrow",
-			"ZELDA_LETTER":     "Zelda's Letter",
+			"FIRE_ARROW":   "Lake Hylia Fire Arrow",
+			"ZELDA_LETTER": "Zelda's Letter",
 		},
 		"MM": {},
 	}
@@ -3703,6 +3768,34 @@ func checkKeyByName(checks []TrackedCheck, name string) (string, bool) {
 	return "", false
 }
 
+func sceneKeyByName(game string, name string) (string, bool) {
+	prefix := game + "_"
+	for key, checkName := range checkNameTable {
+		if checkName == name && strings.HasPrefix(key, prefix) {
+			return key, true
+		}
+	}
+	return "", false
+}
+
+func parseSceneCheckKey(t *testing.T, key string) (string, int, int) {
+	t.Helper()
+
+	parts := strings.Split(key, "_")
+	if len(parts) != 4 {
+		t.Fatalf("unexpected scene check key format %q", key)
+	}
+	scene, err := strconv.Atoi(parts[2])
+	if err != nil {
+		t.Fatalf("parse scene id from %q: %v", key, err)
+	}
+	bit, err := strconv.Atoi(parts[3])
+	if err != nil {
+		t.Fatalf("parse bit from %q: %v", key, err)
+	}
+	return parts[1], scene, bit
+}
+
 func mmExtraBossItemsRecord(items uint8) uint32 {
 	return uint32(items) << 8
 }
@@ -3785,6 +3878,27 @@ func TestExtractChecksIncludesLiveMmCollectibleFlags(t *testing.T) {
 	checks := checkNameSet(ExtractChecks(state))
 	if _, ok := checks["Clock Town Platform HP"]; !ok {
 		t.Fatal("missing Clock Town Platform HP from MM live collectible flags")
+	}
+}
+
+func TestExtractChecksIncludesLiveMmStrayFairySwitchFlags(t *testing.T) {
+	key, ok := sceneKeyByName("MM", "Woodfall Temple SF Entrance")
+	if !ok {
+		t.Fatal("missing generated scene mapping for Woodfall Temple SF Entrance")
+	}
+	kind, scene, bit := parseSceneCheckKey(t, key)
+	if kind != "switch1" {
+		t.Fatalf("Woodfall Temple SF Entrance kind = %q, want switch1", kind)
+	}
+
+	state := &GameState{}
+	state.Mm.LiveSceneID = uint16(scene)
+	state.Mm.LiveSwitch1Flags = 1 << uint(bit)
+	state.Mm.HasLiveSceneFlags = true
+
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Woodfall Temple SF Entrance"]; !ok {
+		t.Fatal("missing Woodfall Temple SF Entrance from MM live switch flags")
 	}
 }
 
