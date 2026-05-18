@@ -1311,6 +1311,41 @@ func TestExtractChecksResolvesDodongoCompassChestSceneConflict(t *testing.T) {
 	}
 }
 
+func TestExtractChecksIncludesMmCowChecks(t *testing.T) {
+	original := checkNameTable
+	checkNameTable = map[string]string{
+		"MM_cow_19": "Termina Field Cow Front",
+		"MM_cow_20": "Termina Field Cow Back",
+	}
+	t.Cleanup(func() {
+		checkNameTable = original
+	})
+
+	state := &GameState{}
+	checks := checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Termina Field Cow Front"]; ok {
+		t.Fatal("unexpected MM cow check before cow flag is set")
+	}
+
+	state.Oot.ExtraRecords[ExtraIdxCowFlags] = 1 << 0x13
+	checks = checkNameSet(ExtractChecks(state))
+	if _, ok := checks["Termina Field Cow Front"]; !ok {
+		t.Fatal("missing MM cow check after cow flag is set")
+	}
+	if _, ok := checks["Termina Field Cow Back"]; ok {
+		t.Fatal("unexpected second MM cow check from a single cow flag")
+	}
+}
+
+func TestGeneratedLocationsIncludeMmCowChecks(t *testing.T) {
+	if got := checkNameTable["MM_cow_19"]; got != "Termina Field Cow Front" {
+		t.Fatalf("unexpected MM cow mapping for bit 0x13: got %q", got)
+	}
+	if got := checkNameTable["MM_cow_20"]; got != "Termina Field Cow Back" {
+		t.Fatalf("unexpected MM cow mapping for bit 0x14: got %q", got)
+	}
+}
+
 func TestExtractChecksFallsBackToStableKey(t *testing.T) {
 	original := checkNameTable
 	checkNameTable = map[string]string{}

@@ -249,15 +249,13 @@ def build_location_mapping(repo_root: pathlib.Path) -> dict[str, object]:
                     continue
 
                 if check_type == "cow":
-                    if game != "OOT":
-                        continue
                     try:
                         cow_bit = int(value, 0)
                     except ValueError:
                         continue
-                    if cow_bit < 0 or cow_bit > 8:
+                    if cow_bit < 0 or cow_bit >= 32:
                         continue
-                    key = f"OOT_cow_{cow_bit}"
+                    key = f"{game}_cow_{cow_bit}"
                     cow_variant_candidates[key].append((scene_name, location))
                     cow_checks_raw[key] = location
                     continue

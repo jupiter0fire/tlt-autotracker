@@ -746,7 +746,7 @@ func ExtractChecks(state *GameState) []TrackedCheck {
 	appendBitmapChecks(state.Shared.Bitmap("shopsMm"), "MM", "shop", shopCheckName)
 	appendBitmapChecks(state.Shared.Bitmap("scrubsOot"), "OOT", "scrub", scrubCheckName)
 	appendOotSilverRupeeChecks(state.Shared.Bitmap("srOot"), &state.Oot, appendCheck)
-	appendOotCowChecks(state.Oot.ExtraRecords[ExtraIdxCowFlags], appendCheck)
+	appendCowChecks(state.Oot.ExtraRecords[ExtraIdxCowFlags], appendCheck)
 
 	appendOotSymbolChecks(state, ootSymbolChecks, appendCheck)
 	appendOotAdultTradeConsumptionFallbacks(state, appendCheck)
@@ -977,14 +977,18 @@ func appendOotXflagChecks(bitmap []uint8, oot *OotState, appendCheck func(string
 	}
 }
 
-func appendOotCowChecks(cowFlags uint32, appendCheck func(string, string)) {
+func appendCowChecks(cowFlags uint32, appendCheck func(string, string)) {
 	for bit := 0; bit < 32; bit++ {
 		if cowFlags&(1<<uint(bit)) == 0 {
 			continue
 		}
-		key := "OOT_cow_" + itoa(bit)
-		if name, ok := checkNameTable[key]; ok {
-			appendCheck(key, name)
+		ootKey := "OOT_cow_" + itoa(bit)
+		if name, ok := checkNameTable[ootKey]; ok {
+			appendCheck(ootKey, name)
+		}
+		mmKey := "MM_cow_" + itoa(bit)
+		if name, ok := checkNameTable[mmKey]; ok {
+			appendCheck(mmKey, name)
 		}
 	}
 }
