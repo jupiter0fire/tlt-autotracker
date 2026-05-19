@@ -13,6 +13,12 @@ def parse_args() -> argparse.Namespace:
 	parser = argparse.ArgumentParser(description="Debug the OoTMM autotracker WebSocket stream.")
 	parser.add_argument("--url", default="ws://127.0.0.1:17026/", help="WebSocket URL")
 	parser.add_argument(
+		"--protocol",
+		choices=("auto", "legacy", "raw"),
+		default="auto",
+		help="Handshake protocol override. 'auto' leaves mode selection to the advertised features.",
+	)
+	parser.add_argument(
 		"--features",
 		default="items,checks,gps",
 		help="Comma-separated feature list to advertise in the handshake",
@@ -34,6 +40,34 @@ def parse_args() -> argparse.Namespace:
 		help="Stop after N seconds; 0 waits forever",
 	)
 	return parser.parse_args()
+
+
+def format_raw_snapshot(payload: dict[str, Any]) -> str:
+	chunk_entries = payload.get("chunks", [])
+	if not isinstance(chunk_entries, list):
+		return "raw snapshot with invalid chunks payload"
+
+	total_length = 0
+	chunk_names: list[str] = []
+	for entry in chunk_entries:
+		if not isinstance(entry, dict):
+			continue
+		name = entry.get("name")
+		length = entry.get("length")
+		if isinstance(name, str):
+			chunk_names.append(name)
+		if isinstance(length, int):
+			total_length += length
+
+	preview = ", ".join(chunk_names[:4]) if chunk_names else "no chunks"
+	if len(chunk_names) > 4:
+		preview = f"{preview}, +{len(chunk_names) - 4} more"
+
+	return (
+		f"raw seq={payload.get('sequence')} game={payload.get('game')} "
+		f"saveIndex={payload.get('saveIndex')} chunks={len(chunk_names)} "
+		f"bytes={total_length} [{preview}]"
+	)
 
 
 def format_inventory(items: dict[str, int]) -> str:
@@ -164,6 +198,8 @@ async def recv_loop(ws: websockets.ClientConnection, raw: bool) -> None:
 			print(
 				f"[{now}] location refresh={refresh} game={payload.get('game')} scene=0x{int(payload.get('sceneId', 0)):02X}"
 			)
+		elif msg_type == "raw":
+			print(f"[{now}] {format_raw_snapshot(payload)}")
 		else:
 			print(f"[{now}] {msg_type} refresh={refresh} payload={payload}")
 
@@ -178,6 +214,8 @@ async def main() -> None:
 			"features": features,
 			"flags": {},
 		}
+		if args.protocol != "auto":
+			handshake["flags"]["protocol"] = args.protocol
 		await ws.send(json.dumps(handshake))
 		print(f"sent handshake: {handshake}")
 

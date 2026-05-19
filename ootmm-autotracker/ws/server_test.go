@@ -1,8 +1,9 @@
 package ws
 
 import (
-	"errors"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,8 @@ func TestBroadcastDeltaSendsLocationBeforeItems(t *testing.T) {
 		t.Fatalf("dial websocket: %v", err)
 	}
 	defer conn.Close()
+
+	waitForClientCount(t, server, 1)
 
 	server.BroadcastDelta(
 		ootmm.GameOot,
@@ -126,6 +129,181 @@ func TestPendingFullSyncClientGetsInitialInventoryInsteadOfDelta(t *testing.T) {
 	if got := second["refresh"]; got != true {
 		t.Fatalf("second refresh = %v, want true", got)
 	}
+
+	expectNoMessage(t, conn)
+}
+
+func TestRawHandshakeSelectsRawModeAndPreservesBase64ChunkOrder(t *testing.T) {
+	server := NewServer(":0")
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(map[string]interface{}{
+		"type":     "handshake",
+		"features": []string{"raw"},
+		"flags":    map[string]interface{}{},
+	}); err != nil {
+		t.Fatalf("write handshake: %v", err)
+	}
+
+	ack := readJSONMessage(t, conn)
+	if got := ack["type"]; got != "handshAck" {
+		t.Fatalf("ack type = %v, want handshAck", got)
+	}
+	if got := ack["mode"]; got != "raw" {
+		t.Fatalf("ack mode = %v, want raw", got)
+	}
+
+	server.BroadcastRawSnapshot(&ootmm.RawFrame{
+		Valid:      true,
+		ActiveGame: ootmm.GameMm,
+		SaveIndex:  2,
+		Chunks: []ootmm.RawChunk{
+			{Name: "combo_ctx_oot", Address: 0x80006584, Length: 4, Data: []byte{0x00, 0x01, 0x02, 0x03}},
+			{Name: "oot_save_ctx", Address: 0x8011A5D0, Length: 3, Data: []byte{0xFA, 0x00, 0xBC}},
+		},
+	})
+
+	msg := readJSONMessage(t, conn)
+	if got := msg["type"]; got != "raw" {
+		t.Fatalf("message type = %v, want raw", got)
+	}
+	if got := msg["schemaVersion"]; got != rawSchemaVersion {
+		t.Fatalf("schemaVersion = %v, want %s", got, rawSchemaVersion)
+	}
+	if got := msg["diff"]; got != false {
+		t.Fatalf("diff = %v, want false", got)
+	}
+	if got := msg["refresh"]; got != true {
+		t.Fatalf("refresh = %v, want true", got)
+	}
+	if got := msg["sequence"]; got != float64(1) {
+		t.Fatalf("sequence = %v, want 1", got)
+	}
+	if got := msg["game"]; got != "MM" {
+		t.Fatalf("game = %v, want MM", got)
+	}
+	if got := msg["saveIndex"]; got != float64(2) {
+		t.Fatalf("saveIndex = %v, want 2", got)
+	}
+
+	chunks, ok := msg["chunks"].([]interface{})
+	if !ok || len(chunks) != 2 {
+		t.Fatalf("chunks = %T %#v, want 2 entries", msg["chunks"], msg["chunks"])
+	}
+
+	first, ok := chunks[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("first chunk = %T, want object", chunks[0])
+	}
+	if got := first["name"]; got != "combo_ctx_oot" {
+		t.Fatalf("first chunk name = %v, want combo_ctx_oot", got)
+	}
+	if got := first["address"]; got != float64(0x80006584) {
+		t.Fatalf("first chunk address = %v, want %#x", got, 0x80006584)
+	}
+	if got := first["length"]; got != float64(4) {
+		t.Fatalf("first chunk length = %v, want 4", got)
+	}
+	firstData, ok := first["data"].(string)
+	if !ok {
+		t.Fatalf("first chunk data = %T, want string", first["data"])
+	}
+	decodedFirst, err := base64.StdEncoding.DecodeString(firstData)
+	if err != nil {
+		t.Fatalf("decode first chunk data: %v", err)
+	}
+	if string(decodedFirst) != string([]byte{0x00, 0x01, 0x02, 0x03}) {
+		t.Fatalf("decoded first chunk = % x, want 00 01 02 03", decodedFirst)
+	}
+
+	second, ok := chunks[1].(map[string]interface{})
+	if !ok {
+		t.Fatalf("second chunk = %T, want object", chunks[1])
+	}
+	if got := second["name"]; got != "oot_save_ctx" {
+		t.Fatalf("second chunk name = %v, want oot_save_ctx", got)
+	}
+	secondData, ok := second["data"].(string)
+	if !ok {
+		t.Fatalf("second chunk data = %T, want string", second["data"])
+	}
+	decodedSecond, err := base64.StdEncoding.DecodeString(secondData)
+	if err != nil {
+		t.Fatalf("decode second chunk data: %v", err)
+	}
+	if string(decodedSecond) != string([]byte{0xFA, 0x00, 0xBC}) {
+		t.Fatalf("decoded second chunk = % x, want fa 00 bc", decodedSecond)
+	}
+}
+
+func TestRawClientDoesNotReceiveLegacyDelta(t *testing.T) {
+	server := NewServer(":0")
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(map[string]interface{}{
+		"type":     "handshake",
+		"features": []string{"raw"},
+		"flags":    map[string]interface{}{},
+	}); err != nil {
+		t.Fatalf("write handshake: %v", err)
+	}
+	ack := readJSONMessage(t, conn)
+	if got := ack["type"]; got != "handshAck" {
+		t.Fatalf("ack type = %v, want handshAck", got)
+	}
+
+	server.BroadcastDelta(
+		ootmm.GameOot,
+		0x10,
+		true,
+		[]tracker.ItemDiff{{ID: "OOT_SWORD", Qty: 1}},
+		nil,
+	)
+
+	expectNoMessage(t, conn)
+}
+
+func TestLegacyClientDoesNotReceiveRawSnapshots(t *testing.T) {
+	server := NewServer(":0")
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	waitForClientCount(t, server, 1)
+
+	server.BroadcastRawSnapshot(&ootmm.RawFrame{
+		Valid:      true,
+		ActiveGame: ootmm.GameOot,
+		SaveIndex:  1,
+		Chunks: []ootmm.RawChunk{{
+			Name:    "combo_ctx_oot",
+			Address: 0x80006584,
+			Length:  2,
+			Data:    []byte{0xAA, 0x55},
+		}},
+	})
 
 	expectNoMessage(t, conn)
 }
