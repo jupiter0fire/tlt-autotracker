@@ -1,10 +1,38 @@
 package ootmm
 
 import (
+	"fmt"
 	"testing"
 
 	"ootmm-autotracker/n64"
 )
+
+type snapshotFixtureRegion struct {
+	address uint32
+	data    []byte
+}
+
+type snapshotFixtureCoreReader struct {
+	regions []snapshotFixtureRegion
+}
+
+func (s *snapshotFixtureCoreReader) ReadMemory(addr uint32, size int) ([]byte, error) {
+	return s.ReadMemoryLarge(addr, size)
+}
+
+func (s *snapshotFixtureCoreReader) ReadMemoryLarge(addr uint32, size int) ([]byte, error) {
+	for _, region := range s.regions {
+		if addr < region.address {
+			continue
+		}
+		offset := int(addr - region.address)
+		if offset < 0 || offset+size > len(region.data) {
+			continue
+		}
+		return region.data[offset : offset+size], nil
+	}
+	return nil, fmt.Errorf("addr %#x size %d not found", addr, size)
+}
 
 func TestReadRawFrameForStableStateExportsNamedChunks(t *testing.T) {
 	regions := []snapshotFixtureRegion{
