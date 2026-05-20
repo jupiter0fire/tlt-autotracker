@@ -55,6 +55,18 @@ type clientState struct {
 	conn      *websocket.Conn
 	wantsFull bool
 	mode      ProtocolMode
+	rawMemory rawMemoryAreaSelection
+}
+
+type rawMemoryAreasMessage struct {
+	Oot []string `json:"oot"`
+	Mm  []string `json:"mm"`
+}
+
+type rawMemoryAreaSelection struct {
+	hasRequest bool
+	oot        map[string]struct{}
+	mm         map[string]struct{}
 }
 
 func NewServer(addr string, options ...Options) *Server {
@@ -126,9 +138,10 @@ func (s *Server) readLoop(conn *websocket.Conn) {
 		}
 
 		var envelope struct {
-			Type     string                 `json:"type"`
-			Features []string               `json:"features"`
-			Flags    map[string]interface{} `json:"flags"`
+			Type        string                  `json:"type"`
+			Features    []string                `json:"features"`
+			Flags       map[string]interface{}  `json:"flags"`
+			MemoryAreas *rawMemoryAreasMessage `json:"memoryAreas"`
 		}
 		if err := json.Unmarshal(msg, &envelope); err != nil {
 			continue
@@ -146,6 +159,7 @@ func (s *Server) readLoop(conn *websocket.Conn) {
 				return
 			}
 			s.setClientMode(conn, mode)
+			s.setClientRawMemoryAreas(conn, envelope.MemoryAreas)
 			s.markClientForFullSync(conn)
 
 			ack := HandshakeAckMessage{
@@ -208,6 +222,70 @@ func stringFlag(flags map[string]interface{}, key string) (string, bool) {
 	return trimmed, true
 }
 
+func normalizeRawMemoryAreaNames(names []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
+			continue
+		}
+		set[trimmed] = struct{}{}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return set
+}
+
+func normalizeRawMemoryAreas(request *rawMemoryAreasMessage) rawMemoryAreaSelection {
+	if request == nil {
+		return rawMemoryAreaSelection{}
+	}
+
+	return rawMemoryAreaSelection{
+		hasRequest: true,
+		oot:        normalizeRawMemoryAreaNames(request.Oot),
+		mm:         normalizeRawMemoryAreaNames(request.Mm),
+	}
+}
+
+func (selection rawMemoryAreaSelection) requestedNamesForGame(game ootmm.ActiveGame) (map[string]struct{}, bool) {
+	if !selection.hasRequest {
+		return nil, false
+	}
+
+	switch game {
+	case ootmm.GameOot:
+		return selection.oot, true
+	case ootmm.GameMm:
+		return selection.mm, true
+	default:
+		return nil, false
+	}
+}
+
+func filterRawChunksForGame(
+	chunks []ootmm.RawChunk,
+	selection rawMemoryAreaSelection,
+	game ootmm.ActiveGame,
+) []ootmm.RawChunk {
+	requestedNames, filtered := selection.requestedNamesForGame(game)
+	if !filtered {
+		return chunks
+	}
+	if len(requestedNames) == 0 {
+		return nil
+	}
+
+	result := make([]ootmm.RawChunk, 0, len(chunks))
+	for _, chunk := range chunks {
+		if _, ok := requestedNames[chunk.Name]; ok {
+			result = append(result, chunk)
+		}
+	}
+	return result
+}
+
 func supportedFeatures(mode ProtocolMode) []string {
 	if mode == ProtocolModeRaw {
 		return []string{"raw"}
@@ -224,6 +302,17 @@ func (s *Server) setClientMode(conn *websocket.Conn, mode ProtocolMode) {
 		return
 	}
 	client.mode = mode
+}
+
+func (s *Server) setClientRawMemoryAreas(conn *websocket.Conn, request *rawMemoryAreasMessage) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	client, ok := s.clients[conn]
+	if !ok {
+		return
+	}
+	client.rawMemory = normalizeRawMemoryAreas(request)
 }
 
 func (s *Server) sendProtocolError(conn *websocket.Conn, message string) {
@@ -344,22 +433,44 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 		return
 	}
 
-	msg := RawMessage{
-		Type:          "raw",
-		SchemaVersion: rawSchemaVersion,
-		Diff:          false,
-		Refresh:       true,
-		Sequence:      s.nextRawSequence(),
-		Game:          frame.ActiveGame.String(),
-		SaveIndex:     frame.SaveIndex,
-		Chunks:        frame.Chunks,
-	}
+	sequence := s.nextRawSequence()
 
-	s.broadcast(msg, func(client *clientState) bool {
-		return client.mode == ProtocolModeRaw
-	}, func(client *clientState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for conn, client := range s.clients {
+		if client.mode != ProtocolModeRaw {
+			continue
+		}
+
+		chunks := filterRawChunksForGame(frame.Chunks, client.rawMemory, frame.ActiveGame)
+		if len(chunks) == 0 {
+			continue
+		}
+
+		msg := RawMessage{
+			Type:          "raw",
+			SchemaVersion: rawSchemaVersion,
+			Diff:          false,
+			Refresh:       true,
+			Sequence:      sequence,
+			Game:          frame.ActiveGame.String(),
+			SaveIndex:     frame.SaveIndex,
+			Chunks:        chunks,
+		}
+
+		data, err := json.Marshal(msg)
+		if err != nil {
+			log.Printf("JSON marshal error: %v", err)
+			continue
+		}
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			conn.Close()
+			delete(s.clients, conn)
+			continue
+		}
 		client.wantsFull = false
-	})
+	}
 }
 
 func (s *Server) nextRawSequence() uint64 {

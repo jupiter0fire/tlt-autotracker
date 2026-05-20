@@ -7,6 +7,10 @@ const (
 	ootRawPlayStateTailSize = OotPlayOffLinkAgeOnLoad + 1 - OotPlayOffCurrentRoom
 	mmRawPlayStateCoreSize  = MmPlayOffCollectFlags + 4 - MmPlayOffSceneID
 	mmRawPlayStateTailSize  = MmPlayOffGameplayFrames + 4 - MmPlayOffCurrentRoom
+	ootPlayStateCoreChunk   = "oot_playstate_core"
+	ootPlayStateTailChunk   = "oot_playstate_tail"
+	mmPlayStateCoreChunk    = "mm_playstate_core"
+	mmPlayStateTailChunk    = "mm_playstate_tail"
 )
 
 // RawChunk is a single opaque memory range exported for the TypeScript-side
@@ -65,7 +69,7 @@ func (r *Reader) ReadRawFrame() (*RawFrame, error) {
 	}
 	frame.SaveIndex = activeSaveIndex
 
-	chunks, err := r.readRawChunks()
+	chunks, err := r.readRawChunks(game)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +104,7 @@ func (r *Reader) ReadRawFrame() (*RawFrame, error) {
 // ReadRawFrameForStableState captures a raw snapshot after a caller already
 // established a stable game/save pair through ReadState.
 func (r *Reader) ReadRawFrameForStableState(game ActiveGame, saveIndex uint32) (*RawFrame, error) {
-	chunks, err := r.readRawChunks()
+	chunks, err := r.readRawChunks(game)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +117,8 @@ func (r *Reader) ReadRawFrameForStableState(game ActiveGame, saveIndex uint32) (
 	}, nil
 }
 
-func (r *Reader) readRawChunks() ([]RawChunk, error) {
-	specs := rawChunkSpecs()
+func (r *Reader) readRawChunks(game ActiveGame) ([]RawChunk, error) {
+	specs := append(rawChunkSpecs(), r.selectedPlayStateChunkSpecs(game)...)
 	chunks := make([]RawChunk, 0, len(specs))
 	for _, spec := range specs {
 		data, err := r.mem.Read(spec.address, spec.length)
@@ -131,8 +135,47 @@ func (r *Reader) readRawChunks() ([]RawChunk, error) {
 	return chunks, nil
 }
 
+func (r *Reader) selectedPlayStateChunkSpecs(game ActiveGame) []rawChunkSpec {
+	switch game {
+	case GameOot:
+		if _, ok := r.readOotPlayStateSampleCached(); !ok || r.ootPlayStateAddr == 0 {
+			return nil
+		}
+		return []rawChunkSpec{
+			{
+				name:    ootPlayStateCoreChunk,
+				address: r.ootPlayStateAddr + uint32(OotPlayOffSceneID),
+				length:  ootRawPlayStateCoreSize,
+			},
+			{
+				name:    ootPlayStateTailChunk,
+				address: r.ootPlayStateAddr + uint32(OotPlayOffCurrentRoom),
+				length:  ootRawPlayStateTailSize,
+			},
+		}
+	case GameMm:
+		if _, ok := r.readMmPlayStateSampleCached(); !ok || r.mmPlayStateAddr == 0 {
+			return nil
+		}
+		return []rawChunkSpec{
+			{
+				name:    mmPlayStateCoreChunk,
+				address: r.mmPlayStateAddr + uint32(MmPlayOffSceneID),
+				length:  mmRawPlayStateCoreSize,
+			},
+			{
+				name:    mmPlayStateTailChunk,
+				address: r.mmPlayStateAddr + uint32(MmPlayOffCurrentRoom),
+				length:  mmRawPlayStateTailSize,
+			},
+		}
+	default:
+		return nil
+	}
+}
+
 func rawChunkSpecs() []rawChunkSpec {
-	specs := []rawChunkSpec{
+	return []rawChunkSpec{
 		{name: "combo_ctx_oot", address: AddrComboCtxOot, length: ComboCtxSize},
 		{name: "combo_ctx_mm", address: AddrComboCtxMm, length: ComboCtxSize},
 		{name: "oot_save_ctx", address: AddrOotSaveCtx, length: OotSaveCtxSize},
@@ -140,36 +183,4 @@ func rawChunkSpecs() []rawChunkSpec {
 		{name: "oot_payload", address: AddrOotPayload, length: OotPayloadSize},
 		{name: "mm_payload", address: AddrMmPayload, length: MmPayloadSize},
 	}
-
-	for index, addr := range ootPlayStateCandidateAddrs {
-		specs = append(specs,
-			rawChunkSpec{
-				name:    fmt.Sprintf("oot_playstate_candidate_%d_core", index),
-				address: addr + uint32(OotPlayOffSceneID),
-				length:  ootRawPlayStateCoreSize,
-			},
-			rawChunkSpec{
-				name:    fmt.Sprintf("oot_playstate_candidate_%d_tail", index),
-				address: addr + uint32(OotPlayOffCurrentRoom),
-				length:  ootRawPlayStateTailSize,
-			},
-		)
-	}
-
-	for index, addr := range mmPlayStateCandidateAddrs {
-		specs = append(specs,
-			rawChunkSpec{
-				name:    fmt.Sprintf("mm_playstate_candidate_%d_core", index),
-				address: addr + uint32(MmPlayOffSceneID),
-				length:  mmRawPlayStateCoreSize,
-			},
-			rawChunkSpec{
-				name:    fmt.Sprintf("mm_playstate_candidate_%d_tail", index),
-				address: addr + uint32(MmPlayOffCurrentRoom),
-				length:  mmRawPlayStateTailSize,
-			},
-		)
-	}
-
-	return specs
 }

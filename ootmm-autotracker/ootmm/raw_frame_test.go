@@ -89,7 +89,7 @@ func TestReadRawFrameForStableStateExportsNamedChunks(t *testing.T) {
 		t.Fatalf("raw frame save index = %d, want 2", frame.SaveIndex)
 	}
 
-	specs := rawChunkSpecs()
+	specs := append(rawChunkSpecs(), reader.selectedPlayStateChunkSpecs(GameOot)...)
 	if len(frame.Chunks) != len(specs) {
 		t.Fatalf("chunk count = %d, want %d", len(frame.Chunks), len(specs))
 	}
