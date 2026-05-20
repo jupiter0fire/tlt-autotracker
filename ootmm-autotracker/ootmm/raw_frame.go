@@ -7,10 +7,22 @@ const (
 	ootRawPlayStateTailSize = OotPlayOffLinkAgeOnLoad + 1 - OotPlayOffCurrentRoom
 	mmRawPlayStateCoreSize  = MmPlayOffCollectFlags + 4 - MmPlayOffSceneID
 	mmRawPlayStateTailSize  = MmPlayOffGameplayFrames + 4 - MmPlayOffCurrentRoom
+	ootSaveCtxChunk         = "oot_save_ctx"
+	mmSaveCtxChunk          = "mm_save_ctx"
+	ootForeignMmSaveChunk   = "oot_foreign_mm_save"
+	mmForeignOotSaveChunk   = "mm_foreign_oot_save"
+	ootSharedSaveChunk      = "oot_shared_custom_save"
+	mmSharedSaveChunk       = "mm_shared_custom_save"
+	ootRuntimeComboChunk    = "oot_runtime_combo_config"
+	mmRuntimeComboChunk     = "mm_runtime_combo_config"
+	ootRuntimeSilverChunk   = "oot_runtime_silver_rupee_data"
+	ootRuntimeMaxKeysChunk  = "oot_runtime_max_keys"
 	ootPlayStateCoreChunk   = "oot_playstate_core"
 	ootPlayStateTailChunk   = "oot_playstate_tail"
 	mmPlayStateCoreChunk    = "mm_playstate_core"
 	mmPlayStateTailChunk    = "mm_playstate_tail"
+	ootSaveCtxUsedSize      = OotCtxOffGameMode + 4
+	mmSaveCtxUsedSize       = MmCtxOffCycleFlags + MmPermCount*0x14
 )
 
 // RawChunk is a single opaque memory range exported for the TypeScript-side
@@ -118,7 +130,7 @@ func (r *Reader) ReadRawFrameForStableState(game ActiveGame, saveIndex uint32) (
 }
 
 func (r *Reader) readRawChunks(game ActiveGame) ([]RawChunk, error) {
-	specs := append(rawChunkSpecs(), r.selectedPlayStateChunkSpecs(game)...)
+	specs := append(rawChunkSpecs(game), r.selectedPlayStateChunkSpecs(game)...)
 	chunks := make([]RawChunk, 0, len(specs))
 	for _, spec := range specs {
 		data, err := r.mem.Read(spec.address, spec.length)
@@ -174,13 +186,35 @@ func (r *Reader) selectedPlayStateChunkSpecs(game ActiveGame) []rawChunkSpec {
 	}
 }
 
-func rawChunkSpecs() []rawChunkSpec {
-	return []rawChunkSpec{
-		{name: "combo_ctx_oot", address: AddrComboCtxOot, length: ComboCtxSize},
-		{name: "combo_ctx_mm", address: AddrComboCtxMm, length: ComboCtxSize},
-		{name: "oot_save_ctx", address: AddrOotSaveCtx, length: OotSaveCtxSize},
-		{name: "mm_save_ctx", address: AddrMmSaveCtx, length: MmSaveCtxSize},
-		{name: "oot_payload", address: AddrOotPayload, length: OotPayloadSize},
-		{name: "mm_payload", address: AddrMmPayload, length: MmPayloadSize},
+func rawChunkSpecs(game ActiveGame) []rawChunkSpec {
+	switch game {
+	case GameOot:
+		return []rawChunkSpec{
+			{name: ootSaveCtxChunk, address: AddrOotSaveCtx, length: maxInt(OotSaveSize, ootSaveCtxUsedSize)},
+			{name: ootForeignMmSaveChunk, address: AddrOotForeignMmSaveLive, length: MmSaveSize},
+			{name: ootSharedSaveChunk, address: AddrOotSharedCustomSaveLive, length: sharedStateReadSize()},
+			{name: ootRuntimeComboChunk, address: AddrOotRuntimeOotComboConfigLive, length: OotComboConfigSize},
+			{name: ootRuntimeSilverChunk, address: AddrOotRuntimeSilverRupeeDataLive, length: OotSilverRupeeDataSize},
+			{name: ootRuntimeMaxKeysChunk, address: AddrOotRuntimeMaxKeysLive, length: OotMaxKeysBlockSize},
+		}
+	case GameMm:
+		return []rawChunkSpec{
+			{name: mmSaveCtxChunk, address: AddrMmSaveCtx, length: maxInt(MmSaveSize, mmSaveCtxUsedSize)},
+			{name: mmForeignOotSaveChunk, address: AddrMmForeignOotSaveLive, length: OotSaveSize},
+			{name: mmSharedSaveChunk, address: AddrMmSharedCustomSaveLive, length: sharedStateReadSize()},
+			{name: mmRuntimeComboChunk, address: AddrMmRuntimeOotComboConfigLive, length: OotComboConfigSize},
+		}
+	default:
+		return nil
 	}
+}
+
+func maxInt(values ...int) int {
+	max := 0
+	for _, value := range values {
+		if value > max {
+			max = value
+		}
+	}
+	return max
 }

@@ -261,8 +261,8 @@ func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
 		"features": []string{"raw"},
 		"flags":    map[string]interface{}{},
 		"memoryAreas": map[string]interface{}{
-			"oot": []string{"oot_save_ctx", "oot_payload", "oot_playstate_core", "oot_playstate_tail"},
-			"mm":  []string{"mm_save_ctx", "mm_playstate_core", "mm_playstate_tail"},
+			"oot": []string{"oot_save_ctx", "oot_foreign_mm_save", "oot_shared_custom_save", "oot_playstate_core", "oot_playstate_tail"},
+			"mm":  []string{"mm_save_ctx", "mm_foreign_oot_save", "mm_shared_custom_save", "mm_playstate_core", "mm_playstate_tail"},
 		},
 	}); err != nil {
 		t.Fatalf("write handshake: %v", err)
@@ -280,7 +280,8 @@ func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
 		Chunks: []ootmm.RawChunk{
 			{Name: "combo_ctx_oot", Address: 0x80006584, Length: 4, Data: []byte{0x00, 0x01, 0x02, 0x03}},
 			{Name: "oot_save_ctx", Address: 0x8011A5D0, Length: 3, Data: []byte{0xFA, 0x00, 0xBC}},
-			{Name: "oot_payload", Address: 0x80400000, Length: 2, Data: []byte{0xAA, 0x55}},
+			{Name: "oot_foreign_mm_save", Address: 0x80443970, Length: 2, Data: []byte{0xAA, 0x55}},
+			{Name: "oot_shared_custom_save", Address: 0x80443100, Length: 2, Data: []byte{0x11, 0x22}},
 			{Name: "oot_playstate_core", Address: 0x801c84a0, Length: 4, Data: []byte{0x33, 0x44, 0x55, 0x66}},
 			{Name: "oot_playstate_tail", Address: 0x801c84b0, Length: 4, Data: []byte{0x77, 0x88, 0x99, 0xAA}},
 			{Name: "mm_save_ctx", Address: 0x801ef670, Length: 2, Data: []byte{0x10, 0x20}},
@@ -289,20 +290,23 @@ func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
 
 	first := readJSONMessage(t, conn)
 	firstChunks, ok := first["chunks"].([]interface{})
-	if !ok || len(firstChunks) != 4 {
-		t.Fatalf("first chunks = %T %#v, want 4 entries", first["chunks"], first["chunks"])
+	if !ok || len(firstChunks) != 5 {
+		t.Fatalf("first chunks = %T %#v, want 5 entries", first["chunks"], first["chunks"])
 	}
 	if got := chunkName(t, firstChunks[0]); got != "oot_save_ctx" {
 		t.Fatalf("first OoT chunk = %v, want oot_save_ctx", got)
 	}
-	if got := chunkName(t, firstChunks[1]); got != "oot_payload" {
-		t.Fatalf("second OoT chunk = %v, want oot_payload", got)
+	if got := chunkName(t, firstChunks[1]); got != "oot_foreign_mm_save" {
+		t.Fatalf("second OoT chunk = %v, want oot_foreign_mm_save", got)
 	}
-	if got := chunkName(t, firstChunks[2]); got != "oot_playstate_core" {
-		t.Fatalf("third OoT chunk = %v, want oot_playstate_core", got)
+	if got := chunkName(t, firstChunks[2]); got != "oot_shared_custom_save" {
+		t.Fatalf("third OoT chunk = %v, want oot_shared_custom_save", got)
 	}
-	if got := chunkName(t, firstChunks[3]); got != "oot_playstate_tail" {
-		t.Fatalf("fourth OoT chunk = %v, want oot_playstate_tail", got)
+	if got := chunkName(t, firstChunks[3]); got != "oot_playstate_core" {
+		t.Fatalf("fourth OoT chunk = %v, want oot_playstate_core", got)
+	}
+	if got := chunkName(t, firstChunks[4]); got != "oot_playstate_tail" {
+		t.Fatalf("fifth OoT chunk = %v, want oot_playstate_tail", got)
 	}
 
 	server.BroadcastRawSnapshot(&ootmm.RawFrame{
@@ -312,7 +316,8 @@ func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
 		Chunks: []ootmm.RawChunk{
 			{Name: "oot_save_ctx", Address: 0x8011A5D0, Length: 3, Data: []byte{0xFA, 0x00, 0xBC}},
 			{Name: "mm_save_ctx", Address: 0x801ef670, Length: 2, Data: []byte{0x10, 0x20}},
-			{Name: "mm_payload", Address: 0x80400000, Length: 2, Data: []byte{0xAA, 0x55}},
+			{Name: "mm_foreign_oot_save", Address: 0x807729f0, Length: 2, Data: []byte{0xAA, 0x55}},
+			{Name: "mm_shared_custom_save", Address: 0x80772180, Length: 2, Data: []byte{0x11, 0x22}},
 			{Name: "mm_playstate_core", Address: 0x803e6b20, Length: 4, Data: []byte{0x01, 0x02, 0x03, 0x04}},
 			{Name: "mm_playstate_tail", Address: 0x803e6b30, Length: 4, Data: []byte{0x05, 0x06, 0x07, 0x08}},
 		},
@@ -320,16 +325,22 @@ func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
 
 	second := readJSONMessage(t, conn)
 	secondChunks, ok := second["chunks"].([]interface{})
-	if !ok || len(secondChunks) != 3 {
-		t.Fatalf("second chunks = %T %#v, want 3 entries", second["chunks"], second["chunks"])
+	if !ok || len(secondChunks) != 5 {
+		t.Fatalf("second chunks = %T %#v, want 5 entries", second["chunks"], second["chunks"])
 	}
 	if got := chunkName(t, secondChunks[0]); got != "mm_save_ctx" {
 		t.Fatalf("MM chunk = %v, want mm_save_ctx", got)
 	}
-	if got := chunkName(t, secondChunks[1]); got != "mm_playstate_core" {
+	if got := chunkName(t, secondChunks[1]); got != "mm_foreign_oot_save" {
+		t.Fatalf("MM foreign OoT save = %v, want mm_foreign_oot_save", got)
+	}
+	if got := chunkName(t, secondChunks[2]); got != "mm_shared_custom_save" {
+		t.Fatalf("MM shared custom save = %v, want mm_shared_custom_save", got)
+	}
+	if got := chunkName(t, secondChunks[3]); got != "mm_playstate_core" {
 		t.Fatalf("MM playstate core = %v, want mm_playstate_core", got)
 	}
-	if got := chunkName(t, secondChunks[2]); got != "mm_playstate_tail" {
+	if got := chunkName(t, secondChunks[4]); got != "mm_playstate_tail" {
 		t.Fatalf("MM playstate tail = %v, want mm_playstate_tail", got)
 	}
 }
