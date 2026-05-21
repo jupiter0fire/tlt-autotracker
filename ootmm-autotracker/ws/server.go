@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -27,8 +28,16 @@ type Server struct {
 }
 
 type clientState struct {
-	conn      *websocket.Conn
-	rawMemory rawMemoryAreaSelection
+	conn            *websocket.Conn
+	rawMemory       rawMemoryAreaSelection
+	rawLastSnapshot rawSnapshotState
+}
+
+type rawSnapshotState struct {
+	hasSnapshot bool
+	game        ootmm.ActiveGame
+	saveIndex   uint32
+	chunks      []ootmm.RawChunk
 }
 
 type rawMemoryAreasMessage struct {
@@ -255,6 +264,53 @@ func filterRawChunksForGame(
 	return result
 }
 
+func cloneRawChunks(chunks []ootmm.RawChunk) []ootmm.RawChunk {
+	if len(chunks) == 0 {
+		return nil
+	}
+
+	cloned := make([]ootmm.RawChunk, 0, len(chunks))
+	for _, chunk := range chunks {
+		cloned = append(cloned, ootmm.RawChunk{
+			Name:    chunk.Name,
+			Address: chunk.Address,
+			Length:  chunk.Length,
+			Data:    append([]byte(nil), chunk.Data...),
+		})
+	}
+
+	return cloned
+}
+
+func rawChunksEqual(left []ootmm.RawChunk, right []ootmm.RawChunk) bool {
+	if len(left) != len(right) {
+		return false
+	}
+
+	for i := range left {
+		if left[i].Name != right[i].Name ||
+			left[i].Address != right[i].Address ||
+			left[i].Length != right[i].Length ||
+			!bytes.Equal(left[i].Data, right[i].Data) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (state rawSnapshotState) matches(game ootmm.ActiveGame, saveIndex uint32, chunks []ootmm.RawChunk) bool {
+	if !state.hasSnapshot {
+		return false
+	}
+
+	if state.game != game || state.saveIndex != saveIndex {
+		return false
+	}
+
+	return rawChunksEqual(state.chunks, chunks)
+}
+
 func (s *Server) setClientRawMemoryAreas(conn *websocket.Conn, request *rawMemoryAreasMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -264,6 +320,7 @@ func (s *Server) setClientRawMemoryAreas(conn *websocket.Conn, request *rawMemor
 		return
 	}
 	client.rawMemory = normalizeRawMemoryAreas(request)
+	client.rawLastSnapshot = rawSnapshotState{}
 }
 
 func mergeRequestedRawChunkSpecs(clients map[*websocket.Conn]*clientState, game ootmm.ActiveGame) []ootmm.RawChunkSpec {
@@ -336,6 +393,9 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 		if len(chunks) == 0 {
 			continue
 		}
+		if client.rawLastSnapshot.matches(frame.ActiveGame, frame.SaveIndex, chunks) {
+			continue
+		}
 
 		msg := RawMessage{
 			Type:          "raw",
@@ -356,6 +416,14 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			conn.Close()
 			delete(s.clients, conn)
+			continue
+		}
+
+		client.rawLastSnapshot = rawSnapshotState{
+			hasSnapshot: true,
+			game:        frame.ActiveGame,
+			saveIndex:   frame.SaveIndex,
+			chunks:      cloneRawChunks(chunks),
 		}
 	}
 }
