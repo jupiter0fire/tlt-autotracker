@@ -22,6 +22,30 @@ func TestNoteOoTMMUnavailableTracksElapsedTime(t *testing.T) {
 	}
 }
 
+func TestNoteOoTMMUnavailableAfterValidSaveIgnoresStartupInvalidSaves(t *testing.T) {
+	var unavailableSince time.Time
+	start := time.Unix(100, 0)
+
+	if got := noteOoTMMUnavailableAfterValidSave(false, &unavailableSince, start); got != 0 {
+		t.Fatalf("startup invalid-save duration = %s, want 0", got)
+	}
+	if !unavailableSince.IsZero() {
+		t.Fatalf("startup invalid-save timestamp = %s, want zero", unavailableSince)
+	}
+
+	if got := noteOoTMMUnavailableAfterValidSave(true, &unavailableSince, start); got != 0 {
+		t.Fatalf("first post-valid invalid-save duration = %s, want 0", got)
+	}
+	if !unavailableSince.Equal(start) {
+		t.Fatalf("post-valid invalid-save timestamp = %s, want %s", unavailableSince, start)
+	}
+
+	later := start.Add(ootmmLostTimeout + 1500*time.Millisecond)
+	if got := noteOoTMMUnavailableAfterValidSave(true, &unavailableSince, later); got != later.Sub(start) {
+		t.Fatalf("later post-valid invalid-save duration = %s, want %s", got, later.Sub(start))
+	}
+}
+
 func TestParseBackendChoiceMatchesAliases(t *testing.T) {
 	options := []*backendOption{
 		{kind: backendRetroArch, name: "RetroArch"},
@@ -99,4 +123,3 @@ func TestStartupCommitHashPrefersInjectedValue(t *testing.T) {
 		t.Fatalf("startupCommitHash() = %q, want %q", got, "0123456789ab")
 	}
 }
-

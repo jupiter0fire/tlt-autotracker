@@ -2,8 +2,24 @@ package n64
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
+
+type probeTestCoreReader struct {
+	err error
+}
+
+func (p *probeTestCoreReader) ReadMemory(addr uint32, size int) ([]byte, error) {
+	return p.ReadMemoryLarge(addr, size)
+}
+
+func (p *probeTestCoreReader) ReadMemoryLarge(addr uint32, size int) ([]byte, error) {
+	if p.err != nil {
+		return nil, p.err
+	}
+	return make([]byte, size), nil
+}
 
 func TestAlignedWordRead(t *testing.T) {
 	start, size := alignedWordRead(0x74, 24)
@@ -46,5 +62,53 @@ func TestUnswizzleRangeUnaligned(t *testing.T) {
 	want := []byte{0x01}
 	if !bytes.Equal(data, want) {
 		t.Fatalf("unaligned unswizzle = % x, want % x", data, want)
+	}
+}
+
+func TestProbeReturnsReadErrorWhenAllReadsFail(t *testing.T) {
+	backendErr := errors.New("backend read failed")
+	mem := NewMemory(&probeTestCoreReader{err: backendErr})
+	mem.SetSwizzle(false)
+
+	err := mem.Probe()
+	if err == nil {
+		t.Fatal("Probe() returned nil, want error")
+	}
+	if !IsProbeReadError(err) {
+		t.Fatalf("Probe() error classification = false, want true: %v", err)
+	}
+	if !errors.Is(err, backendErr) {
+		t.Fatalf("Probe() error = %v, want wrapped backend error %v", err, backendErr)
+	}
+}
+
+func TestProbeFixedModeReturnsReadErrorWhenAllReadsFail(t *testing.T) {
+	backendErr := errors.New("backend read failed")
+	mem := NewMemory(&probeTestCoreReader{err: backendErr})
+	mem.SetSwizzle(false)
+	mem.SetBaseShift(VirtualBase)
+
+	err := mem.Probe()
+	if err == nil {
+		t.Fatal("Probe() returned nil, want error")
+	}
+	if !IsProbeReadError(err) {
+		t.Fatalf("Probe() error classification = false, want true: %v", err)
+	}
+	if !errors.Is(err, backendErr) {
+		t.Fatalf("Probe() error = %v, want wrapped backend error %v", err, backendErr)
+	}
+}
+
+func TestProbeReturnsNotDetectedWhenReadsSucceedWithoutOoTMM(t *testing.T) {
+	mem := NewMemory(&probeTestCoreReader{})
+	mem.SetSwizzle(false)
+
+	err := mem.Probe()
+	if err == nil {
+		t.Fatal("Probe() returned nil, want error")
+	}
+	if IsProbeReadError(err) {
+		t.Fatalf("Probe() error classification = true, want false: %v", err)
 	}
 }

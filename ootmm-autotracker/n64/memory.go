@@ -2,6 +2,7 @@ package n64
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 )
@@ -26,6 +27,23 @@ type Memory struct {
 	baseShift      uint32 // 0 for physical, 0x80000000 for virtual
 	swizzle        bool   // true for RetroArch/mupen64plus word-swizzle, false for PJ64
 	fixedBaseShift bool   // true when SetBaseShift() was called; Probe() won't override
+}
+
+type probeReadError struct {
+	err error
+}
+
+func (e *probeReadError) Error() string {
+	return fmt.Sprintf("probe read: %v", e.err)
+}
+
+func (e *probeReadError) Unwrap() error {
+	return e.err
+}
+
+func IsProbeReadError(err error) bool {
+	var target *probeReadError
+	return errors.As(err, &target)
 }
 
 func NewMemory(client CoreReader) *Memory {
@@ -57,6 +75,19 @@ func (m *Memory) SetBaseShift(shift uint32) {
 // both ComboCtx addresses (OoT and MM) and fall back to checking the
 // payload area at 0x80400000 which is only populated by OoTMM.
 func (m *Memory) Probe() error {
+	var (
+		hadSuccessfulRead bool
+		lastReadErr       error
+	)
+
+	noteReadResult := func(err error) {
+		if err == nil {
+			hadSuccessfulRead = true
+			return
+		}
+		lastReadErr = err
+	}
+
 	// When the address mode has been forced (e.g. PJ64), skip detection
 	// and only verify that OoTMM is actually running.
 	if m.fixedBaseShift {
@@ -71,6 +102,7 @@ func (m *Memory) Probe() error {
 	// Try physical first (most common for Mupen64Plus-Next)
 	for _, addr := range ctxAddrs {
 		data, err := m.readCoreLogical(addr, 8)
+		noteReadResult(err)
 		if err == nil && string(data) == string(magic) {
 			m.baseShift = 0
 			log.Println("N64 core uses physical addressing")
@@ -81,6 +113,7 @@ func (m *Memory) Probe() error {
 	// Try virtual
 	for _, addr := range ctxAddrs {
 		data, err := m.readCoreLogical(addr|VirtualBase, 8)
+		noteReadResult(err)
 		if err == nil && string(data) == string(magic) {
 			m.baseShift = VirtualBase
 			log.Println("N64 core uses virtual addressing")
@@ -92,6 +125,7 @@ func (m *Memory) Probe() error {
 	// Regular OoT doesn't use this region, so non-zero data here indicates OoTMM.
 	payloadAddr := uint32(0x00400000)
 	data, err := m.readCoreLogical(payloadAddr, 8)
+	noteReadResult(err)
 	if err == nil && !isAllZero(data) {
 		m.baseShift = 0
 		log.Println("N64 core uses physical addressing (detected via payload)")
@@ -99,10 +133,15 @@ func (m *Memory) Probe() error {
 	}
 
 	data, err = m.readCoreLogical(payloadAddr|VirtualBase, 8)
+	noteReadResult(err)
 	if err == nil && !isAllZero(data) {
 		m.baseShift = VirtualBase
 		log.Println("N64 core uses virtual addressing (detected via payload)")
 		return nil
+	}
+
+	if !hadSuccessfulRead && lastReadErr != nil {
+		return &probeReadError{err: lastReadErr}
 	}
 
 	return fmt.Errorf("unable to detect N64 address space (OoTMM not detected)")
@@ -110,6 +149,19 @@ func (m *Memory) Probe() error {
 
 // probeFixedMode checks for OoTMM presence when the addressing mode is already known.
 func (m *Memory) probeFixedMode() error {
+	var (
+		hadSuccessfulRead bool
+		lastReadErr       error
+	)
+
+	noteReadResult := func(err error) {
+		if err == nil {
+			hadSuccessfulRead = true
+			return
+		}
+		lastReadErr = err
+	}
+
 	magic := []byte("OoT+MM<3")
 	mode := "virtual"
 	if m.baseShift == 0 {
@@ -119,6 +171,7 @@ func (m *Memory) probeFixedMode() error {
 	// Check ComboCtx addresses using the pre-set base shift
 	for _, virtAddr := range []uint32{0x80006584, 0x80098280} {
 		data, err := m.Read(virtAddr, 8)
+		noteReadResult(err)
 		if err == nil && string(data) == string(magic) {
 			log.Printf("N64 core uses %s addressing (fixed)", mode)
 			return nil
@@ -127,9 +180,14 @@ func (m *Memory) probeFixedMode() error {
 
 	// Fallback: check payload area
 	data, err := m.Read(0x80400000, 8)
+	noteReadResult(err)
 	if err == nil && !isAllZero(data) {
 		log.Printf("N64 core uses %s addressing (fixed, detected via payload)", mode)
 		return nil
+	}
+
+	if !hadSuccessfulRead && lastReadErr != nil {
+		return &probeReadError{err: lastReadErr}
 	}
 
 	return fmt.Errorf("unable to detect OoTMM (address mode: %s)", mode)

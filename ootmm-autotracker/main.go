@@ -90,7 +90,21 @@ func main() {
 		probed                bool
 		lastGame              ootmm.ActiveGame
 		ootmmUnavailableSince time.Time
+		invalidSaveSince      time.Time
+		unstableGameSince     time.Time
+		hasReadValidSave      bool
 	)
+
+	restartSession := func() {
+		reader = resetTrackingSession(backend, mem)
+		connected = false
+		probed = false
+		lastGame = ootmm.GameNone
+		ootmmUnavailableSince = time.Time{}
+		invalidSaveSince = time.Time{}
+		unstableGameSince = time.Time{}
+		hasReadValidSave = false
+	}
 
 	for {
 		time.Sleep(pollInterval)
@@ -104,6 +118,9 @@ func main() {
 			connected = true
 			probed = false
 			ootmmUnavailableSince = time.Time{}
+			invalidSaveSince = time.Time{}
+			unstableGameSince = time.Time{}
+			hasReadValidSave = false
 			if selected.kind == backendPJ64 {
 				log.Println("Project64 adapter connected")
 			} else {
@@ -118,13 +135,14 @@ func main() {
 				if selected.kind == backendPJ64 && !backend.IsConnected() {
 					log.Println("Project64 connection lost during probe")
 					connected = false
+				} else if n64.IsProbeReadError(err) {
+					log.Printf("Probe read error: %v; reconnecting backend for a fresh session", err)
+					restartSession()
+					time.Sleep(retryDelay)
+					continue
 				} else if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
 					log.Printf("OoTMM unavailable for %s during probe; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-					reader = resetTrackingSession(backend, mem)
-					connected = false
-					probed = false
-					lastGame = ootmm.GameNone
-					ootmmUnavailableSince = time.Time{}
+					restartSession()
 				}
 				// Not an OoTMM session yet, or emulator not running a game
 				time.Sleep(retryDelay)
@@ -139,41 +157,31 @@ func main() {
 		rawFrame, err := reader.ReadRawFrameWithSelection(server.RequestedRawChunkSpecs())
 		if err != nil {
 			log.Printf("Raw read error: %v", err)
-			reader = resetTrackingSession(backend, mem)
-			connected = false
-			probed = false
-			lastGame = ootmm.GameNone
-			ootmmUnavailableSince = time.Time{}
+			restartSession()
 			time.Sleep(retryDelay)
 			continue
 		}
 
 		if !rawFrame.Valid {
-			if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
+			if elapsed := noteOoTMMUnavailableAfterValidSave(hasReadValidSave, &invalidSaveSince, now); elapsed > ootmmLostTimeout {
 				log.Printf("OoTMM unavailable for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-				reader = resetTrackingSession(backend, mem)
-				connected = false
-				probed = false
-				lastGame = ootmm.GameNone
-				ootmmUnavailableSince = time.Time{}
+				restartSession()
 				time.Sleep(retryDelay)
 			}
 			continue
 		}
+		hasReadValidSave = true
+		invalidSaveSince = time.Time{}
 
 		if rawFrame.ActiveGame == ootmm.GameNone {
-			if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
+			if elapsed := noteOoTMMUnavailable(&unstableGameSince, now); elapsed > ootmmLostTimeout {
 				log.Printf("OoTMM did not reach a stable active game for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-				reader = resetTrackingSession(backend, mem)
-				connected = false
-				probed = false
-				lastGame = ootmm.GameNone
-				ootmmUnavailableSince = time.Time{}
+				restartSession()
 				time.Sleep(retryDelay)
 			}
 			continue
 		}
-		ootmmUnavailableSince = time.Time{}
+		unstableGameSince = time.Time{}
 
 		if rawFrame.ActiveGame != lastGame {
 			log.Printf("Active game: %s", rawFrame.ActiveGame)
@@ -223,6 +231,13 @@ func noteOoTMMUnavailable(unavailableSince *time.Time, now time.Time) time.Durat
 		return 0
 	}
 	return now.Sub(*unavailableSince)
+}
+
+func noteOoTMMUnavailableAfterValidSave(hasReadValidSave bool, unavailableSince *time.Time, now time.Time) time.Duration {
+	if !hasReadValidSave {
+		return 0
+	}
+	return noteOoTMMUnavailable(unavailableSince, now)
 }
 
 func resetTrackingSession(backend emulatorBackend, mem *n64.Memory) *ootmm.Reader {
