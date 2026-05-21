@@ -35,25 +35,25 @@ func (s *snapshotFixtureCoreReader) ReadMemoryLarge(addr uint32, size int) ([]by
 }
 
 func TestReadRawFrameForStableStateExportsNamedChunks(t *testing.T) {
-	regions := []snapshotFixtureRegion{
-		{address: AddrOotSaveCtx, data: filledBytes(maxInt(OotSaveSize, ootSaveCtxUsedSize), 0x30)},
-		{address: AddrOotForeignMmSaveLive, data: filledBytes(MmSaveSize, 0x40)},
-		{address: AddrOotSharedCustomSaveLive, data: filledBytes(sharedStateReadSize(), 0x50)},
-		{address: AddrOotRuntimeOotComboConfigLive, data: filledBytes(OotComboConfigSize, 0x60)},
-		{address: AddrOotRuntimeSilverRupeeDataLive, data: filledBytes(OotSilverRupeeDataSize, 0x70)},
-		{address: AddrOotRuntimeMaxKeysLive, data: filledBytes(OotMaxKeysBlockSize, 0x80)},
+	specs := []RawChunkSpec{
+		{Name: "oot_save_ctx", Address: AddrOotSaveCtx, Length: maxInt(OotSaveSize, ootSaveCtxUsedSize)},
+		{Name: "oot_foreign_mm_save", Address: 0x80443970, Length: MmSaveSize},
+		{Name: "oot_shared_custom_save", Address: 0x80443100, Length: int(SharedCustomSaveSize)},
+		{Name: "oot_runtime_combo_config", Address: 0x804416c8, Length: OotComboConfigSize},
+		{Name: "oot_runtime_silver_rupee_data", Address: 0x8042ec10, Length: 72},
+		{Name: "oot_runtime_max_keys", Address: 0x80441c78, Length: 21},
+		{Name: "oot_playstate_core", Address: 0x801c8544, Length: ootRawPlayStateCoreSize},
+		{Name: "oot_playstate_tail", Address: 0x801da160, Length: ootRawPlayStateTailSize},
 	}
-	for index, addr := range ootPlayStateCandidateAddrs {
-		regions = append(regions,
-			snapshotFixtureRegion{
-				address: addr + uint32(OotPlayOffSceneID),
-				data:    filledBytes(ootRawPlayStateCoreSize, byte(0x90+index)),
-			},
-			snapshotFixtureRegion{
-				address: addr + uint32(OotPlayOffCurrentRoom),
-				data:    filledBytes(ootRawPlayStateTailSize, byte(0xA0+index)),
-			},
-		)
+	regions := []snapshotFixtureRegion{
+		{address: specs[0].Address, data: filledBytes(specs[0].Length, 0x30)},
+		{address: specs[1].Address, data: filledBytes(specs[1].Length, 0x40)},
+		{address: specs[2].Address, data: filledBytes(specs[2].Length, 0x50)},
+		{address: specs[3].Address, data: filledBytes(specs[3].Length, 0x60)},
+		{address: specs[4].Address, data: filledBytes(specs[4].Length, 0x70)},
+		{address: specs[5].Address, data: filledBytes(specs[5].Length, 0x80)},
+		{address: specs[6].Address, data: filledBytes(specs[6].Length, 0x90)},
+		{address: specs[7].Address, data: filledBytes(specs[7].Length, 0xA0)},
 	}
 
 	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: regions})
@@ -61,7 +61,7 @@ func TestReadRawFrameForStableStateExportsNamedChunks(t *testing.T) {
 	mem.SetSwizzle(false)
 
 	reader := NewReader(mem)
-	frame, err := reader.ReadRawFrameForStableState(GameOot, 2)
+	frame, err := reader.ReadRawFrameForStableState(GameOot, 2, specs)
 	if err != nil {
 		t.Fatalf("ReadRawFrameForStableState returned error: %v", err)
 	}
@@ -75,46 +75,43 @@ func TestReadRawFrameForStableStateExportsNamedChunks(t *testing.T) {
 		t.Fatalf("raw frame save index = %d, want 2", frame.SaveIndex)
 	}
 
-	specs := append(rawChunkSpecs(GameOot), reader.selectedPlayStateChunkSpecs(GameOot)...)
 	if len(frame.Chunks) != len(specs) {
 		t.Fatalf("chunk count = %d, want %d", len(frame.Chunks), len(specs))
 	}
 
 	for index, spec := range specs {
 		chunk := frame.Chunks[index]
-		if chunk.Name != spec.name {
-			t.Fatalf("chunk[%d] name = %q, want %q", index, chunk.Name, spec.name)
+		if chunk.Name != spec.Name {
+			t.Fatalf("chunk[%d] name = %q, want %q", index, chunk.Name, spec.Name)
 		}
-		if chunk.Address != spec.address {
-			t.Fatalf("chunk[%d] address = %#x, want %#x", index, chunk.Address, spec.address)
+		if chunk.Address != spec.Address {
+			t.Fatalf("chunk[%d] address = %#x, want %#x", index, chunk.Address, spec.Address)
 		}
-		if chunk.Length != spec.length {
-			t.Fatalf("chunk[%d] length = %d, want %d", index, chunk.Length, spec.length)
+		if chunk.Length != spec.Length {
+			t.Fatalf("chunk[%d] length = %d, want %d", index, chunk.Length, spec.Length)
 		}
-		if len(chunk.Data) != spec.length {
-			t.Fatalf("chunk[%d] data length = %d, want %d", index, len(chunk.Data), spec.length)
+		if len(chunk.Data) != spec.Length {
+			t.Fatalf("chunk[%d] data length = %d, want %d", index, len(chunk.Data), spec.Length)
 		}
 	}
 }
 
 func TestReadRawFrameForStableStateExportsNamedChunksForMm(t *testing.T) {
-	regions := []snapshotFixtureRegion{
-		{address: AddrMmSaveCtx, data: filledBytes(maxInt(MmSaveSize, mmSaveCtxUsedSize), 0x30)},
-		{address: AddrMmForeignOotSaveLive, data: filledBytes(OotSaveSize, 0x40)},
-		{address: AddrMmSharedCustomSaveLive, data: filledBytes(sharedStateReadSize(), 0x50)},
-		{address: AddrMmRuntimeOotComboConfigLive, data: filledBytes(OotComboConfigSize, 0x60)},
+	specs := []RawChunkSpec{
+		{Name: "mm_save_ctx", Address: AddrMmSaveCtx, Length: maxInt(MmSaveSize, mmSaveCtxUsedSize)},
+		{Name: "mm_foreign_oot_save", Address: 0x807729f0, Length: OotSaveSize},
+		{Name: "mm_shared_custom_save", Address: 0x80772180, Length: int(SharedCustomSaveSize)},
+		{Name: "mm_runtime_combo_config", Address: 0x80770b18, Length: OotComboConfigSize},
+		{Name: "mm_playstate_core", Address: 0x803e6bc4, Length: mmRawPlayStateCoreSize},
+		{Name: "mm_playstate_tail", Address: 0x8041f220, Length: mmRawPlayStateTailSize},
 	}
-	for index, addr := range mmPlayStateCandidateAddrs {
-		regions = append(regions,
-			snapshotFixtureRegion{
-				address: addr + uint32(MmPlayOffSceneID),
-				data:    filledBytes(mmRawPlayStateCoreSize, byte(0x90+index)),
-			},
-			snapshotFixtureRegion{
-				address: addr + uint32(MmPlayOffCurrentRoom),
-				data:    filledBytes(mmRawPlayStateTailSize, byte(0xA0+index)),
-			},
-		)
+	regions := []snapshotFixtureRegion{
+		{address: specs[0].Address, data: filledBytes(specs[0].Length, 0x30)},
+		{address: specs[1].Address, data: filledBytes(specs[1].Length, 0x40)},
+		{address: specs[2].Address, data: filledBytes(specs[2].Length, 0x50)},
+		{address: specs[3].Address, data: filledBytes(specs[3].Length, 0x60)},
+		{address: specs[4].Address, data: filledBytes(specs[4].Length, 0x90)},
+		{address: specs[5].Address, data: filledBytes(specs[5].Length, 0xA0)},
 	}
 
 	mem := n64.NewMemory(&snapshotFixtureCoreReader{regions: regions})
@@ -122,7 +119,7 @@ func TestReadRawFrameForStableStateExportsNamedChunksForMm(t *testing.T) {
 	mem.SetSwizzle(false)
 
 	reader := NewReader(mem)
-	frame, err := reader.ReadRawFrameForStableState(GameMm, 2)
+	frame, err := reader.ReadRawFrameForStableState(GameMm, 2, specs)
 	if err != nil {
 		t.Fatalf("ReadRawFrameForStableState returned error: %v", err)
 	}
@@ -136,24 +133,23 @@ func TestReadRawFrameForStableStateExportsNamedChunksForMm(t *testing.T) {
 		t.Fatalf("raw frame save index = %d, want 2", frame.SaveIndex)
 	}
 
-	specs := append(rawChunkSpecs(GameMm), reader.selectedPlayStateChunkSpecs(GameMm)...)
 	if len(frame.Chunks) != len(specs) {
 		t.Fatalf("chunk count = %d, want %d", len(frame.Chunks), len(specs))
 	}
 
 	for index, spec := range specs {
 		chunk := frame.Chunks[index]
-		if chunk.Name != spec.name {
-			t.Fatalf("chunk[%d] name = %q, want %q", index, chunk.Name, spec.name)
+		if chunk.Name != spec.Name {
+			t.Fatalf("chunk[%d] name = %q, want %q", index, chunk.Name, spec.Name)
 		}
-		if chunk.Address != spec.address {
-			t.Fatalf("chunk[%d] address = %#x, want %#x", index, chunk.Address, spec.address)
+		if chunk.Address != spec.Address {
+			t.Fatalf("chunk[%d] address = %#x, want %#x", index, chunk.Address, spec.Address)
 		}
-		if chunk.Length != spec.length {
-			t.Fatalf("chunk[%d] length = %d, want %d", index, chunk.Length, spec.length)
+		if chunk.Length != spec.Length {
+			t.Fatalf("chunk[%d] length = %d, want %d", index, chunk.Length, spec.Length)
 		}
-		if len(chunk.Data) != spec.length {
-			t.Fatalf("chunk[%d] data length = %d, want %d", index, len(chunk.Data), spec.length)
+		if len(chunk.Data) != spec.Length {
+			t.Fatalf("chunk[%d] data length = %d, want %d", index, len(chunk.Data), spec.Length)
 		}
 	}
 }

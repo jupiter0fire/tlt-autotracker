@@ -3,10 +3,10 @@ package ootmm
 import "fmt"
 
 const (
-	ootRawPlayStateCoreSize = OotPlayOffTempCollect + 4 - OotPlayOffSceneID
-	ootRawPlayStateTailSize = OotPlayOffLinkAgeOnLoad + 1 - OotPlayOffCurrentRoom
-	mmRawPlayStateCoreSize  = MmPlayOffCollectFlags + 4 - MmPlayOffSceneID
-	mmRawPlayStateTailSize  = MmPlayOffGameplayFrames + 4 - MmPlayOffCurrentRoom
+	ootRawPlayStateCoreSize = 0x1CA8
+	ootRawPlayStateTailSize = 0x12D
+	mmRawPlayStateCoreSize  = 0x1DD4
+	mmRawPlayStateTailSize  = 0x164
 	ootSaveCtxChunk         = "oot_save_ctx"
 	mmSaveCtxChunk          = "mm_save_ctx"
 	ootForeignMmSaveChunk   = "oot_foreign_mm_save"
@@ -21,8 +21,8 @@ const (
 	ootPlayStateTailChunk   = "oot_playstate_tail"
 	mmPlayStateCoreChunk    = "mm_playstate_core"
 	mmPlayStateTailChunk    = "mm_playstate_tail"
-	ootSaveCtxUsedSize      = OotCtxOffGameMode + 4
-	mmSaveCtxUsedSize       = MmCtxOffCycleFlags + MmPermCount*0x14
+	ootSaveCtxUsedSize      = ootSaveCtxGameModeOffset + 4
+	mmSaveCtxUsedSize       = mmSaveCtxCycleFlagsOffset + mmCycleSceneFlagCount*mmCycleSceneFlagStride
 )
 
 // RawChunk is a single opaque memory range exported for the TypeScript-side
@@ -34,6 +34,17 @@ type RawChunk struct {
 	Data    []byte `json:"data"`
 }
 
+type RawChunkSpec struct {
+	Name    string `json:"name"`
+	Address uint32 `json:"address"`
+	Length  int    `json:"length"`
+}
+
+type RawChunkSpecSelection struct {
+	Oot []RawChunkSpec
+	Mm  []RawChunkSpec
+}
+
 // RawFrame is a complete raw snapshot for one stable OoTMM poll.
 type RawFrame struct {
 	Valid      bool
@@ -42,16 +53,14 @@ type RawFrame struct {
 	Chunks     []RawChunk
 }
 
-type rawChunkSpec struct {
-	name    string
-	address uint32
-	length  int
+// ReadRawFrame captures a stable raw snapshot without running item/check
+// extraction. It uses the same two-frame game/save stability guard as the
+// tracker runtime so raw clients do not observe mixed-transition frames.
+func (r *Reader) ReadRawFrame() (*RawFrame, error) {
+	return r.ReadRawFrameWithSelection(defaultRawChunkSelection())
 }
 
-// ReadRawFrame captures a stable raw snapshot without running item/check
-// extraction. It mirrors ReadState's game/save stability checks so raw clients
-// do not observe mixed-transition frames.
-func (r *Reader) ReadRawFrame() (*RawFrame, error) {
+func (r *Reader) ReadRawFrameWithSelection(selection RawChunkSpecSelection) (*RawFrame, error) {
 	frame := &RawFrame{}
 
 	saveIndex, valid, err := r.detector.DetectOoTMM()
@@ -81,7 +90,7 @@ func (r *Reader) ReadRawFrame() (*RawFrame, error) {
 	}
 	frame.SaveIndex = activeSaveIndex
 
-	chunks, err := r.readRawChunks(game)
+	chunks, err := r.readRawChunks(selection.specsForGame(game))
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +123,9 @@ func (r *Reader) ReadRawFrame() (*RawFrame, error) {
 }
 
 // ReadRawFrameForStableState captures a raw snapshot after a caller already
-// established a stable game/save pair through ReadState.
-func (r *Reader) ReadRawFrameForStableState(game ActiveGame, saveIndex uint32) (*RawFrame, error) {
-	chunks, err := r.readRawChunks(game)
+// established a stable game/save pair through its own polling logic.
+func (r *Reader) ReadRawFrameForStableState(game ActiveGame, saveIndex uint32, specs []RawChunkSpec) (*RawFrame, error) {
+	chunks, err := r.readRawChunks(specs)
 	if err != nil {
 		return nil, err
 	}
@@ -129,84 +138,50 @@ func (r *Reader) ReadRawFrameForStableState(game ActiveGame, saveIndex uint32) (
 	}, nil
 }
 
-func (r *Reader) readRawChunks(game ActiveGame) ([]RawChunk, error) {
-	specs := append(rawChunkSpecs(game), r.selectedPlayStateChunkSpecs(game)...)
+func defaultRawChunkSelection() RawChunkSpecSelection {
+	return RawChunkSpecSelection{
+		Oot: []RawChunkSpec{{
+			Name:    ootSaveCtxChunk,
+			Address: AddrOotSaveCtx,
+			Length:  maxInt(OotSaveSize, ootSaveCtxUsedSize),
+		}},
+		Mm: []RawChunkSpec{{
+			Name:    mmSaveCtxChunk,
+			Address: AddrMmSaveCtx,
+			Length:  maxInt(MmSaveSize, mmSaveCtxUsedSize),
+		}},
+	}
+}
+
+func (selection RawChunkSpecSelection) specsForGame(game ActiveGame) []RawChunkSpec {
+	switch game {
+	case GameOot:
+		return selection.Oot
+	case GameMm:
+		return selection.Mm
+	default:
+		return nil
+	}
+}
+
+func (r *Reader) readRawChunks(specs []RawChunkSpec) ([]RawChunk, error) {
 	chunks := make([]RawChunk, 0, len(specs))
 	for _, spec := range specs {
-		data, err := r.mem.Read(spec.address, spec.length)
+		if spec.Length <= 0 || spec.Name == "" {
+			continue
+		}
+		data, err := r.mem.Read(spec.Address, spec.Length)
 		if err != nil {
-			return nil, fmt.Errorf("read raw chunk %s at %#x: %w", spec.name, spec.address, err)
+			return nil, fmt.Errorf("read raw chunk %s at %#x: %w", spec.Name, spec.Address, err)
 		}
 		chunks = append(chunks, RawChunk{
-			Name:    spec.name,
-			Address: spec.address,
-			Length:  spec.length,
+			Name:    spec.Name,
+			Address: spec.Address,
+			Length:  spec.Length,
 			Data:    data,
 		})
 	}
 	return chunks, nil
-}
-
-func (r *Reader) selectedPlayStateChunkSpecs(game ActiveGame) []rawChunkSpec {
-	switch game {
-	case GameOot:
-		if _, ok := r.readOotPlayStateSampleCached(); !ok || r.ootPlayStateAddr == 0 {
-			return nil
-		}
-		return []rawChunkSpec{
-			{
-				name:    ootPlayStateCoreChunk,
-				address: r.ootPlayStateAddr + uint32(OotPlayOffSceneID),
-				length:  ootRawPlayStateCoreSize,
-			},
-			{
-				name:    ootPlayStateTailChunk,
-				address: r.ootPlayStateAddr + uint32(OotPlayOffCurrentRoom),
-				length:  ootRawPlayStateTailSize,
-			},
-		}
-	case GameMm:
-		if _, ok := r.readMmPlayStateSampleCached(); !ok || r.mmPlayStateAddr == 0 {
-			return nil
-		}
-		return []rawChunkSpec{
-			{
-				name:    mmPlayStateCoreChunk,
-				address: r.mmPlayStateAddr + uint32(MmPlayOffSceneID),
-				length:  mmRawPlayStateCoreSize,
-			},
-			{
-				name:    mmPlayStateTailChunk,
-				address: r.mmPlayStateAddr + uint32(MmPlayOffCurrentRoom),
-				length:  mmRawPlayStateTailSize,
-			},
-		}
-	default:
-		return nil
-	}
-}
-
-func rawChunkSpecs(game ActiveGame) []rawChunkSpec {
-	switch game {
-	case GameOot:
-		return []rawChunkSpec{
-			{name: ootSaveCtxChunk, address: AddrOotSaveCtx, length: maxInt(OotSaveSize, ootSaveCtxUsedSize)},
-			{name: ootForeignMmSaveChunk, address: AddrOotForeignMmSaveLive, length: MmSaveSize},
-			{name: ootSharedSaveChunk, address: AddrOotSharedCustomSaveLive, length: sharedStateReadSize()},
-			{name: ootRuntimeComboChunk, address: AddrOotRuntimeOotComboConfigLive, length: OotComboConfigSize},
-			{name: ootRuntimeSilverChunk, address: AddrOotRuntimeSilverRupeeDataLive, length: OotSilverRupeeDataSize},
-			{name: ootRuntimeMaxKeysChunk, address: AddrOotRuntimeMaxKeysLive, length: OotMaxKeysBlockSize},
-		}
-	case GameMm:
-		return []rawChunkSpec{
-			{name: mmSaveCtxChunk, address: AddrMmSaveCtx, length: maxInt(MmSaveSize, mmSaveCtxUsedSize)},
-			{name: mmForeignOotSaveChunk, address: AddrMmForeignOotSaveLive, length: OotSaveSize},
-			{name: mmSharedSaveChunk, address: AddrMmSharedCustomSaveLive, length: sharedStateReadSize()},
-			{name: mmRuntimeComboChunk, address: AddrMmRuntimeOotComboConfigLive, length: OotComboConfigSize},
-		}
-	default:
-		return nil
-	}
 }
 
 func maxInt(values ...int) int {

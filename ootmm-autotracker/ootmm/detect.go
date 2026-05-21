@@ -34,13 +34,14 @@ type Detector struct {
 
 const playableSaveSlotCount uint32 = 3
 const addrMmRegEditorPtr uint32 = 0x801F3F60
+const comboCtxMagic = "OoT+MM<3"
 
 func NewDetector(mem *n64.Memory) *Detector {
 	return &Detector{mem: mem}
 }
 
 func isReadyGameState(game ActiveGame, gameMode, saveIndex, runtimeMarker uint32) bool {
-	if gameMode != GameModeNormal || saveIndex >= playableSaveSlotCount {
+	if gameMode != gameModeNormal || saveIndex >= playableSaveSlotCount {
 		return false
 	}
 
@@ -58,11 +59,11 @@ func (d *Detector) detectReadyGame(game ActiveGame) (uint32, bool, error) {
 
 	switch game {
 	case GameOot:
-		modeAddr = AddrOotSaveCtx + uint32(OotCtxOffGameMode)
-		saveAddr = AddrOotSaveCtx + uint32(OotCtxOffFileNum)
+		modeAddr = AddrOotSaveCtx + ootSaveCtxGameModeOffset
+		saveAddr = AddrOotSaveCtx + ootSaveCtxFileNumOffset
 	case GameMm:
-		modeAddr = AddrMmSaveCtx + uint32(MmCtxOffGameMode)
-		saveAddr = AddrMmSaveCtx + uint32(MmCtxOffFileNum)
+		modeAddr = AddrMmSaveCtx + mmSaveCtxGameModeOffset
+		saveAddr = AddrMmSaveCtx + mmSaveCtxFileNumOffset
 		ptr, err := d.mem.ReadU32BE(addrMmRegEditorPtr)
 		if err != nil {
 			return 0, false, err
@@ -97,10 +98,10 @@ func (d *Detector) DetectOoTMM() (uint32, bool, error) {
 		return 0, false, err
 	}
 
-	magic := string(data[CtxOffMagic : CtxOffMagic+8])
-	if magic == "OoT+MM<3" {
-		valid := binary.BigEndian.Uint32(data[CtxOffValid:])
-		saveIndex := binary.BigEndian.Uint32(data[CtxOffSaveIndex:])
+	magic := string(data[comboCtxMagicOffset : comboCtxMagicOffset+comboCtxMagicSize])
+	if magic == comboCtxMagic {
+		valid := binary.BigEndian.Uint32(data[comboCtxValidOffset:])
+		saveIndex := binary.BigEndian.Uint32(data[comboCtxSaveIndexOffset:])
 		return saveIndex, valid != 0, nil
 	}
 
@@ -110,10 +111,10 @@ func (d *Detector) DetectOoTMM() (uint32, bool, error) {
 		return 0, false, err
 	}
 
-	magic = string(data[CtxOffMagic : CtxOffMagic+8])
-	if magic == "OoT+MM<3" {
-		valid := binary.BigEndian.Uint32(data[CtxOffValid:])
-		saveIndex := binary.BigEndian.Uint32(data[CtxOffSaveIndex:])
+	magic = string(data[comboCtxMagicOffset : comboCtxMagicOffset+comboCtxMagicSize])
+	if magic == comboCtxMagic {
+		valid := binary.BigEndian.Uint32(data[comboCtxValidOffset:])
+		saveIndex := binary.BigEndian.Uint32(data[comboCtxSaveIndexOffset:])
 		return saveIndex, valid != 0, nil
 	}
 
@@ -175,12 +176,12 @@ func (d *Detector) DetectActiveGame() (ActiveGame, error) {
 // still running and save data should not be read.
 func (d *Detector) isComboCtxMagicPresent() bool {
 	if data, err := d.mem.Read(AddrComboCtxOot, ComboCtxSize); err == nil {
-		if string(data[CtxOffMagic:CtxOffMagic+8]) == "OoT+MM<3" {
+		if string(data[comboCtxMagicOffset:comboCtxMagicOffset+comboCtxMagicSize]) == comboCtxMagic {
 			return true
 		}
 	}
 	if data, err := d.mem.Read(AddrComboCtxMm, ComboCtxSize); err == nil {
-		if string(data[CtxOffMagic:CtxOffMagic+8]) == "OoT+MM<3" {
+		if string(data[comboCtxMagicOffset:comboCtxMagicOffset+comboCtxMagicSize]) == comboCtxMagic {
 			return true
 		}
 	}

@@ -2,93 +2,52 @@ package ws
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
 	"ootmm-autotracker/ootmm"
-	"ootmm-autotracker/tracker"
 )
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-type ProtocolMode string
-
-const (
-	ProtocolModeLegacy ProtocolMode = "legacy"
-	ProtocolModeRaw    ProtocolMode = "raw"
-	rawSchemaVersion   string       = "1"
-)
-
-type Options struct {
-	EnableLegacyInterpretation bool
-	DefaultProtocolMode        ProtocolMode
-}
-
-func ParseProtocolMode(value string) (ProtocolMode, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", string(ProtocolModeLegacy):
-		return ProtocolModeLegacy, nil
-	case string(ProtocolModeRaw):
-		return ProtocolModeRaw, nil
-	default:
-		return "", fmt.Errorf("unsupported protocol mode %q", value)
-	}
-}
+const rawSchemaVersion = "1"
 
 // Server manages WebSocket connections to tracker frontends.
 type Server struct {
-	mu                         sync.Mutex
-	clients                    map[*websocket.Conn]*clientState
-	addr                       string
-	enableLegacyInterpretation bool
-	defaultProtocolMode        ProtocolMode
-	rawSequence                uint64
+	mu          sync.Mutex
+	clients     map[*websocket.Conn]*clientState
+	addr        string
+	rawSequence uint64
 }
 
 type clientState struct {
 	conn      *websocket.Conn
-	wantsFull bool
-	mode      ProtocolMode
 	rawMemory rawMemoryAreaSelection
 }
 
 type rawMemoryAreasMessage struct {
-	Oot []string `json:"oot"`
-	Mm  []string `json:"mm"`
+	Oot []ootmm.RawChunkSpec `json:"oot"`
+	Mm  []ootmm.RawChunkSpec `json:"mm"`
 }
 
 type rawMemoryAreaSelection struct {
 	hasRequest bool
-	oot        map[string]struct{}
-	mm         map[string]struct{}
+	ootSpecs   []ootmm.RawChunkSpec
+	mmSpecs    []ootmm.RawChunkSpec
+	ootNames   map[string]struct{}
+	mmNames    map[string]struct{}
 }
 
-func NewServer(addr string, options ...Options) *Server {
-	config := Options{
-		EnableLegacyInterpretation: true,
-		DefaultProtocolMode:        ProtocolModeLegacy,
-	}
-	if len(options) > 0 {
-		config = options[0]
-		if config.DefaultProtocolMode == "" {
-			config.DefaultProtocolMode = ProtocolModeLegacy
-		}
-	}
-	if !config.EnableLegacyInterpretation && config.DefaultProtocolMode == ProtocolModeLegacy {
-		config.DefaultProtocolMode = ProtocolModeRaw
-	}
-
+func NewServer(addr string) *Server {
 	return &Server{
-		clients:                    make(map[*websocket.Conn]*clientState),
-		addr:                       addr,
-		enableLegacyInterpretation: config.EnableLegacyInterpretation,
-		defaultProtocolMode:        config.DefaultProtocolMode,
+		clients: make(map[*websocket.Conn]*clientState),
+		addr:    addr,
 	}
 }
 
@@ -113,12 +72,10 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
-	s.clients[conn] = &clientState{conn: conn, mode: s.defaultProtocolMode}
+	s.clients[conn] = &clientState{conn: conn}
 	s.mu.Unlock()
 
 	log.Printf("Tracker connected (%d total)", s.ClientCount())
-
-	// Read messages in a goroutine (handle handshake, refresh requests)
 	go s.readLoop(conn)
 }
 
@@ -138,9 +95,9 @@ func (s *Server) readLoop(conn *websocket.Conn) {
 		}
 
 		var envelope struct {
-			Type        string                  `json:"type"`
-			Features    []string                `json:"features"`
-			Flags       map[string]interface{}  `json:"flags"`
+			Type        string                 `json:"type"`
+			Features    []string               `json:"features"`
+			Flags       map[string]interface{} `json:"flags"`
 			MemoryAreas *rawMemoryAreasMessage `json:"memoryAreas"`
 		}
 		if err := json.Unmarshal(msg, &envelope); err != nil {
@@ -149,58 +106,45 @@ func (s *Server) readLoop(conn *websocket.Conn) {
 
 		switch envelope.Type {
 		case "handshake":
-			mode, err := s.resolveProtocolMode(envelope.Features, envelope.Flags)
-			if err != nil {
-				s.sendProtocolError(conn, err.Error())
+			if requestsLegacyProtocol(envelope.Features, envelope.Flags) {
+				s.sendProtocolError(conn, "legacy protocol removed")
 				return
 			}
-			if mode == ProtocolModeLegacy && !s.enableLegacyInterpretation {
-				s.sendProtocolError(conn, "legacy protocol disabled")
-				return
-			}
-			s.setClientMode(conn, mode)
 			s.setClientRawMemoryAreas(conn, envelope.MemoryAreas)
-			s.markClientForFullSync(conn)
 
 			ack := HandshakeAckMessage{
 				Type:     "handshAck",
 				Version:  "0.1.0",
 				Name:     "ootmm-autotracker",
 				Refresh:  true,
-				Mode:     string(mode),
-				Features: supportedFeatures(mode),
+				Mode:     "raw",
+				Features: []string{"raw"},
 			}
 			data, _ := json.Marshal(ack)
-			conn.WriteMessage(websocket.TextMessage, data)
+			_ = conn.WriteMessage(websocket.TextMessage, data)
 
-		case "sendFull":
-			s.markClientForFullSync(conn)
-
-		case "refresh":
-			s.markClientForFullSync(conn)
-			log.Println("Refresh requested by tracker")
+		case "sendFull", "refresh":
+			continue
 		}
 	}
 }
 
-func (s *Server) resolveProtocolMode(features []string, flags map[string]interface{}) (ProtocolMode, error) {
-	if override, ok := stringFlag(flags, "protocol"); ok {
-		return ParseProtocolMode(override)
+func requestsLegacyProtocol(features []string, flags map[string]interface{}) bool {
+	if override, ok := stringFlag(flags, "protocol"); ok && strings.EqualFold(override, "legacy") {
+		return true
 	}
-	if override, ok := stringFlag(flags, "mode"); ok {
-		return ParseProtocolMode(override)
+	if override, ok := stringFlag(flags, "mode"); ok && strings.EqualFold(override, "legacy") {
+		return true
 	}
 
 	for _, feature := range features {
 		switch strings.ToLower(strings.TrimSpace(feature)) {
-		case string(ProtocolModeRaw):
-			return ProtocolModeRaw, nil
-		case "items", "checks", "locations":
-			return ProtocolModeLegacy, nil
+		case "items", "checks", "locations", "legacy":
+			return true
 		}
 	}
 
-	return s.defaultProtocolMode, nil
+	return false
 }
 
 func stringFlag(flags map[string]interface{}, key string) (string, bool) {
@@ -222,30 +166,40 @@ func stringFlag(flags map[string]interface{}, key string) (string, bool) {
 	return trimmed, true
 }
 
-func normalizeRawMemoryAreaNames(names []string) map[string]struct{} {
-	set := make(map[string]struct{}, len(names))
-	for _, name := range names {
-		trimmed := strings.TrimSpace(name)
-		if trimmed == "" {
+func normalizeRawChunkSpecs(specs []ootmm.RawChunkSpec) ([]ootmm.RawChunkSpec, map[string]struct{}) {
+	set := make(map[string]struct{}, len(specs))
+	normalized := make([]ootmm.RawChunkSpec, 0, len(specs))
+	for _, spec := range specs {
+		trimmed := strings.TrimSpace(spec.Name)
+		if trimmed == "" || spec.Address == 0 || spec.Length <= 0 {
 			continue
 		}
+		if _, exists := set[trimmed]; exists {
+			continue
+		}
+		spec.Name = trimmed
+		normalized = append(normalized, spec)
 		set[trimmed] = struct{}{}
 	}
-	if len(set) == 0 {
-		return nil
+	if len(normalized) == 0 {
+		return nil, nil
 	}
-	return set
+	return normalized, set
 }
 
 func normalizeRawMemoryAreas(request *rawMemoryAreasMessage) rawMemoryAreaSelection {
 	if request == nil {
 		return rawMemoryAreaSelection{}
 	}
+	ootSpecs, ootNames := normalizeRawChunkSpecs(request.Oot)
+	mmSpecs, mmNames := normalizeRawChunkSpecs(request.Mm)
 
 	return rawMemoryAreaSelection{
 		hasRequest: true,
-		oot:        normalizeRawMemoryAreaNames(request.Oot),
-		mm:         normalizeRawMemoryAreaNames(request.Mm),
+		ootSpecs:   ootSpecs,
+		mmSpecs:    mmSpecs,
+		ootNames:   ootNames,
+		mmNames:    mmNames,
 	}
 }
 
@@ -256,9 +210,24 @@ func (selection rawMemoryAreaSelection) requestedNamesForGame(game ootmm.ActiveG
 
 	switch game {
 	case ootmm.GameOot:
-		return selection.oot, true
+		return selection.ootNames, true
 	case ootmm.GameMm:
-		return selection.mm, true
+		return selection.mmNames, true
+	default:
+		return nil, false
+	}
+}
+
+func (selection rawMemoryAreaSelection) requestedSpecsForGame(game ootmm.ActiveGame) ([]ootmm.RawChunkSpec, bool) {
+	if !selection.hasRequest {
+		return nil, false
+	}
+
+	switch game {
+	case ootmm.GameOot:
+		return selection.ootSpecs, true
+	case ootmm.GameMm:
+		return selection.mmSpecs, true
 	default:
 		return nil, false
 	}
@@ -286,24 +255,6 @@ func filterRawChunksForGame(
 	return result
 }
 
-func supportedFeatures(mode ProtocolMode) []string {
-	if mode == ProtocolModeRaw {
-		return []string{"raw"}
-	}
-	return []string{"items", "checks", "location"}
-}
-
-func (s *Server) setClientMode(conn *websocket.Conn, mode ProtocolMode) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	client, ok := s.clients[conn]
-	if !ok {
-		return
-	}
-	client.mode = mode
-}
-
 func (s *Server) setClientRawMemoryAreas(conn *websocket.Conn, request *rawMemoryAreasMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -313,6 +264,43 @@ func (s *Server) setClientRawMemoryAreas(conn *websocket.Conn, request *rawMemor
 		return
 	}
 	client.rawMemory = normalizeRawMemoryAreas(request)
+}
+
+func mergeRequestedRawChunkSpecs(clients map[*websocket.Conn]*clientState, game ootmm.ActiveGame) []ootmm.RawChunkSpec {
+	merged := make(map[string]ootmm.RawChunkSpec)
+	for _, client := range clients {
+		specs, ok := client.rawMemory.requestedSpecsForGame(game)
+		if !ok {
+			continue
+		}
+		for _, spec := range specs {
+			if _, exists := merged[spec.Name]; exists {
+				continue
+			}
+			merged[spec.Name] = spec
+		}
+	}
+	result := make([]ootmm.RawChunkSpec, 0, len(merged))
+	for _, spec := range merged {
+		result = append(result, spec)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Address == result[j].Address {
+			return result[i].Name < result[j].Name
+		}
+		return result[i].Address < result[j].Address
+	})
+	return result
+}
+
+func (s *Server) RequestedRawChunkSpecs() ootmm.RawChunkSpecSelection {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return ootmm.RawChunkSpecSelection{
+		Oot: mergeRequestedRawChunkSpecs(s.clients, ootmm.GameOot),
+		Mm:  mergeRequestedRawChunkSpecs(s.clients, ootmm.GameMm),
+	}
 }
 
 func (s *Server) sendProtocolError(conn *websocket.Conn, message string) {
@@ -325,28 +313,6 @@ func (s *Server) sendProtocolError(conn *websocket.Conn, message string) {
 	}
 }
 
-func (s *Server) markClientForFullSync(conn *websocket.Conn) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	client, ok := s.clients[conn]
-	if !ok {
-		return
-	}
-
-	client.wantsFull = true
-}
-
-// RequestFullSyncAll marks every connected client to receive a fresh snapshot.
-func (s *Server) RequestFullSyncAll() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, client := range s.clients {
-		client.wantsFull = true
-	}
-}
-
 // ClientCount returns the number of connected tracker clients.
 func (s *Server) ClientCount() int {
 	s.mu.Lock()
@@ -354,95 +320,18 @@ func (s *Server) ClientCount() int {
 	return len(s.clients)
 }
 
-// LegacyClientCount returns the number of clients subscribed to the legacy
-// interpreted item/check/location stream.
-func (s *Server) LegacyClientCount() int {
-	return s.clientCountByMode(ProtocolModeLegacy)
-}
-
-// RawClientCount returns the number of clients subscribed to the raw stream.
-func (s *Server) RawClientCount() int {
-	return s.clientCountByMode(ProtocolModeRaw)
-}
-
-func (s *Server) clientCountByMode(mode ProtocolMode) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	count := 0
-	for _, client := range s.clients {
-		if client.mode == mode {
-			count++
-		}
-	}
-	return count
-}
-
-// BroadcastItems sends item updates to all connected clients.
-func (s *Server) BroadcastItems(items []tracker.ItemDiff, diff bool) {
-	if len(items) == 0 {
-		return
-	}
-	msg := ItemMessage{
-		Type:    "item",
-		Diff:    diff,
-		Refresh: true,
-		Items:   items,
-	}
-	s.broadcastReadyLegacyClients(msg)
-}
-
-// BroadcastChecks sends check updates to all connected clients.
-func (s *Server) BroadcastChecks(checks []tracker.CheckDiff, diff bool) {
-	if len(checks) == 0 {
-		return
-	}
-	msg := CheckMessage{
-		Type:    "check",
-		Diff:    diff,
-		Refresh: true,
-		Checks:  checks,
-	}
-	s.broadcastReadyLegacyClients(msg)
-}
-
-// BroadcastDelta sends location updates before item/check diffs when they changed in the same poll.
-func (s *Server) BroadcastDelta(game ootmm.ActiveGame, sceneID uint16, locationChanged bool, items []tracker.ItemDiff, checks []tracker.CheckDiff) {
-	if locationChanged {
-		s.BroadcastLocation(game, sceneID)
-	}
-
-	s.BroadcastItems(items, true)
-	s.BroadcastChecks(checks, true)
-}
-
-// BroadcastLocation sends the current location to all clients.
-func (s *Server) BroadcastLocation(game ootmm.ActiveGame, sceneID uint16) {
-	msg := LocationMessage{
-		Type:    "location",
-		Refresh: true,
-		Game:    game.String(),
-		SceneID: sceneID,
-	}
-	s.broadcastReadyLegacyClients(msg)
-}
-
-// BroadcastRawSnapshot sends a complete raw snapshot to raw-mode clients.
+// BroadcastRawSnapshot sends a complete raw snapshot to connected clients.
 func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 	if frame == nil || !frame.Valid || frame.ActiveGame == ootmm.GameNone || len(frame.Chunks) == 0 {
 		return
 	}
 
-	sequence := s.nextRawSequence()
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.rawSequence++
+	sequence := s.rawSequence
 
 	for conn, client := range s.clients {
-		if client.mode != ProtocolModeRaw {
-			continue
-		}
-
 		chunks := filterRawChunksForGame(frame.Chunks, client.rawMemory, frame.ActiveGame)
 		if len(chunks) == 0 {
 			continue
@@ -467,176 +356,8 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			conn.Close()
 			delete(s.clients, conn)
-			continue
-		}
-		client.wantsFull = false
-	}
-}
-
-func (s *Server) nextRawSequence() uint64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.rawSequence++
-	return s.rawSequence
-}
-
-func (s *Server) broadcastReadyLegacyClients(msg interface{}) {
-	s.broadcast(msg, func(client *clientState) bool {
-		return client.mode == ProtocolModeLegacy && !client.wantsFull
-	})
-}
-
-func (s *Server) broadcast(msg interface{}, include func(*clientState) bool, postSend ...func(*clientState)) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("JSON marshal error: %v", err)
-		return
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for conn, client := range s.clients {
-		if include != nil && !include(client) {
-			continue
-		}
-		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			conn.Close()
-			delete(s.clients, conn)
-			continue
-		}
-		if len(postSend) > 0 && postSend[0] != nil {
-			postSend[0](client)
 		}
 	}
-}
-
-// HasPendingFullSync reports whether any client requested a full state.
-func (s *Server) HasPendingFullSync() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, client := range s.clients {
-		if client.mode == ProtocolModeLegacy && client.wantsFull {
-			return true
-		}
-	}
-
-	return false
-}
-
-// FlushFullState sends a full snapshot to clients that requested one.
-func (s *Server) FlushFullState(items []tracker.ItemDiff, checks []tracker.CheckDiff, game ootmm.ActiveGame, sceneID uint16) {
-	conns := s.consumeLegacyFullSyncRequests()
-	if len(conns) == 0 {
-		return
-	}
-
-	s.sendToClients(conns, LocationMessage{
-		Type:    "location",
-		Refresh: false,
-		Game:    game.String(),
-		SceneID: sceneID,
-	})
-
-	if len(items) > 0 {
-		s.sendToClients(conns, ItemMessage{
-			Type:    "item",
-			Diff:    false,
-			Refresh: false,
-			Items:   items,
-		})
-	}
-
-	s.sendToClients(conns, CheckMessage{
-		Type:    "check",
-		Diff:    false,
-		Refresh: false,
-		Checks:  checks,
-	})
-
-	s.sendToClients(conns, map[string]interface{}{
-		"type":    "refresh",
-		"refresh": true,
-	})
-}
-
-// FlushInitialItems sends only the current item inventory to clients that
-// connected before the tracker had an established baseline.
-func (s *Server) FlushInitialItems(items []tracker.ItemDiff) {
-	conns := s.consumeLegacyFullSyncRequests()
-	if len(conns) == 0 {
-		return
-	}
-
-	if len(items) > 0 {
-		s.sendToClients(conns, ItemMessage{
-			Type:    "item",
-			Diff:    false,
-			Refresh: false,
-			Items:   items,
-		})
-	}
-
-	s.sendToClients(conns, map[string]interface{}{
-		"type":    "refresh",
-		"refresh": true,
-	})
-}
-
-func (s *Server) consumeLegacyFullSyncRequests() []*websocket.Conn {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	conns := make([]*websocket.Conn, 0, len(s.clients))
-	for _, client := range s.clients {
-		if client.mode != ProtocolModeLegacy || !client.wantsFull {
-			continue
-		}
-
-		client.wantsFull = false
-		conns = append(conns, client.conn)
-	}
-
-	return conns
-}
-
-func (s *Server) sendToClients(conns []*websocket.Conn, msg interface{}) {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("JSON marshal error: %v", err)
-		return
-	}
-
-	for _, conn := range conns {
-		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			s.mu.Lock()
-			conn.Close()
-			delete(s.clients, conn)
-			s.mu.Unlock()
-		}
-	}
-}
-
-type ItemMessage struct {
-	Type    string             `json:"type"`
-	Diff    bool               `json:"diff"`
-	Refresh bool               `json:"refresh"`
-	Items   []tracker.ItemDiff `json:"items"`
-}
-
-type CheckMessage struct {
-	Type    string              `json:"type"`
-	Diff    bool                `json:"diff"`
-	Refresh bool                `json:"refresh"`
-	Checks  []tracker.CheckDiff `json:"checks"`
-}
-
-type LocationMessage struct {
-	Type    string `json:"type"`
-	Refresh bool   `json:"refresh"`
-	Game    string `json:"game"`
-	SceneID uint16 `json:"sceneId"`
 }
 
 type HandshakeAckMessage struct {

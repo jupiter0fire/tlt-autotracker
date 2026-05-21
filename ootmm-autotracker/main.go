@@ -14,7 +14,6 @@ import (
 	"ootmm-autotracker/ootmm"
 	"ootmm-autotracker/pj64"
 	"ootmm-autotracker/retroarch"
-	"ootmm-autotracker/tracker"
 	"ootmm-autotracker/ws"
 )
 
@@ -23,7 +22,6 @@ const (
 	retryDelay            = 2 * time.Second
 	startupRetryDelay     = 500 * time.Millisecond
 	ootmmLostTimeout      = 20 * time.Second
-	autoSnapshotInterval  = 5 * time.Minute
 	shortCommitHashLength = 12
 )
 
@@ -68,22 +66,12 @@ func main() {
 	pj64Mode := flag.Bool("pj64", false, "Force Project64 backend (skip auto-detection)")
 	pj64Port := flag.Int("pj64-port", pj64.DefaultPort, "PJ64 TCP listen port")
 	wsAddr := flag.String("ws-addr", ":17026", "WebSocket listen address")
-	enableLegacyProtocol := flag.Bool("enable-legacy-protocol", true, "Allow legacy interpreted item/check/location WebSocket clients")
-	wsDefaultProtocol := flag.String("ws-default-protocol", string(ws.ProtocolModeLegacy), "Default WebSocket protocol for clients without a handshake override (legacy|raw)")
 	flag.Parse()
-	defaultProtocolMode, err := ws.ParseProtocolMode(*wsDefaultProtocol)
-	if err != nil {
-		log.Fatalf("invalid WebSocket protocol mode: %v", err)
-	}
-	consoleCommands := startConsoleCommands()
 
 	fmt.Println("=== OoTMM Autotracker ===")
 
 	// Start WebSocket server
-	server := ws.NewServer(*wsAddr, ws.Options{
-		EnableLegacyInterpretation: *enableLegacyProtocol,
-		DefaultProtocolMode:        defaultProtocolMode,
-	})
+	server := ws.NewServer(*wsAddr)
 	server.Start()
 
 	selected, err := selectBackend(*raHost, *raPort, *pj64Port, *wsAddr, *pj64Mode)
@@ -96,22 +84,17 @@ func main() {
 	mem := selected.mem
 
 	reader := ootmm.NewReader(mem)
-	state := tracker.NewState()
 
 	var (
-		connected                = selected.connected
-		probed                   bool
-		lastGame                 ootmm.ActiveGame
-		lastScene                uint16
-		ootmmUnavailableSince    time.Time
-		nextAutoSnapshotAt       = time.Now().Add(autoSnapshotInterval)
-		forceFullSyncOnReconnect bool
+		connected             = selected.connected
+		probed                bool
+		lastGame              ootmm.ActiveGame
+		ootmmUnavailableSince time.Time
 	)
 
 	for {
 		time.Sleep(pollInterval)
 		now := time.Now()
-		drainConsoleCommands(consoleCommands, connected, probed, state.Initialized(), mem, reader)
 
 		// Step 1: Ensure connected to emulator
 		if !connected {
@@ -137,11 +120,10 @@ func main() {
 					connected = false
 				} else if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
 					log.Printf("OoTMM unavailable for %s during probe; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-					reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+					reader = resetTrackingSession(backend, mem)
 					connected = false
 					probed = false
 					lastGame = ootmm.GameNone
-					lastScene = 0
 					ootmmUnavailableSince = time.Time{}
 				}
 				// Not an OoTMM session yet, or emulator not running a game
@@ -153,178 +135,52 @@ func main() {
 			log.Println("OoTMM detected!")
 		}
 
-		drainConsoleCommands(consoleCommands, connected, probed, state.Initialized(), mem, reader)
-
 		// Step 3: Read game state
-		legacyClients := server.LegacyClientCount()
-		rawClients := server.RawClientCount()
-		if rawClients > 0 && legacyClients == 0 {
-			rawFrame, err := reader.ReadRawFrame()
-			if err != nil {
-				log.Printf("Raw read error: %v", err)
-				reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
-				connected = false
-				probed = false
-				lastGame = ootmm.GameNone
-				lastScene = 0
-				ootmmUnavailableSince = time.Time{}
-				time.Sleep(retryDelay)
-				continue
-			}
-
-			if !rawFrame.Valid {
-				if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
-					log.Printf("OoTMM unavailable for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-					reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
-					connected = false
-					probed = false
-					lastGame = ootmm.GameNone
-					lastScene = 0
-					ootmmUnavailableSince = time.Time{}
-					time.Sleep(retryDelay)
-				}
-				continue
-			}
-
-			if rawFrame.ActiveGame == ootmm.GameNone {
-				if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
-					log.Printf("OoTMM did not reach a stable active game for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-					reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
-					connected = false
-					probed = false
-					lastGame = ootmm.GameNone
-					lastScene = 0
-					ootmmUnavailableSince = time.Time{}
-					time.Sleep(retryDelay)
-				}
-				continue
-			}
-			ootmmUnavailableSince = time.Time{}
-
-			if !now.Before(nextAutoSnapshotAt) {
-				snapshotNow := time.Now()
-				if err := writeAutomaticSnapshot(mem, reader, snapshotNow); err != nil {
-					log.Printf("Automatic snapshot failed: %v", err)
-				}
-				nextAutoSnapshotAt = snapshotNow.Add(autoSnapshotInterval)
-			}
-
-			if rawFrame.ActiveGame != lastGame {
-				log.Printf("Active game: %s", rawFrame.ActiveGame)
-				lastGame = rawFrame.ActiveGame
-			}
-			server.BroadcastRawSnapshot(rawFrame)
-			continue
-		}
-
-		gs, err := reader.ReadState()
+		rawFrame, err := reader.ReadRawFrameWithSelection(server.RequestedRawChunkSpecs())
 		if err != nil {
-			log.Printf("Read error: %v", err)
-			reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+			log.Printf("Raw read error: %v", err)
+			reader = resetTrackingSession(backend, mem)
 			connected = false
 			probed = false
 			lastGame = ootmm.GameNone
-			lastScene = 0
 			ootmmUnavailableSince = time.Time{}
 			time.Sleep(retryDelay)
 			continue
 		}
 
-		if !gs.Valid {
+		if !rawFrame.Valid {
 			if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
 				log.Printf("OoTMM unavailable for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-				reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+				reader = resetTrackingSession(backend, mem)
 				connected = false
 				probed = false
 				lastGame = ootmm.GameNone
-				lastScene = 0
 				ootmmUnavailableSince = time.Time{}
 				time.Sleep(retryDelay)
 			}
-			// OoTMM context not valid (maybe in title screen)
 			continue
 		}
 
-		if gs.ActiveGame == ootmm.GameNone {
+		if rawFrame.ActiveGame == ootmm.GameNone {
 			if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
 				log.Printf("OoTMM did not reach a stable active game for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
-				reader, state = resetTrackingSession(backend, mem, server, &forceFullSyncOnReconnect)
+				reader = resetTrackingSession(backend, mem)
 				connected = false
 				probed = false
 				lastGame = ootmm.GameNone
-				lastScene = 0
 				ootmmUnavailableSince = time.Time{}
 				time.Sleep(retryDelay)
 			}
-			// Game transition in progress or data discarded due to mid-read switch
 			continue
 		}
 		ootmmUnavailableSince = time.Time{}
 
-		if rawClients > 0 {
-			rawFrame, err := reader.ReadRawFrameForStableState(gs.ActiveGame, gs.SaveIndex)
-			if err != nil {
-				log.Printf("Raw frame capture error: %v", err)
-			} else {
-				server.BroadcastRawSnapshot(rawFrame)
-			}
+		if rawFrame.ActiveGame != lastGame {
+			log.Printf("Active game: %s", rawFrame.ActiveGame)
+			lastGame = rawFrame.ActiveGame
 		}
 
-		if !now.Before(nextAutoSnapshotAt) {
-			snapshotNow := time.Now()
-			if err := writeAutomaticSnapshot(mem, reader, snapshotNow); err != nil {
-				log.Printf("Automatic snapshot failed: %v", err)
-			}
-			nextAutoSnapshotAt = snapshotNow.Add(autoSnapshotInterval)
-		}
-
-		// Step 4: Compute deltas
-		hadTrackerBaseline := state.Initialized()
-		var (
-			changedItems  []tracker.ItemDiff
-			changedChecks []tracker.CheckDiff
-			gameChanged   bool
-			currentScene  uint16
-		)
-		locationChanged := false
-		if legacyClients > 0 {
-			changedItems, changedChecks, gameChanged = state.Update(gs)
-			currentScene = getActiveScene(gs)
-			locationChanged = gameChanged || currentScene != lastScene || gs.ActiveGame != lastGame
-		}
-
-		// Step 5: Broadcast to trackers
-		if legacyClients > 0 {
-			if gameChanged {
-				log.Printf("Active game: %s", gs.ActiveGame)
-			}
-
-			server.BroadcastDelta(gs.ActiveGame, currentScene, locationChanged, changedItems, changedChecks)
-
-			if server.HasPendingFullSync() {
-				fullItems, fullChecks := state.FullState(gs)
-				if hadTrackerBaseline || forceFullSyncOnReconnect {
-					server.FlushFullState(fullItems, fullChecks, gs.ActiveGame, currentScene)
-				} else {
-					server.FlushInitialItems(fullItems)
-				}
-			}
-
-			lastScene = currentScene
-			lastGame = gs.ActiveGame
-		} else if rawClients > 0 && gs.ActiveGame != lastGame {
-			log.Printf("Active game: %s", gs.ActiveGame)
-			lastGame = gs.ActiveGame
-		}
-
-		// Step 6: Console output
-		if legacyClients > 0 && (gameChanged || len(changedItems) > 0 || len(changedChecks) > 0) {
-			printStatus(gs, changedItems, changedChecks, server.ClientCount())
-		}
-
-		if legacyClients > 0 && !hadTrackerBaseline {
-			forceFullSyncOnReconnect = false
-		}
+		server.BroadcastRawSnapshot(rawFrame)
 	}
 }
 
@@ -369,41 +225,15 @@ func noteOoTMMUnavailable(unavailableSince *time.Time, now time.Time) time.Durat
 	return now.Sub(*unavailableSince)
 }
 
-func resetTrackingSession(backend emulatorBackend, mem *n64.Memory, server *ws.Server, forceFullSyncOnReconnect *bool) (*ootmm.Reader, *tracker.State) {
+func resetTrackingSession(backend emulatorBackend, mem *n64.Memory) *ootmm.Reader {
 	backend.Close()
-	server.RequestFullSyncAll()
-	*forceFullSyncOnReconnect = true
-	return ootmm.NewReader(mem), tracker.NewState()
-}
-
-func getActiveScene(gs *ootmm.GameState) uint16 {
-	switch gs.ActiveGame {
-	case ootmm.GameOot:
-		return gs.Oot.SceneID
-	case ootmm.GameMm:
-		// MM doesn't have a direct sceneId in the same spot;
-		// for now return 0 (to be refined)
-		return 0
-	}
-	return 0
-}
-
-func printStatus(gs *ootmm.GameState, items []tracker.ItemDiff, checks []tracker.CheckDiff, clients int) {
-	fmt.Printf("[%s] Game: %s | Scene: 0x%02X | Δ items: %d | Δ checks: %d | Trackers: %d\n",
-		time.Now().Format("15:04:05"),
-		gs.ActiveGame,
-		getActiveScene(gs),
-		len(items),
-		len(checks),
-		clients,
-	)
+	return ootmm.NewReader(mem)
 }
 
 func selectBackend(raHost string, raPort int, pj64Port int, wsAddr string, forcePJ64 bool) (*backendOption, error) {
 	if forcePJ64 {
 		fmt.Printf("PJ64:      listening on port %d\n", pj64Port)
 		fmt.Printf("WebSocket: %s\n", wsAddr)
-		fmt.Println("Console: dump [label|path] writes a JSON-Snapshot, help shows commands")
 		fmt.Println()
 		fmt.Println("Waiting for Project64 Lua adapter to connect...")
 		fmt.Println("(Load pj64_adapter.lua in Project64's scripting console)")
@@ -413,7 +243,6 @@ func selectBackend(raHost string, raPort int, pj64Port int, wsAddr string, force
 	fmt.Printf("RetroArch: %s:%d\n", raHost, raPort)
 	fmt.Printf("PJ64:      listening on port %d\n", pj64Port)
 	fmt.Printf("WebSocket: %s\n", wsAddr)
-	fmt.Println("Console: dump [label|path] writes a JSON-Snapshot, help shows commands")
 	fmt.Println()
 	fmt.Println("Checking RetroArch and Project64...")
 

@@ -3,8 +3,6 @@ package main
 import (
 	"testing"
 	"time"
-
-	"ootmm-autotracker/ws"
 )
 
 func TestNoteOoTMMUnavailableTracksElapsedTime(t *testing.T) {
@@ -102,32 +100,3 @@ func TestStartupCommitHashPrefersInjectedValue(t *testing.T) {
 	}
 }
 
-func TestParseProtocolModeAcceptsKnownModes(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		want  ws.ProtocolMode
-	}{
-		{name: "default empty", input: "", want: ws.ProtocolModeLegacy},
-		{name: "legacy", input: "legacy", want: ws.ProtocolModeLegacy},
-		{name: "raw", input: "raw", want: ws.ProtocolModeRaw},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := ws.ParseProtocolMode(test.input)
-			if err != nil {
-				t.Fatalf("ParseProtocolMode(%q) returned error: %v", test.input, err)
-			}
-			if got != test.want {
-				t.Fatalf("ParseProtocolMode(%q) = %q, want %q", test.input, got, test.want)
-			}
-		})
-	}
-}
-
-func TestParseProtocolModeRejectsUnknownMode(t *testing.T) {
-	if _, err := ws.ParseProtocolMode("delta"); err == nil {
-		t.Fatal("ParseProtocolMode accepted an unknown protocol mode")
-	}
-}
