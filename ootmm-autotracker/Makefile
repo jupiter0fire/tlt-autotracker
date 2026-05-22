@@ -1,5 +1,4 @@
 BINARY_NAME=ootmm-autotracker
-VERSION=0.1.0
 OOTMM_REPO?=../OoTMM
 OOTMM_PATCHFILE?=
 GO?=go

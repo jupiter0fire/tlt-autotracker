@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"ootmm-autotracker/buildinfo"
 	"ootmm-autotracker/ootmm"
 )
 
@@ -54,6 +55,9 @@ func TestRawHandshakeSelectsRawModeAndPreservesBase64ChunkOrder(t *testing.T) {
 	ack := readJSONMessage(t, conn)
 	if got := ack["type"]; got != "handshAck" {
 		t.Fatalf("ack type = %v, want handshAck", got)
+	}
+	if got := ack["version"]; got != buildinfo.Version {
+		t.Fatalf("ack version = %v, want %s", got, buildinfo.Version)
 	}
 	if got := ack["mode"]; got != "raw" {
 		t.Fatalf("ack mode = %v, want raw", got)

@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"ootmm-autotracker/buildinfo"
 	"ootmm-autotracker/ootmm"
 )
 
@@ -123,7 +124,7 @@ func (s *Server) readLoop(conn *websocket.Conn) {
 
 			ack := HandshakeAckMessage{
 				Type:     "handshAck",
-				Version:  "0.1.0",
+				Version:  buildinfo.Version,
 				Name:     "ootmm-autotracker",
 				Refresh:  true,
 				Mode:     "raw",
