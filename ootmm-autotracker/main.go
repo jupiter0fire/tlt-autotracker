@@ -99,6 +99,7 @@ func main() {
 		invalidSaveSince      time.Time
 		unstableGameSince     time.Time
 		hasReadValidSave      bool
+		hasSeenActiveGame     bool
 	)
 
 	restartSession := func() {
@@ -110,6 +111,7 @@ func main() {
 		invalidSaveSince = time.Time{}
 		unstableGameSince = time.Time{}
 		hasReadValidSave = false
+		hasSeenActiveGame = false
 	}
 
 	for {
@@ -127,6 +129,7 @@ func main() {
 			invalidSaveSince = time.Time{}
 			unstableGameSince = time.Time{}
 			hasReadValidSave = false
+			hasSeenActiveGame = false
 			if selected.kind == backendPJ64 {
 				log.Println("Project64 adapter connected")
 			} else {
@@ -198,13 +201,14 @@ func main() {
 		invalidSaveSince = time.Time{}
 
 		if rawFrame.ActiveGame == ootmm.GameNone {
-			if elapsed := noteOoTMMUnavailableAfterValidSave(hasReadValidSave, &unstableGameSince, now); elapsed > ootmmLostTimeout {
+			if elapsed := noteOoTMMUnavailableAfterStableActiveGame(hasSeenActiveGame, &unstableGameSince, now); elapsed > ootmmLostTimeout {
 				log.Printf("OoTMM did not reach a stable active game for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
 				restartSession()
 				time.Sleep(retryDelay)
 			}
 			continue
 		}
+		hasSeenActiveGame = true
 		unstableGameSince = time.Time{}
 
 		if rawFrame.ActiveGame != lastGame {
@@ -272,6 +276,13 @@ func noteOoTMMUnavailable(unavailableSince *time.Time, now time.Time) time.Durat
 
 func noteOoTMMUnavailableAfterValidSave(hasReadValidSave bool, unavailableSince *time.Time, now time.Time) time.Duration {
 	if !hasReadValidSave {
+		return 0
+	}
+	return noteOoTMMUnavailable(unavailableSince, now)
+}
+
+func noteOoTMMUnavailableAfterStableActiveGame(hasSeenActiveGame bool, unavailableSince *time.Time, now time.Time) time.Duration {
+	if !hasSeenActiveGame {
 		return 0
 	}
 	return noteOoTMMUnavailable(unavailableSince, now)
