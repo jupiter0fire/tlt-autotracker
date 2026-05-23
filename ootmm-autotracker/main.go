@@ -137,16 +137,23 @@ func main() {
 		// Step 2: Probe address space (once per connection)
 		if !probed {
 			if err := mem.Probe(); err != nil {
-				// Check if the connection died during probe (e.g. PJ64 Lua crashed)
-				if selected.kind == backendPJ64 && !backend.IsConnected() {
-					log.Println("Project64 connection lost during probe")
-					connected = false
-				} else if n64.IsProbeReadError(err) {
-					log.Printf("Probe read error: %v; reconnecting backend for a fresh session", err)
+				backendConnected := backend.IsConnected()
+				if shouldRestartSessionOnReadFailure(hasReadValidSave, backendConnected) &&
+					(!backendConnected || n64.IsProbeReadError(err)) {
+					if !backendConnected {
+						if selected.kind == backendPJ64 {
+							log.Println("Project64 connection lost during probe")
+						} else if hasReadValidSave {
+							log.Println("RetroArch connection lost during probe")
+						}
+					} else {
+						log.Printf("Probe read error: %v; reconnecting backend for a fresh session", err)
+					}
 					restartSession()
 					time.Sleep(retryDelay)
 					continue
-				} else if elapsed := noteOoTMMUnavailable(&ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
+				}
+				if elapsed := noteOoTMMUnavailableAfterValidSave(hasReadValidSave, &ootmmUnavailableSince, now); elapsed > ootmmLostTimeout {
 					log.Printf("OoTMM unavailable for %s during probe; reconnecting backend for a fresh session", elapsed.Round(time.Second))
 					restartSession()
 				}
@@ -162,8 +169,19 @@ func main() {
 		// Step 3: Read game state
 		rawFrame, err := reader.ReadRawFrameWithSelection(server.RequestedRawChunkSpecs())
 		if err != nil {
-			log.Printf("Raw read error: %v", err)
-			restartSession()
+			backendConnected := backend.IsConnected()
+			if shouldRestartSessionOnReadFailure(hasReadValidSave, backendConnected) {
+				if !backendConnected {
+					if selected.kind == backendPJ64 {
+						log.Println("Project64 connection lost during raw read")
+					} else if hasReadValidSave {
+						log.Println("RetroArch connection lost during raw read")
+					}
+				} else {
+					log.Printf("Raw read error: %v", err)
+				}
+				restartSession()
+			}
 			time.Sleep(retryDelay)
 			continue
 		}
@@ -180,7 +198,7 @@ func main() {
 		invalidSaveSince = time.Time{}
 
 		if rawFrame.ActiveGame == ootmm.GameNone {
-			if elapsed := noteOoTMMUnavailable(&unstableGameSince, now); elapsed > ootmmLostTimeout {
+			if elapsed := noteOoTMMUnavailableAfterValidSave(hasReadValidSave, &unstableGameSince, now); elapsed > ootmmLostTimeout {
 				log.Printf("OoTMM did not reach a stable active game for %s; reconnecting backend for a fresh session", elapsed.Round(time.Second))
 				restartSession()
 				time.Sleep(retryDelay)
@@ -257,6 +275,10 @@ func noteOoTMMUnavailableAfterValidSave(hasReadValidSave bool, unavailableSince 
 		return 0
 	}
 	return noteOoTMMUnavailable(unavailableSince, now)
+}
+
+func shouldRestartSessionOnReadFailure(hasReadValidSave bool, backendConnected bool) bool {
+	return !backendConnected || hasReadValidSave
 }
 
 func resetTrackingSession(backend emulatorBackend, mem *n64.Memory) *ootmm.Reader {

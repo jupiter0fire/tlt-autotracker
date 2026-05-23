@@ -1,9 +1,11 @@
 package ws
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -467,6 +469,43 @@ func TestWebSocketUpgradeRejectsDisallowedOrigin(t *testing.T) {
 	}
 	if response.StatusCode != http.StatusForbidden {
 		t.Fatalf("status code = %d, want %d", response.StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestWebSocketUpgradeLogsRepeatedDisallowedOriginOnce(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	var logOutput bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	log.SetOutput(&logOutput)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(originalWriter)
+		log.SetFlags(originalFlags)
+	})
+
+	for attempt := 0; attempt < 2; attempt++ {
+		_, response, err := dialTestWebSocket(httpServer.URL, "http://evil.example")
+		if err == nil {
+			t.Fatal("dial websocket unexpectedly succeeded")
+		}
+		if response == nil {
+			t.Fatalf("dial websocket returned nil response for error: %v", err)
+		}
+		if response.StatusCode != http.StatusForbidden {
+			t.Fatalf("status code = %d, want %d", response.StatusCode, http.StatusForbidden)
+		}
+	}
+
+	output := logOutput.String()
+	if count := strings.Count(output, "Rejected WebSocket upgrade"); count != 1 {
+		t.Fatalf("rejection log count = %d, want 1; output=%q", count, output)
+	}
+	if strings.Contains(output, "WebSocket upgrade error:") {
+		t.Fatalf("unexpected duplicate upgrade error log: %q", output)
 	}
 }
 

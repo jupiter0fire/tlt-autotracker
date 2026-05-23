@@ -46,6 +46,48 @@ func TestNoteOoTMMUnavailableAfterValidSaveIgnoresStartupInvalidSaves(t *testing
 	}
 }
 
+func TestShouldRestartSessionOnReadFailure(t *testing.T) {
+	tests := []struct {
+		name            string
+		hasReadValidSave bool
+		backendConnected bool
+		want            bool
+	}{
+		{
+			name:             "startup read failure waits quietly",
+			hasReadValidSave: false,
+			backendConnected: true,
+			want:             false,
+		},
+		{
+			name:             "tracked session read failure restarts",
+			hasReadValidSave: true,
+			backendConnected: true,
+			want:             true,
+		},
+		{
+			name:             "disconnected backend restarts immediately",
+			hasReadValidSave: false,
+			backendConnected: false,
+			want:             true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := shouldRestartSessionOnReadFailure(test.hasReadValidSave, test.backendConnected); got != test.want {
+				t.Fatalf(
+					"shouldRestartSessionOnReadFailure(validSave=%t, connected=%t) = %t, want %t",
+					test.hasReadValidSave,
+					test.backendConnected,
+					got,
+					test.want,
+				)
+			}
+		})
+	}
+}
+
 func TestParseBackendChoiceMatchesAliases(t *testing.T) {
 	options := []*backendOption{
 		{kind: backendRetroArch, name: "RetroArch"},

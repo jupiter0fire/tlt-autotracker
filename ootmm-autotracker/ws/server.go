@@ -27,6 +27,7 @@ type Server struct {
 	rawSequence       uint64
 	allowedOrigins    map[string]struct{}
 	allowedOriginList []string
+	rejectedLogKeys   map[string]struct{}
 }
 
 type clientState struct {
@@ -66,6 +67,7 @@ func NewServer(addr string, allowedOrigins []string) (*Server, error) {
 		addr:              addr,
 		allowedOrigins:    normalizedOrigins,
 		allowedOriginList: normalizedOriginList,
+		rejectedLogKeys:   make(map[string]struct{}),
 	}, nil
 }
 
@@ -90,7 +92,9 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{CheckOrigin: s.checkOrigin}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
+		if !isExpectedOriginRejection(err) {
+			log.Printf("WebSocket upgrade error: %v", err)
+		}
 		return
 	}
 
@@ -185,13 +189,18 @@ func normalizeOriginHost(parsed *url.URL, scheme string) (string, error) {
 func (s *Server) checkOrigin(r *http.Request) bool {
 	originHeader := strings.TrimSpace(r.Header.Get("Origin"))
 	if originHeader == "" {
-		log.Printf("Rejected WebSocket upgrade from %s: missing Origin header", r.RemoteAddr)
+		s.logRejectedUpgradeOnce(
+			"missing-origin",
+			"Rejected WebSocket upgrade from %s: missing Origin header",
+			r.RemoteAddr,
+		)
 		return false
 	}
 
 	normalizedOrigin, err := normalizeOrigin(originHeader)
 	if err != nil {
-		log.Printf(
+		s.logRejectedUpgradeOnce(
+			"invalid-origin:"+originHeader+":"+err.Error(),
 			"Rejected WebSocket upgrade from %s: invalid Origin %q: %v",
 			r.RemoteAddr,
 			originHeader,
@@ -201,7 +210,8 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 	}
 
 	if _, ok := s.allowedOrigins[normalizedOrigin]; !ok {
-		log.Printf(
+		s.logRejectedUpgradeOnce(
+			"disallowed-origin:"+normalizedOrigin,
 			"Rejected WebSocket upgrade from %s: origin %q is not in allowlist",
 			r.RemoteAddr,
 			normalizedOrigin,
@@ -210,6 +220,26 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 	}
 
 	return true
+}
+
+func (s *Server) logRejectedUpgradeOnce(key string, format string, args ...any) {
+	s.mu.Lock()
+	if _, exists := s.rejectedLogKeys[key]; exists {
+		s.mu.Unlock()
+		return
+	}
+	s.rejectedLogKeys[key] = struct{}{}
+	s.mu.Unlock()
+
+	log.Printf(format, args...)
+}
+
+func isExpectedOriginRejection(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return strings.Contains(err.Error(), "request origin not allowed by Upgrader.CheckOrigin")
 }
 
 func (s *Server) readLoop(conn *websocket.Conn) {
