@@ -16,13 +16,17 @@ import (
 	"ootmm-autotracker/ootmm"
 )
 
+const (
+	allowedDevOrigin  = "http://localhost:5173"
+	allowedProdOrigin = "https://www.thelasttracker.org"
+)
+
 func TestRawHandshakeSelectsRawModeAndPreservesBase64ChunkOrder(t *testing.T) {
-	server := NewServer(":0")
+	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
 	defer httpServer.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedDevOrigin)
 	if err != nil {
 		t.Fatalf("dial websocket: %v", err)
 	}
@@ -147,12 +151,11 @@ func TestRawHandshakeSelectsRawModeAndPreservesBase64ChunkOrder(t *testing.T) {
 }
 
 func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
-	server := NewServer(":0")
+	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
 	defer httpServer.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedDevOrigin)
 	if err != nil {
 		t.Fatalf("dial websocket: %v", err)
 	}
@@ -260,12 +263,11 @@ func TestRawClientReceivesOnlyRequestedMemoryAreasForActiveGame(t *testing.T) {
 }
 
 func TestRawClientDoesNotReceiveUpdateWhenOnlyUnwatchedChunkChanges(t *testing.T) {
-	server := NewServer(":0")
+	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
 	defer httpServer.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedDevOrigin)
 	if err != nil {
 		t.Fatalf("dial websocket: %v", err)
 	}
@@ -317,12 +319,11 @@ func TestRawClientDoesNotReceiveUpdateWhenOnlyUnwatchedChunkChanges(t *testing.T
 }
 
 func TestRawClientReceivesUpdateWhenWatchedChunkChanges(t *testing.T) {
-	server := NewServer(":0")
+	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
 	defer httpServer.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedDevOrigin)
 	if err != nil {
 		t.Fatalf("dial websocket: %v", err)
 	}
@@ -398,12 +399,11 @@ func TestRawClientReceivesUpdateWhenWatchedChunkChanges(t *testing.T) {
 }
 
 func TestLegacyHandshakeIsRejected(t *testing.T) {
-	server := NewServer(":0")
+	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
 	defer httpServer.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedDevOrigin)
 	if err != nil {
 		t.Fatalf("dial websocket: %v", err)
 	}
@@ -426,6 +426,101 @@ func TestLegacyHandshakeIsRejected(t *testing.T) {
 	if got := msg["message"]; got != "legacy protocol removed" {
 		t.Fatalf("message = %v, want legacy protocol removed", got)
 	}
+}
+
+func TestWebSocketUpgradeAllowsConfiguredProductionOrigin(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedProdOrigin)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(map[string]interface{}{
+		"type":     "handshake",
+		"features": []string{"raw"},
+		"flags":    map[string]interface{}{},
+	}); err != nil {
+		t.Fatalf("write handshake: %v", err)
+	}
+
+	ack := readJSONMessage(t, conn)
+	if got := ack["type"]; got != "handshAck" {
+		t.Fatalf("ack type = %v, want handshAck", got)
+	}
+}
+
+func TestWebSocketUpgradeRejectsDisallowedOrigin(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	_, response, err := dialTestWebSocket(httpServer.URL, "http://evil.example")
+	if err == nil {
+		t.Fatal("dial websocket unexpectedly succeeded")
+	}
+	if response == nil {
+		t.Fatalf("dial websocket returned nil response for error: %v", err)
+	}
+	if response.StatusCode != http.StatusForbidden {
+		t.Fatalf("status code = %d, want %d", response.StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestWebSocketUpgradeRejectsMissingOrigin(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	_, response, err := dialTestWebSocket(httpServer.URL, "")
+	if err == nil {
+		t.Fatal("dial websocket unexpectedly succeeded")
+	}
+	if response == nil {
+		t.Fatalf("dial websocket returned nil response for error: %v", err)
+	}
+	if response.StatusCode != http.StatusForbidden {
+		t.Fatalf("status code = %d, want %d", response.StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestWebSocketUpgradeRejectsNullOrigin(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	_, response, err := dialTestWebSocket(httpServer.URL, "null")
+	if err == nil {
+		t.Fatal("dial websocket unexpectedly succeeded")
+	}
+	if response == nil {
+		t.Fatalf("dial websocket returned nil response for error: %v", err)
+	}
+	if response.StatusCode != http.StatusForbidden {
+		t.Fatalf("status code = %d, want %d", response.StatusCode, http.StatusForbidden)
+	}
+}
+
+func newTestServer(t *testing.T) *Server {
+	t.Helper()
+
+	server, err := NewServer(":0", []string{allowedDevOrigin, allowedProdOrigin})
+	if err != nil {
+		t.Fatalf("NewServer returned error: %v", err)
+	}
+	return server
+}
+
+func dialTestWebSocket(httpURL string, origin string) (*websocket.Conn, *http.Response, error) {
+	wsURL := "ws" + strings.TrimPrefix(httpURL, "http")
+	headers := make(http.Header)
+	if origin != "" {
+		headers.Set("Origin", origin)
+	}
+	return websocket.DefaultDialer.Dial(wsURL, headers)
 }
 
 func readJSONMessage(t *testing.T, conn *websocket.Conn) map[string]interface{} {

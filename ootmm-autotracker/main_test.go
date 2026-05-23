@@ -123,3 +123,16 @@ func TestStartupCommitHashPrefersInjectedValue(t *testing.T) {
 		t.Fatalf("startupCommitHash() = %q, want %q", got, "0123456789ab")
 	}
 }
+
+func TestSplitCommaSeparatedListTrimsAndSkipsEmptyEntries(t *testing.T) {
+	got := splitCommaSeparatedList(" http://localhost:5173, ,https://www.thelasttracker.org/ ")
+	want := []string{"http://localhost:5173", "https://www.thelasttracker.org/"}
+	if len(got) != len(want) {
+		t.Fatalf("splitCommaSeparatedList length = %d, want %d (%#v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("splitCommaSeparatedList[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}

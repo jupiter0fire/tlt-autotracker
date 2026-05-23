@@ -18,11 +18,13 @@ import (
 )
 
 const (
-	pollInterval          = 100 * time.Millisecond
-	retryDelay            = 2 * time.Second
-	startupRetryDelay     = 500 * time.Millisecond
-	ootmmLostTimeout      = 20 * time.Second
-	shortCommitHashLength = 12
+	pollInterval            = 100 * time.Millisecond
+	retryDelay              = 2 * time.Second
+	startupRetryDelay       = 500 * time.Millisecond
+	ootmmLostTimeout        = 20 * time.Second
+	shortCommitHashLength   = 12
+	defaultWSAddr           = "127.0.0.1:17026"
+	defaultWSAllowedOrigins = "http://localhost:5173,https://www.thelasttracker.org"
 )
 
 var commitHash string
@@ -65,13 +67,17 @@ func main() {
 	raPort := flag.Int("ra-port", retroarch.DefaultPort, "RetroArch network command port")
 	pj64Mode := flag.Bool("pj64", false, "Force Project64 backend (skip auto-detection)")
 	pj64Port := flag.Int("pj64-port", pj64.DefaultPort, "PJ64 TCP listen port")
-	wsAddr := flag.String("ws-addr", ":17026", "WebSocket listen address")
+	wsAddr := flag.String("ws-addr", defaultWSAddr, "WebSocket listen address")
+	wsAllowedOrigins := flag.String("ws-allowed-origins", defaultWSAllowedOrigins, "Comma-separated allowed WebSocket origins")
 	flag.Parse()
 
 	fmt.Println("=== OoTMM Autotracker ===")
 
 	// Start WebSocket server
-	server := ws.NewServer(*wsAddr)
+	server, err := ws.NewServer(*wsAddr, splitCommaSeparatedList(*wsAllowedOrigins))
+	if err != nil {
+		log.Fatalf("websocket server config: %v", err)
+	}
 	server.Start()
 
 	selected, err := selectBackend(*raHost, *raPort, *pj64Port, *wsAddr, *pj64Mode)
@@ -223,6 +229,19 @@ func shortCommitHash(hash string) string {
 		return hash
 	}
 	return hash[:shortCommitHashLength]
+}
+
+func splitCommaSeparatedList(raw string) []string {
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		result = append(result, trimmed)
+	}
+	return result
 }
 
 func noteOoTMMUnavailable(unavailableSince *time.Time, now time.Time) time.Duration {

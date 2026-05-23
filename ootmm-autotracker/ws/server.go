@@ -3,8 +3,11 @@ package ws
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -14,18 +17,16 @@ import (
 	"ootmm-autotracker/ootmm"
 )
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
-
 const rawSchemaVersion = "1"
 
 // Server manages WebSocket connections to tracker frontends.
 type Server struct {
-	mu          sync.Mutex
-	clients     map[*websocket.Conn]*clientState
-	addr        string
-	rawSequence uint64
+	mu                sync.Mutex
+	clients           map[*websocket.Conn]*clientState
+	addr              string
+	rawSequence       uint64
+	allowedOrigins    map[string]struct{}
+	allowedOriginList []string
 }
 
 type clientState struct {
@@ -54,11 +55,18 @@ type rawMemoryAreaSelection struct {
 	mmNames    map[string]struct{}
 }
 
-func NewServer(addr string) *Server {
-	return &Server{
-		clients: make(map[*websocket.Conn]*clientState),
-		addr:    addr,
+func NewServer(addr string, allowedOrigins []string) (*Server, error) {
+	normalizedOrigins, normalizedOriginList, err := normalizeAllowedOrigins(allowedOrigins)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Server{
+		clients:           make(map[*websocket.Conn]*clientState),
+		addr:              addr,
+		allowedOrigins:    normalizedOrigins,
+		allowedOriginList: normalizedOriginList,
+	}, nil
 }
 
 // Start begins listening for WebSocket connections in a background goroutine.
@@ -67,7 +75,11 @@ func (s *Server) Start() {
 	mux.HandleFunc("/", s.handleWS)
 
 	go func() {
-		log.Printf("WebSocket server listening on %s", s.addr)
+		log.Printf(
+			"WebSocket server listening on %s (allowed origins: %s)",
+			s.addr,
+			strings.Join(s.allowedOriginList, ", "),
+		)
 		if err := http.ListenAndServe(s.addr, mux); err != nil {
 			log.Fatalf("WebSocket server error: %v", err)
 		}
@@ -75,6 +87,7 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{CheckOrigin: s.checkOrigin}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
@@ -87,6 +100,116 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Tracker connected (%d total)", s.ClientCount())
 	go s.readLoop(conn)
+}
+
+func normalizeAllowedOrigins(allowedOrigins []string) (map[string]struct{}, []string, error) {
+	result := make(map[string]struct{}, len(allowedOrigins))
+	ordered := make([]string, 0, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		normalized, err := normalizeOrigin(origin)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid allowed origin %q: %w", origin, err)
+		}
+		if _, exists := result[normalized]; exists {
+			continue
+		}
+		result[normalized] = struct{}{}
+		ordered = append(ordered, normalized)
+	}
+	if len(ordered) == 0 {
+		return nil, nil, fmt.Errorf("at least one allowed websocket origin is required")
+	}
+	sort.Strings(ordered)
+	return result, ordered, nil
+}
+
+func normalizeOrigin(origin string) (string, error) {
+	trimmed := strings.TrimSpace(origin)
+	if trimmed == "" {
+		return "", fmt.Errorf("origin is empty")
+	}
+	if strings.EqualFold(trimmed, "null") {
+		return "", fmt.Errorf("null origin is not allowed")
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("parse origin: %w", err)
+	}
+	if parsed.User != nil {
+		return "", fmt.Errorf("origin must not include user info")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("origin must not include query or fragment")
+	}
+	if parsed.Path != "" && parsed.Path != "/" {
+		return "", fmt.Errorf("origin must not include path")
+	}
+
+	scheme := strings.ToLower(strings.TrimSpace(parsed.Scheme))
+	if scheme != "http" && scheme != "https" {
+		return "", fmt.Errorf("unsupported origin scheme %q", parsed.Scheme)
+	}
+
+	host, err := normalizeOriginHost(parsed, scheme)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s://%s", scheme, host), nil
+}
+
+func normalizeOriginHost(parsed *url.URL, scheme string) (string, error) {
+	hostname := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	if hostname == "" {
+		return "", fmt.Errorf("origin host is missing")
+	}
+
+	port := parsed.Port()
+	if scheme == "http" && port == "80" {
+		port = ""
+	}
+	if scheme == "https" && port == "443" {
+		port = ""
+	}
+
+	if port != "" {
+		return net.JoinHostPort(hostname, port), nil
+	}
+	if strings.Contains(hostname, ":") {
+		return "[" + hostname + "]", nil
+	}
+	return hostname, nil
+}
+
+func (s *Server) checkOrigin(r *http.Request) bool {
+	originHeader := strings.TrimSpace(r.Header.Get("Origin"))
+	if originHeader == "" {
+		log.Printf("Rejected WebSocket upgrade from %s: missing Origin header", r.RemoteAddr)
+		return false
+	}
+
+	normalizedOrigin, err := normalizeOrigin(originHeader)
+	if err != nil {
+		log.Printf(
+			"Rejected WebSocket upgrade from %s: invalid Origin %q: %v",
+			r.RemoteAddr,
+			originHeader,
+			err,
+		)
+		return false
+	}
+
+	if _, ok := s.allowedOrigins[normalizedOrigin]; !ok {
+		log.Printf(
+			"Rejected WebSocket upgrade from %s: origin %q is not in allowlist",
+			r.RemoteAddr,
+			normalizedOrigin,
+		)
+		return false
+	}
+
+	return true
 }
 
 func (s *Server) readLoop(conn *websocket.Conn) {
