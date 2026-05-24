@@ -24,7 +24,7 @@ const (
 	ootmmLostTimeout        = 20 * time.Second
 	shortCommitHashLength   = 12
 	defaultWSAddr           = "127.0.0.1:17026"
-	defaultWSAllowedOrigins = "http://localhost:5173,https://www.thelasttracker.org"
+	defaultWSAllowedOrigins = "http://localhost:5173,https://www.thelasttracker.org,https://www.wbsch.de"
 )
 
 var commitHash string

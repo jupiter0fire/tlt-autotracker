@@ -26,7 +26,6 @@ type Server struct {
 	addr              string
 	rawSequence       uint64
 	allowedOrigins    map[string]struct{}
-	allowedOriginList []string
 	rejectedLogKeys   map[string]struct{}
 }
 
@@ -57,7 +56,7 @@ type rawMemoryAreaSelection struct {
 }
 
 func NewServer(addr string, allowedOrigins []string) (*Server, error) {
-	normalizedOrigins, normalizedOriginList, err := normalizeAllowedOrigins(allowedOrigins)
+	normalizedOrigins, err := normalizeAllowedOrigins(allowedOrigins)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,6 @@ func NewServer(addr string, allowedOrigins []string) (*Server, error) {
 		clients:           make(map[*websocket.Conn]*clientState),
 		addr:              addr,
 		allowedOrigins:    normalizedOrigins,
-		allowedOriginList: normalizedOriginList,
 		rejectedLogKeys:   make(map[string]struct{}),
 	}, nil
 }
@@ -77,11 +75,7 @@ func (s *Server) Start() {
 	mux.HandleFunc("/", s.handleWS)
 
 	go func() {
-		log.Printf(
-			"WebSocket server listening on %s (allowed origins: %s)",
-			s.addr,
-			strings.Join(s.allowedOriginList, ", "),
-		)
+		log.Printf("WebSocket server listening on %s", s.addr)
 		if err := http.ListenAndServe(s.addr, mux); err != nil {
 			log.Fatalf("WebSocket server error: %v", err)
 		}
@@ -106,13 +100,13 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	go s.readLoop(conn)
 }
 
-func normalizeAllowedOrigins(allowedOrigins []string) (map[string]struct{}, []string, error) {
+func normalizeAllowedOrigins(allowedOrigins []string) (map[string]struct{}, error) {
 	result := make(map[string]struct{}, len(allowedOrigins))
 	ordered := make([]string, 0, len(allowedOrigins))
 	for _, origin := range allowedOrigins {
 		normalized, err := normalizeOrigin(origin)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid allowed origin %q: %w", origin, err)
+			return nil, fmt.Errorf("invalid allowed origin %q: %w", origin, err)
 		}
 		if _, exists := result[normalized]; exists {
 			continue
@@ -121,10 +115,10 @@ func normalizeAllowedOrigins(allowedOrigins []string) (map[string]struct{}, []st
 		ordered = append(ordered, normalized)
 	}
 	if len(ordered) == 0 {
-		return nil, nil, fmt.Errorf("at least one allowed websocket origin is required")
+		return nil, fmt.Errorf("at least one allowed websocket origin is required")
 	}
 	sort.Strings(ordered)
-	return result, ordered, nil
+	return result, nil
 }
 
 func normalizeOrigin(origin string) (string, error) {

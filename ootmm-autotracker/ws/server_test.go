@@ -21,6 +21,7 @@ import (
 const (
 	allowedDevOrigin  = "http://localhost:5173"
 	allowedProdOrigin = "https://www.thelasttracker.org"
+	allowedAltOrigin  = "https://www.wbsch.de"
 )
 
 func TestRawHandshakeSelectsRawModeAndPreservesBase64ChunkOrder(t *testing.T) {
@@ -455,6 +456,31 @@ func TestWebSocketUpgradeAllowsConfiguredProductionOrigin(t *testing.T) {
 	}
 }
 
+func TestWebSocketUpgradeAllowsAdditionalConfiguredOrigin(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedAltOrigin)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(map[string]interface{}{
+		"type":     "handshake",
+		"features": []string{"raw"},
+		"flags":    map[string]interface{}{},
+	}); err != nil {
+		t.Fatalf("write handshake: %v", err)
+	}
+
+	ack := readJSONMessage(t, conn)
+	if got := ack["type"]; got != "handshAck" {
+		t.Fatalf("ack type = %v, want handshAck", got)
+	}
+}
+
 func TestWebSocketUpgradeRejectsDisallowedOrigin(t *testing.T) {
 	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
@@ -509,6 +535,40 @@ func TestWebSocketUpgradeLogsRepeatedDisallowedOriginOnce(t *testing.T) {
 	}
 }
 
+func TestServerStartDoesNotLogAllowedOrigins(t *testing.T) {
+	server, err := NewServer(":0", []string{allowedDevOrigin, allowedProdOrigin, allowedAltOrigin})
+	if err != nil {
+		t.Fatalf("NewServer returned error: %v", err)
+	}
+
+	var logOutput bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	log.SetOutput(&logOutput)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(originalWriter)
+		log.SetFlags(originalFlags)
+	})
+
+	server.Start()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		output := logOutput.String()
+		if strings.Contains(output, "WebSocket server listening on :0") {
+			if strings.Contains(output, allowedDevOrigin) || strings.Contains(output, allowedProdOrigin) || strings.Contains(output, allowedAltOrigin) {
+				t.Fatalf("startup log exposed allowed origins: %q", output)
+			}
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for startup log, got %q", output)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func TestWebSocketUpgradeRejectsMissingOrigin(t *testing.T) {
 	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
@@ -546,7 +606,7 @@ func TestWebSocketUpgradeRejectsNullOrigin(t *testing.T) {
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
 
-	server, err := NewServer(":0", []string{allowedDevOrigin, allowedProdOrigin})
+	server, err := NewServer(":0", []string{allowedDevOrigin, allowedProdOrigin, allowedAltOrigin})
 	if err != nil {
 		t.Fatalf("NewServer returned error: %v", err)
 	}
