@@ -11,6 +11,7 @@ Download the autotracker for Windows or Linux, and also download the adapter Lua
 3. In Project64-EM, open File -> Lua Scripts and double-click `pj64-adapter.lua`.
 4. Upload the spoiler log to thelasttracker.org.
 5. If The Last Tracker does not connect automatically, click Auto.
+6. Potentially, your browser will display a popup regarding access to the autotracker. You need to grant access there once.
 
 A green outline around the Auto button means the autotracker connected successfully. An orange outline means no connection to the autotracker has been established yet.
 
@@ -24,6 +25,7 @@ Download the autotracker for Windows or Linux from [the latest releases](https:/
 2. Start the autotracker.
 3. Upload the spoiler log to thelasttracker.org.
 4. If The Last Tracker does not connect automatically, click Auto.
+5. Potentially, your browser will display a popup regarding access to the autotracker. You need to grant access there once.
 
 A green outline around the Auto button means the autotracker connected successfully. An orange outline means no connection to the autotracker has been established yet.
 
