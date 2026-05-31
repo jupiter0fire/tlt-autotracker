@@ -11,22 +11,34 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"ootmm-autotracker/buildinfo"
 	"ootmm-autotracker/ootmm"
 )
 
-const rawSchemaVersion = "1"
+const (
+	rawSchemaVersion             = "1"
+	rawBroadcastThrottleInterval = 500 * time.Millisecond
+)
 
 // Server manages WebSocket connections to tracker frontends.
 type Server struct {
-	mu                sync.Mutex
-	clients           map[*websocket.Conn]*clientState
-	addr              string
-	rawSequence       uint64
-	allowedOrigins    map[string]struct{}
-	rejectedLogKeys   map[string]struct{}
+	mu                 sync.Mutex
+	clients            map[*websocket.Conn]*clientState
+	addr               string
+	rawSequence        uint64
+	rawLastBroadcast   time.Time
+	rawPendingSnapshot *queuedRawSnapshot
+	rawThrottleTimer   *time.Timer
+	allowedOrigins     map[string]struct{}
+	rejectedLogKeys    map[string]struct{}
+}
+
+type queuedRawSnapshot struct {
+	frame    *ootmm.RawFrame
+	sequence uint64
 }
 
 type clientState struct {
@@ -62,10 +74,10 @@ func NewServer(addr string, allowedOrigins []string) (*Server, error) {
 	}
 
 	return &Server{
-		clients:           make(map[*websocket.Conn]*clientState),
-		addr:              addr,
-		allowedOrigins:    normalizedOrigins,
-		rejectedLogKeys:   make(map[string]struct{}),
+		clients:         make(map[*websocket.Conn]*clientState),
+		addr:            addr,
+		allowedOrigins:  normalizedOrigins,
+		rejectedLogKeys: make(map[string]struct{}),
 	}, nil
 }
 
@@ -430,6 +442,19 @@ func cloneRawChunks(chunks []ootmm.RawChunk) []ootmm.RawChunk {
 	return cloned
 }
 
+func cloneRawFrame(frame *ootmm.RawFrame) *ootmm.RawFrame {
+	if frame == nil {
+		return nil
+	}
+
+	return &ootmm.RawFrame{
+		Valid:      frame.Valid,
+		ActiveGame: frame.ActiveGame,
+		SaveIndex:  frame.SaveIndex,
+		Chunks:     cloneRawChunks(frame.Chunks),
+	}
+}
+
 func rawChunksEqual(left []ootmm.RawChunk, right []ootmm.RawChunk) bool {
 	if len(left) != len(right) {
 		return false
@@ -535,6 +560,55 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 	defer s.mu.Unlock()
 	s.rawSequence++
 	sequence := s.rawSequence
+	if s.rawLastBroadcast.IsZero() || time.Since(s.rawLastBroadcast) >= rawBroadcastThrottleInterval {
+		s.clearPendingRawSnapshotLocked()
+		s.broadcastRawSnapshotLocked(frame, sequence)
+		return
+	}
+
+	s.rawPendingSnapshot = &queuedRawSnapshot{
+		frame:    cloneRawFrame(frame),
+		sequence: sequence,
+	}
+	if s.rawThrottleTimer != nil {
+		return
+	}
+
+	delay := rawBroadcastThrottleInterval - time.Since(s.rawLastBroadcast)
+	if delay < 0 {
+		delay = 0
+	}
+	s.rawThrottleTimer = time.AfterFunc(delay, s.flushPendingRawSnapshot)
+}
+
+func (s *Server) clearPendingRawSnapshotLocked() {
+	if s.rawThrottleTimer != nil {
+		s.rawThrottleTimer.Stop()
+		s.rawThrottleTimer = nil
+	}
+	s.rawPendingSnapshot = nil
+}
+
+func (s *Server) flushPendingRawSnapshot() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.rawThrottleTimer = nil
+	pending := s.rawPendingSnapshot
+	s.rawPendingSnapshot = nil
+	if pending == nil {
+		return
+	}
+
+	s.broadcastRawSnapshotLocked(pending.frame, pending.sequence)
+}
+
+func (s *Server) broadcastRawSnapshotLocked(frame *ootmm.RawFrame, sequence uint64) {
+	if frame == nil || !frame.Valid || frame.ActiveGame == ootmm.GameNone || len(frame.Chunks) == 0 {
+		return
+	}
+
+	sent := false
 
 	for conn, client := range s.clients {
 		chunks := filterRawChunksForGame(frame.Chunks, client.rawMemory, frame.ActiveGame)
@@ -566,6 +640,7 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 			delete(s.clients, conn)
 			continue
 		}
+		sent = true
 
 		client.rawLastSnapshot = rawSnapshotState{
 			hasSnapshot: true,
@@ -573,6 +648,10 @@ func (s *Server) BroadcastRawSnapshot(frame *ootmm.RawFrame) {
 			saveIndex:   frame.SaveIndex,
 			chunks:      cloneRawChunks(chunks),
 		}
+	}
+
+	if sent {
+		s.rawLastBroadcast = time.Now()
 	}
 }
 

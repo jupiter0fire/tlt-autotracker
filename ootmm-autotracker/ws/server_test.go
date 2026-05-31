@@ -401,6 +401,109 @@ func TestRawClientReceivesUpdateWhenWatchedChunkChanges(t *testing.T) {
 	}
 }
 
+func TestRawClientThrottlesChangedUpdatesToTwoPerSecond(t *testing.T) {
+	server := newTestServer(t)
+	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
+	defer httpServer.Close()
+
+	conn, _, err := dialTestWebSocket(httpServer.URL, allowedDevOrigin)
+	if err != nil {
+		t.Fatalf("dial websocket: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(map[string]interface{}{
+		"type":     "handshake",
+		"features": []string{"raw"},
+		"flags":    map[string]interface{}{},
+		"memoryAreas": map[string]interface{}{
+			"oot": []map[string]interface{}{{
+				"name":    "oot_save_ctx",
+				"address": 0x8011A5D0,
+				"length":  3,
+			}},
+		},
+	}); err != nil {
+		t.Fatalf("write handshake: %v", err)
+	}
+
+	ack := readJSONMessage(t, conn)
+	if got := ack["type"]; got != "handshAck" {
+		t.Fatalf("ack type = %v, want handshAck", got)
+	}
+
+	server.BroadcastRawSnapshot(&ootmm.RawFrame{
+		Valid:      true,
+		ActiveGame: ootmm.GameOot,
+		SaveIndex:  2,
+		Chunks: []ootmm.RawChunk{{
+			Name:    "oot_save_ctx",
+			Address: 0x8011A5D0,
+			Length:  3,
+			Data:    []byte{0xFA, 0x00, 0xBC},
+		}},
+	})
+
+	readJSONMessage(t, conn)
+
+	start := time.Now()
+	server.BroadcastRawSnapshot(&ootmm.RawFrame{
+		Valid:      true,
+		ActiveGame: ootmm.GameOot,
+		SaveIndex:  2,
+		Chunks: []ootmm.RawChunk{{
+			Name:    "oot_save_ctx",
+			Address: 0x8011A5D0,
+			Length:  3,
+			Data:    []byte{0xFA, 0x01, 0xBC},
+		}},
+	})
+
+	time.Sleep(rawBroadcastThrottleInterval / 5)
+
+	server.BroadcastRawSnapshot(&ootmm.RawFrame{
+		Valid:      true,
+		ActiveGame: ootmm.GameOot,
+		SaveIndex:  2,
+		Chunks: []ootmm.RawChunk{{
+			Name:    "oot_save_ctx",
+			Address: 0x8011A5D0,
+			Length:  3,
+			Data:    []byte{0xFA, 0x02, 0xBC},
+		}},
+	})
+
+	msg := readJSONMessage(t, conn)
+	elapsed := time.Since(start)
+	if elapsed < rawBroadcastThrottleInterval/2 {
+		t.Fatalf("throttled update arrived after %s, want at least %s", elapsed, rawBroadcastThrottleInterval/2)
+	}
+	if got := msg["sequence"]; got != float64(3) {
+		t.Fatalf("sequence = %v, want 3", got)
+	}
+
+	chunks, ok := msg["chunks"].([]interface{})
+	if !ok || len(chunks) != 1 {
+		t.Fatalf("chunks = %T %#v, want 1 entry", msg["chunks"], msg["chunks"])
+	}
+
+	chunk, ok := chunks[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("chunk = %T, want object", chunks[0])
+	}
+	data, ok := chunk["data"].(string)
+	if !ok {
+		t.Fatalf("chunk data = %T, want string", chunk["data"])
+	}
+	decoded, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		t.Fatalf("decode chunk data: %v", err)
+	}
+	if string(decoded) != string([]byte{0xFA, 0x02, 0xBC}) {
+		t.Fatalf("decoded chunk = % x, want fa 02 bc", decoded)
+	}
+}
+
 func TestLegacyHandshakeIsRejected(t *testing.T) {
 	server := newTestServer(t)
 	httpServer := httptest.NewServer(http.HandlerFunc(server.handleWS))
