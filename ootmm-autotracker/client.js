@@ -13,7 +13,7 @@ const options = {
 
 const req = http.request(options);
 
-req.on('upgrade', (res, socket, upgradeHead) => {
+req.on('upgrade', (res, socket) => {
   // Simple frame construction for {"type":"handshake"}
   // 0x81 (Fin + Text frame)
   // Mask bit set (0x80) + length 20 (0x14)
