@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"ootmm-autotracker/ares"
 	"ootmm-autotracker/n64"
 	"ootmm-autotracker/ootmm"
 	"ootmm-autotracker/pj64"
@@ -29,7 +30,7 @@ const (
 
 var commitHash string
 
-// emulatorBackend abstracts the lifecycle of RetroArch and PJ64 connections.
+// emulatorBackend abstracts the lifecycle of emulator connections (RetroArch, PJ64, Ares).
 type emulatorBackend interface {
 	Connect() error
 	Close()
@@ -41,6 +42,7 @@ type backendKind string
 const (
 	backendRetroArch backendKind = "retroarch"
 	backendPJ64      backendKind = "pj64"
+	backendAres      backendKind = "ares"
 )
 
 type backendOption struct {
@@ -67,6 +69,9 @@ func main() {
 	raPort := flag.Int("ra-port", retroarch.DefaultPort, "RetroArch network command port")
 	pj64Mode := flag.Bool("pj64", false, "Force Project64 backend (skip auto-detection)")
 	pj64Port := flag.Int("pj64-port", pj64.DefaultPort, "PJ64 TCP listen port")
+	aresMode := flag.Bool("ares", false, "Force Ares backend (skip auto-detection)")
+	aresHost := flag.String("ares-host", ares.DefaultHost, "Ares GDB host")
+	aresPort := flag.Int("ares-port", ares.DefaultPort, "Ares GDB port")
 	wsAddr := flag.String("ws-addr", defaultWSAddr, "WebSocket listen address")
 	wsAllowedOrigins := flag.String("ws-allowed-origins", defaultWSAllowedOrigins, "Comma-separated allowed WebSocket origins")
 	flag.Parse()
@@ -80,7 +85,7 @@ func main() {
 	}
 	server.Start()
 
-	selected, err := selectBackend(*raHost, *raPort, *pj64Port, *wsAddr, *pj64Mode)
+	selected, err := selectBackend(*raHost, *raPort, *pj64Port, *aresHost, *aresPort, *wsAddr, *pj64Mode, *aresMode)
 	if err != nil {
 		log.Fatalf("backend startup: %v", err)
 	}
@@ -130,9 +135,12 @@ func main() {
 			unstableGameSince = time.Time{}
 			hasReadValidSave = false
 			hasSeenActiveGame = false
-			if selected.kind == backendPJ64 {
+			switch selected.kind {
+			case backendPJ64:
 				log.Println("Project64 adapter connected")
-			} else {
+			case backendAres:
+				log.Println("Connected to Ares (GDB)")
+			default:
 				log.Println("Connected to RetroArch")
 			}
 		}
@@ -144,10 +152,15 @@ func main() {
 				if shouldRestartSessionOnReadFailure(hasReadValidSave, backendConnected) &&
 					(!backendConnected || n64.IsProbeReadError(err)) {
 					if !backendConnected {
-						if selected.kind == backendPJ64 {
+						switch selected.kind {
+						case backendPJ64:
 							log.Println("Project64 connection lost during probe")
-						} else if hasReadValidSave {
-							log.Println("RetroArch connection lost during probe")
+						case backendAres:
+							log.Println("Ares connection lost during probe")
+						default:
+							if hasReadValidSave {
+								log.Println("RetroArch connection lost during probe")
+							}
 						}
 					} else {
 						log.Printf("Probe read error: %v; reconnecting backend for a fresh session", err)
@@ -175,10 +188,15 @@ func main() {
 			backendConnected := backend.IsConnected()
 			if shouldRestartSessionOnReadFailure(hasReadValidSave, backendConnected) {
 				if !backendConnected {
-					if selected.kind == backendPJ64 {
+					switch selected.kind {
+					case backendPJ64:
 						log.Println("Project64 connection lost during raw read")
-					} else if hasReadValidSave {
-						log.Println("RetroArch connection lost during raw read")
+					case backendAres:
+						log.Println("Ares connection lost during raw read")
+					default:
+						if hasReadValidSave {
+							log.Println("RetroArch connection lost during raw read")
+						}
 					}
 				} else {
 					log.Printf("Raw read error: %v", err)
@@ -297,7 +315,7 @@ func resetTrackingSession(backend emulatorBackend, mem *n64.Memory) *ootmm.Reade
 	return ootmm.NewReader(mem)
 }
 
-func selectBackend(raHost string, raPort int, pj64Port int, wsAddr string, forcePJ64 bool) (*backendOption, error) {
+func selectBackend(raHost string, raPort int, pj64Port int, aresHost string, aresPort int, wsAddr string, forcePJ64 bool, forceAres bool) (*backendOption, error) {
 	if forcePJ64 {
 		fmt.Printf("PJ64:      listening on port %d\n", pj64Port)
 		fmt.Printf("WebSocket: %s\n", wsAddr)
@@ -307,42 +325,55 @@ func selectBackend(raHost string, raPort int, pj64Port int, wsAddr string, force
 		return newPJ64Option(pj64Port)
 	}
 
+	if forceAres {
+		fmt.Printf("Ares:      %s:%d\n", aresHost, aresPort)
+		fmt.Printf("WebSocket: %s\n", wsAddr)
+		fmt.Println()
+		fmt.Println("Waiting for Ares GDB stub to become available...")
+		return newAresOption(aresHost, aresPort)
+	}
+
 	fmt.Printf("RetroArch: %s:%d\n", raHost, raPort)
 	fmt.Printf("PJ64:      listening on port %d\n", pj64Port)
+	fmt.Printf("Ares:      %s:%d\n", aresHost, aresPort)
 	fmt.Printf("WebSocket: %s\n", wsAddr)
 	fmt.Println()
-	fmt.Println("Checking RetroArch and Project64...")
+	fmt.Println("Checking RetroArch, Project64, and Ares...")
 
 	retroArchOption := newRetroArchOption(raHost, raPort)
 	pj64Option, err := newPJ64Option(pj64Port)
 	if err != nil {
 		log.Printf("Project64 listener unavailable: %v", err)
 	}
+	aresOption, err2 := newAresOption(aresHost, aresPort)
+	if err2 != nil {
+		log.Printf("Ares client unavailable: %v", err2)
+	}
 
 	waitingPrinted := false
 	for {
-		available := detectAvailableBackends(retroArchOption, pj64Option)
+		available := detectAvailableBackends(retroArchOption, pj64Option, aresOption)
 		switch len(available) {
 		case 0:
 			if !waitingPrinted {
-				fmt.Println("Waiting for RetroArch or Project64...")
-				fmt.Println("(Load pj64_adapter.lua in Project64's scripting console if needed)")
+				fmt.Println("Waiting for RetroArch, Project64, or Ares...")
+				fmt.Println("(For PJ64, load pj64_adapter.lua in Project64's scripting console)")
 				waitingPrinted = true
 			}
 			time.Sleep(startupRetryDelay)
 		case 1:
 			chosen := available[0]
 			fmt.Printf("Using %s automatically.\n", chosen.name)
-			cleanupUnselectedBackends(chosen, retroArchOption, pj64Option)
+			cleanupUnselectedBackends(chosen, retroArchOption, pj64Option, aresOption)
 			return chosen, nil
 		default:
 			chosen, err := promptForBackendChoice(available)
 			if err != nil {
-				cleanupUnselectedBackends(nil, retroArchOption, pj64Option)
+				cleanupUnselectedBackends(nil, retroArchOption, pj64Option, aresOption)
 				return nil, err
 			}
 			fmt.Printf("Using %s.\n", chosen.name)
-			cleanupUnselectedBackends(chosen, retroArchOption, pj64Option)
+			cleanupUnselectedBackends(chosen, retroArchOption, pj64Option, aresOption)
 			return chosen, nil
 		}
 	}
@@ -374,6 +405,20 @@ func newPJ64Option(port int) (*backendOption, error) {
 		backend:  srv,
 		mem:      mem,
 		shutdown: srv.Stop,
+	}, nil
+}
+
+func newAresOption(host string, port int) (*backendOption, error) {
+	client := ares.NewClient(host, port)
+	mem := n64.NewMemory(client)
+	mem.SetSwizzle(false)
+	mem.SetBaseShift(n64.VirtualBase)
+	return &backendOption{
+		kind:     backendAres,
+		name:     "Ares",
+		backend:  client,
+		mem:      mem,
+		shutdown: client.Close,
 	}, nil
 }
 
@@ -409,7 +454,7 @@ func cleanupUnselectedBackends(chosen *backendOption, options ...*backendOption)
 func promptForBackendChoice(options []*backendOption) (*backendOption, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("Both RetroArch and Project64 are reachable. Select one:")
+		fmt.Println("Multiple emulators are reachable. Select one:")
 		for index, option := range options {
 			fmt.Printf("  %d) %s\n", index+1, option.name)
 		}
@@ -424,7 +469,7 @@ func promptForBackendChoice(options []*backendOption) (*backendOption, error) {
 			return chosen, nil
 		}
 
-		fmt.Println("Please enter 1/2 or the emulator name.")
+		fmt.Println("Please enter a number or emulator name.")
 	}
 }
 
@@ -444,6 +489,8 @@ func backendChoiceAlias(kind backendKind, choice string) bool {
 		return choice == "retroarch" || choice == "ra"
 	case backendPJ64:
 		return choice == "project64" || choice == "project" || choice == "pj64"
+	case backendAres:
+		return choice == "ares"
 	default:
 		return false
 	}
