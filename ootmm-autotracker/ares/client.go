@@ -99,13 +99,14 @@ func (c *Client) ReadMemory(addr uint32, size int) ([]byte, error) {
 		return nil, err
 	}
 
-	// Check for GDB error response (starts with 'E')
-	if len(resp) > 0 && resp[0] == 'E' {
-		return nil, fmt.Errorf("gdb error: %s", resp)
-	}
-
+	// Try to decode as hex data first. Valid memory-read responses are
+	// always hex-encoded data of the expected length. GDB error responses
+	// (e.g. "E01", "E.") either have odd length or are not valid hex.
 	data, err := hex.DecodeString(resp)
 	if err != nil {
+		if len(resp) > 0 && resp[0] == 'E' {
+			return nil, fmt.Errorf("gdb error: %s", resp)
+		}
 		return nil, fmt.Errorf("decode hex response: %w", err)
 	}
 
