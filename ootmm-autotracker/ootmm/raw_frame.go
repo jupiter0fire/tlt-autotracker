@@ -1,6 +1,14 @@
 package ootmm
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
+
+// ntscFrameDuration is one NTSC N64 frame at 60 Hz (~16.67 ms).
+// We wait this long between the chunk read and the re-detection so the
+// second stability check always sees a different frame.
+const ntscFrameDuration = 17 * time.Millisecond
 
 const (
 	ootRawPlayStateCoreSize = 0x1CA8
@@ -94,6 +102,11 @@ func (r *Reader) ReadRawFrameWithSelection(selection RawChunkSpecSelection) (*Ra
 	if err != nil {
 		return nil, err
 	}
+
+	// Wait at least one NTSC frame so the re-detection below sees a
+	// different frame than the chunk read.  This makes the stability
+	// check much more likely to catch in-progress game transitions.
+	time.Sleep(ntscFrameDuration)
 
 	gameAfter, err := r.detector.DetectActiveGame()
 	if err != nil {

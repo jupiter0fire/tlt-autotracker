@@ -15,6 +15,36 @@ local PORT = 55190
 -- Op codes
 local OP_MEMREAD_BULK = 10
 
+-- ComboCtx addresses (virtual) for transition detection.
+-- During a game switch OoTMM's Context_Init writes the magic "OoT+MM<3"
+-- to the target game's ComboCtx.  While the magic is visible the save
+-- data is not yet fully initialized and must not be read.
+local COMBOCTX_OOT_ADDR = 0x80006584
+local COMBOCTX_MM_ADDR  = 0x80098280
+local COMBOCTX_MAGIC    = "OoT+MM<3"
+
+local function is_game_transition()
+  local magic_oot = ""
+  local magic_mm  = ""
+  pcall(function()
+    -- Read 8 bytes of magic from OoT ComboCtx
+    local parts = {}
+    for i = 0, 7 do
+      parts[i + 1] = string.char(memory.read_u8(COMBOCTX_OOT_ADDR + i))
+    end
+    magic_oot = table.concat(parts)
+  end)
+  pcall(function()
+    -- Read 8 bytes of magic from MM ComboCtx
+    local parts = {}
+    for i = 0, 7 do
+      parts[i + 1] = string.char(memory.read_u8(COMBOCTX_MM_ADDR + i))
+    end
+    magic_mm = table.concat(parts)
+  end)
+  return magic_oot == COMBOCTX_MAGIC or magic_mm == COMBOCTX_MAGIC
+end
+
 function connect()
   local s = socket.tcp(HOST, PORT)
   if s == nil then
@@ -56,28 +86,36 @@ while true do
     if op == OP_MEMREAD_BULK then
       local addr = binary.unpack_u32(s:recv(4))
       local size = binary.unpack_u32(s:recv(4))
-      local parts = {}
-      local i = 0
 
-      -- Handle unaligned head bytes
-      while i < size and (addr + i) % 4 ~= 0 do
-        parts[#parts + 1] = string.char(memory.read_u8(addr + i))
-        i = i + 1
+      -- Guard: if the game is mid-transition (ComboCtx magic is still
+      -- visible at either address), return zeroes so the autotracker
+      -- sees a clean invalid frame instead of partially-written garbage.
+      if is_game_transition() then
+        s:send(string.char(0):rep(size))
+      else
+        local parts = {}
+        local i = 0
+
+        -- Handle unaligned head bytes
+        while i < size and (addr + i) % 4 ~= 0 do
+          parts[#parts + 1] = string.char(memory.read_u8(addr + i))
+          i = i + 1
+        end
+
+        -- Read aligned middle with u32 (4x faster than byte-by-byte)
+        while i + 3 < size do
+          append_u32_be(parts, memory.read_u32(addr + i))
+          i = i + 4
+        end
+
+        -- Handle trailing bytes
+        while i < size do
+          parts[#parts + 1] = string.char(memory.read_u8(addr + i))
+          i = i + 1
+        end
+
+        s:send(table.concat(parts))
       end
-
-      -- Read aligned middle with u32 (4x faster than byte-by-byte)
-      while i + 3 < size do
-        append_u32_be(parts, memory.read_u32(addr + i))
-        i = i + 4
-      end
-
-      -- Handle trailing bytes
-      while i < size do
-        parts[#parts + 1] = string.char(memory.read_u8(addr + i))
-        i = i + 1
-      end
-
-      s:send(table.concat(parts))
     end
   end)
 

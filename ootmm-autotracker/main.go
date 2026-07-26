@@ -26,6 +26,12 @@ const (
 	shortCommitHashLength   = 12
 	defaultWSAddr           = "127.0.0.1:17026"
 	defaultWSAllowedOrigins = "http://localhost:5173,https://www.thelasttracker.org,https://www.wbsch.de"
+
+	// transitionStableFrames is the minimum number of consecutive
+	// valid polls with the same active game required after a game
+	// change before data is broadcast.  This gives the new game's
+	// save context time to fully initialize.
+	transitionStableFrames = 5
 )
 
 var commitHash string
@@ -97,14 +103,15 @@ func main() {
 	reader := ootmm.NewReader(mem)
 
 	var (
-		connected             = selected.connected
-		probed                bool
-		lastGame              ootmm.ActiveGame
-		ootmmUnavailableSince time.Time
-		invalidSaveSince      time.Time
-		unstableGameSince     time.Time
-		hasReadValidSave      bool
-		hasSeenActiveGame     bool
+		connected              = selected.connected
+		probed                 bool
+		lastGame               ootmm.ActiveGame
+		transitionStableCount  int
+		ootmmUnavailableSince  time.Time
+		invalidSaveSince       time.Time
+		unstableGameSince      time.Time
+		hasReadValidSave       bool
+		hasSeenActiveGame      bool
 	)
 
 	restartSession := func() {
@@ -112,6 +119,7 @@ func main() {
 		connected = false
 		probed = false
 		lastGame = ootmm.GameNone
+		transitionStableCount = 0
 		ootmmUnavailableSince = time.Time{}
 		invalidSaveSince = time.Time{}
 		unstableGameSince = time.Time{}
@@ -130,6 +138,7 @@ func main() {
 			}
 			connected = true
 			probed = false
+			transitionStableCount = 0
 			ootmmUnavailableSince = time.Time{}
 			invalidSaveSince = time.Time{}
 			unstableGameSince = time.Time{}
@@ -230,8 +239,16 @@ func main() {
 		unstableGameSince = time.Time{}
 
 		if rawFrame.ActiveGame != lastGame {
-			log.Printf("Active game: %s", rawFrame.ActiveGame)
+			log.Printf("Active game: %s (stabilizing...)", rawFrame.ActiveGame)
 			lastGame = rawFrame.ActiveGame
+			transitionStableCount = 0
+		}
+
+		transitionStableCount++
+		if transitionStableCount < transitionStableFrames {
+			// Still stabilizing after a game change — skip broadcast
+			// so clients don't see partially-initialized data.
+			continue
 		}
 
 		server.BroadcastRawSnapshot(rawFrame)
