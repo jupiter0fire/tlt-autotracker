@@ -239,7 +239,7 @@ func main() {
 		unstableGameSince = time.Time{}
 
 		if rawFrame.ActiveGame != lastGame {
-			log.Printf("Active game: %s (stabilizing...)", rawFrame.ActiveGame)
+			log.Printf("Active game: %s", rawFrame.ActiveGame)
 			lastGame = rawFrame.ActiveGame
 			transitionStableCount = 0
 		}
