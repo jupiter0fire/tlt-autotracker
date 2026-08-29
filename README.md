@@ -2,7 +2,7 @@ This is an autotracker for [thelasttracker.org](https://www.thelasttracker.org/)
 
 ## Autotracking Setup for Project64-EM
 
-Only stable randomizer versions v30.1 to v31.1 are supported (no dev seeds). Autotracking only works after you import a spoiler log.
+Only stable randomizer versions v30.1 to v32.3 are supported (no dev seeds). Autotracking only works after you import a spoiler log.
 
 Download the autotracker for Windows or Linux, and also download the adapter Lua file from [the latest releases](https://github.com/jupiter0fire/tlt-autotracker/releases/latest). Put the adapter Lua in the same folder as the Multiworld/Coop Lua script, inside the Scripts folder of Project64-EM.
 
@@ -18,7 +18,7 @@ A green outline around the Auto button means the autotracker connected successfu
 
 ## Autotracking Setup for RetroArch
 
-Only stable randomizer versions v30.1 to v31.1 are supported (no dev seeds). Autotracking only works after you import a spoiler log.
+Only stable randomizer versions v30.1 to v32.3 are supported (no dev seeds). Autotracking only works after you import a spoiler log.
 
 Download the autotracker for Windows or Linux from [the latest releases](https://github.com/jupiter0fire/tlt-autotracker/releases/latest). If this is your first time using autotracking, enable Show Advanced Settings under Settings -> User Interface. Then enable Network Commands under Settings -> Network and leave the Network Command Port set to 55355.
 
@@ -33,7 +33,7 @@ A green outline around the Auto button means the autotracker connected successfu
 
 ## Autotracking Setup for Ares
 
-Only randomizer versions v30.1 to v31.1 are supported (no dev seeds). Autotracking only works after you import a spoiler log.
+Only randomizer versions v30.1 to v32.3 are supported (no dev seeds). Autotracking only works after you import a spoiler log.
 
 Download the autotracker for Windows or Linux from [the latest releases](https://github.com/jupiter0fire/tlt-autotracker/releases/latest). If this is your first time using autotracking, you have to enable GDB debugging in Ares. Toggle "Enabled" and "Use IPv4" under Settings -> Debug. Leave the Port set to 9123.
 
