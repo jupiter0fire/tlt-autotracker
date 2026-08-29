@@ -17,15 +17,33 @@ const (
 	ReadTimeout  = 10 * time.Second
 
 	opReadBulk = 10
+
+	// adapterGreeting is the 4-byte greeting the PJ64 Lua adapter must
+	// send immediately after connecting.  The trailing digit is the
+	// adapter protocol version: only scripts presenting the current
+	// greeting are served, so outdated Lua scripts are rejected instead
+	// of feeding the tracker stale data.  Keep in sync with
+	// GREETING_MAGIC/PROTOCOL_VERSION in tlt_autotracking.lua.
+	adapterGreeting = "OAT2"
+
+	// greetingLogInterval throttles warning logs while an incompatible
+	// adapter keeps reconnecting.
+	greetingLogInterval = 30 * time.Second
 )
+
+// greetingTimeout is how long the server waits for the adapter greeting
+// before dropping the connection.  It is a variable so tests can shorten
+// it; the new adapter sends the greeting immediately after connecting.
+var greetingTimeout = 2 * time.Second
 
 // Server listens for a PJ64 Lua adapter connection and provides
 // memory reads over a simple binary protocol.
 type Server struct {
-	port     int
-	listener net.Listener
-	conn     net.Conn
-	mu       sync.Mutex
+	port            int
+	listener        net.Listener
+	conn            net.Conn
+	mu              sync.Mutex
+	lastGreetingLog time.Time
 }
 
 func NewServer(port int) *Server {
@@ -43,9 +61,9 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Connect waits for a PJ64 client to connect (with a short timeout so the
-// main loop can continue polling). Implements the same lifecycle interface
-// as retroarch.Client.Connect().
+// Connect waits for a PJ64 client to connect and verifies the adapter
+// greeting (with a short timeout so the main loop can continue polling).
+// Implements the same lifecycle interface as retroarch.Client.Connect().
 func (s *Server) Connect() error {
 	if s.listener == nil {
 		return fmt.Errorf("server not started")
@@ -55,6 +73,25 @@ func (s *Server) Connect() error {
 	if err != nil {
 		return err
 	}
+
+	// Only serve adapters that identify themselves with the current
+	// greeting, so outdated Lua scripts cannot feed the tracker stale
+	// data.
+	conn.SetReadDeadline(time.Now().Add(greetingTimeout))
+	greeting := make([]byte, len(adapterGreeting))
+	if _, err := io.ReadFull(conn, greeting); err != nil {
+		conn.Close()
+		s.logGreetingMismatch(fmt.Sprintf(
+			"PJ64 adapter rejected: no greeting received (%v); please load the current tlt_autotracking_v2.lua from the ootmm-autotracker directory", err))
+		return fmt.Errorf("adapter greeting: %w", err)
+	}
+	if string(greeting) != adapterGreeting {
+		conn.Close()
+		s.logGreetingMismatch(fmt.Sprintf(
+			"PJ64 adapter rejected: greeting %q, want %q; please load the current tlt_autotracking_v2.lua from the ootmm-autotracker directory", string(greeting), adapterGreeting))
+		return fmt.Errorf("unsupported adapter greeting %q (want %q)", string(greeting), adapterGreeting)
+	}
+
 	s.mu.Lock()
 	if s.conn != nil {
 		s.conn.Close()
@@ -63,6 +100,18 @@ func (s *Server) Connect() error {
 	s.mu.Unlock()
 	log.Printf("PJ64 client connected from %s", conn.RemoteAddr())
 	return nil
+}
+
+// logGreetingMismatch logs msg at most once per greetingLogInterval so
+// an incompatible adapter that keeps reconnecting does not spam the log.
+func (s *Server) logGreetingMismatch(msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if time.Since(s.lastGreetingLog) < greetingLogInterval {
+		return
+	}
+	s.lastGreetingLog = time.Now()
+	log.Println(msg)
 }
 
 // Close closes the current PJ64 connection (keeps the listener open for reconnects).

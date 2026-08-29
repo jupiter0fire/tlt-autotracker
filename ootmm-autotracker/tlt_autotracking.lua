@@ -15,6 +15,14 @@ local PORT = 55190
 -- Op codes
 local OP_MEMREAD_BULK = 10
 
+-- Adapter greeting.  The autotracker only serves scripts that send the
+-- current greeting right after connecting, so outdated Lua scripts are
+-- rejected.  Bump PROTOCOL_VERSION whenever the wire protocol changes
+-- incompatibly and keep it in sync with adapterGreeting in
+-- pj64/server.go ("OAT" .. PROTOCOL_VERSION).
+local GREETING_MAGIC = "OAT"
+local PROTOCOL_VERSION = 2
+
 -- ComboCtx addresses (virtual) for transition detection.
 -- During a game switch OoTMM's Context_Init writes the magic "OoT+MM<3"
 -- to the target game's ComboCtx.  While the magic is visible the save
@@ -72,6 +80,17 @@ print("=== OoTMM Autotracker - PJ64 Adapter ===")
 print("Connecting to autotracker at " .. HOST .. ":" .. PORT)
 
 local s = connect()
+
+-- Identify this script to the autotracker.  The server rejects
+-- connections without a matching greeting, so an old script can never
+-- feed the tracker stale data.
+local ok_send, send_err = pcall(function()
+  s:send(GREETING_MAGIC .. PROTOCOL_VERSION)
+end)
+if not ok_send then
+  print("Failed to send greeting: " .. tostring(send_err))
+end
+
 print("Connected to autotracker!")
 
 while true do
